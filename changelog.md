@@ -25,10 +25,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   vendored. Assets are embedded via the `web` package.
 - `quote.SuttaURL`, `quote.New`, and `quote.DisplayHTML` helpers in
   `internal/quote`.
+- A `Makefile` for the common commands (`make test|vet|fmt|run|extract|seed|tidy|clean`),
+  exporting `CGO_ENABLED=1`.
 
 ### Changed
 - `quotes` schema gains a `sort_order INTEGER` column (user-owned order; the
   canonical `id`/`char_count` ranking is preserved).
+
+### Fixed
+- Clipboard copy buttons now write within the user gesture via `ClipboardItem`
+  (with a `writeText` fallback), so rapid copy operations no longer lose
+  transient activation.
 
 ### Notes
 - Run with `CGO_ENABLED=1` (mattn/go-sqlite3). `cmd/extract` is unchanged and
