@@ -22,6 +22,7 @@ func mustTemplates() *template.Template {
 		"templates/index.html",
 		"templates/quote_list.html",
 		"templates/quote_block.html",
+		"templates/quote_block_ro.html",
 		"templates/quote_form.html",
 	))
 }

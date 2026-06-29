@@ -9,8 +9,9 @@
   }
 
   function refreshBulk() {
-    var btn = document.querySelector('[data-action="bulk-delete"]');
-    if (btn) btn.disabled = selectedIds().length === 0;
+    var any = selectedIds().length > 0;
+    document.querySelectorAll('[data-action="bulk-delete"], [data-action="add-collection"]')
+      .forEach(function (b) { b.disabled = !any; });
   }
 
   function flash(btn, text) {
@@ -53,7 +54,17 @@
     }
 
     if (action === "copy-all") {
-      copyFromUrl("/export.txt").then(function () { flash(btn, "Copied all"); }).catch(function () {});
+      copyFromUrl(btn.dataset.export || "/export.txt").then(function () { flash(btn, "Copied all"); }).catch(function () {});
+    }
+
+    if (action === "add-collection") {
+      var cids = selectedIds();
+      if (cids.length === 0) return;
+      var body = new URLSearchParams();
+      cids.forEach(function (id) { body.append("id", id); });
+      var res = await fetch("/collections", { method: "POST", body: body });
+      var loc = res.headers.get("HX-Redirect");
+      if (res.ok && loc) location.href = loc;
     }
 
     if (action === "bulk-delete") {

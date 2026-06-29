@@ -15,8 +15,22 @@ import (
 )
 
 type pageData struct {
-	Quotes []store.Quote
+	Quotes      []store.Quote
+	Collections []store.Collection
+	View        viewSpec
 }
+
+// viewSpec describes which view is rendered (home or a collection) and drives the
+// layout: home allows +New and the selection toolbar; a collection is read-only
+// (copyable) with a delete-collection button.
+type viewSpec struct {
+	IsCollection bool
+	CollectionID int64
+	Title        string
+	ExportURL    string
+}
+
+func (v viewSpec) CanNew() bool { return !v.IsCollection }
 
 type formData struct {
 	ID          int64
@@ -33,7 +47,12 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
-	s.render(w, "page", pageData{Quotes: qs})
+	cols, err := s.store.ListCollections()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	s.render(w, "page", pageData{Quotes: qs, Collections: cols, View: viewSpec{Title: "Quotes", ExportURL: "/export.txt"}})
 }
 
 func (s *Server) listFragment(w http.ResponseWriter, r *http.Request) {
@@ -45,12 +64,87 @@ func (s *Server) listFragment(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "quote_list", pageData{Quotes: qs})
 }
 
+func (s *Server) collection(w http.ResponseWriter, r *http.Request) {
+	cid, ok := parseID(w, r, "cid")
+	if !ok {
+		return
+	}
+	if _, err := s.store.GetCollection(cid); err != nil {
+		handleStoreErr(w, err)
+		return
+	}
+	qs, err := s.store.CollectionQuotes(cid)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	cols, err := s.store.ListCollections()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	s.render(w, "page", pageData{
+		Quotes:      qs,
+		Collections: cols,
+		View: viewSpec{
+			IsCollection: true,
+			CollectionID: cid,
+			Title:        fmt.Sprintf("Collection %d", cid),
+			ExportURL:    fmt.Sprintf("/collections/%d/export.txt", cid),
+		},
+	})
+}
+
+func (s *Server) createCollection(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		badRequest(w)
+		return
+	}
+	cid, err := s.store.CreateCollection(parseIDs(r.PostForm["id"]))
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	w.Header().Set("HX-Redirect", fmt.Sprintf("/collections/%d", cid))
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) deleteCollection(w http.ResponseWriter, r *http.Request) {
+	cid, ok := parseID(w, r, "cid")
+	if !ok {
+		return
+	}
+	if err := s.store.DeleteCollection(cid); err != nil {
+		handleStoreErr(w, err)
+		return
+	}
+	w.Header().Set("HX-Redirect", "/")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) collectionExport(w http.ResponseWriter, r *http.Request) {
+	cid, ok := parseID(w, r, "cid")
+	if !ok {
+		return
+	}
+	qs, err := s.store.CollectionQuotes(cid)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	quotes := make([]*quote.Quote, len(qs))
+	for i, q := range qs {
+		quotes[i] = quote.New(q.SuttaID, q.Citation, splitPassages(q.BodyText))
+	}
+	writeText(w, quote.RenderExportFile(quotes))
+}
+
 func (s *Server) newForm(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "quote_form", formData{Action: "/quotes", SubmitLabel: "Add quote"})
 }
 
 func (s *Server) editForm(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(w, r)
+	id, ok := parseID(w, r, "id")
 	if !ok {
 		return
 	}
@@ -92,7 +186,7 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) update(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(w, r)
+	id, ok := parseID(w, r, "id")
 	if !ok {
 		return
 	}
@@ -117,7 +211,7 @@ func (s *Server) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) delete(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(w, r)
+	id, ok := parseID(w, r, "id")
 	if !ok {
 		return
 	}
@@ -157,7 +251,7 @@ func (s *Server) reorder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) copyOne(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(w, r)
+	id, ok := parseID(w, r, "id")
 	if !ok {
 		return
 	}
@@ -223,8 +317,8 @@ func attributionOf(citation, sutta string) string {
 	return strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(rest), ","))
 }
 
-func parseID(w http.ResponseWriter, r *http.Request) (int64, bool) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+func parseID(w http.ResponseWriter, r *http.Request, name string) (int64, bool) {
+	id, err := strconv.ParseInt(r.PathValue(name), 10, 64)
 	if err != nil || id <= 0 {
 		badRequest(w)
 		return 0, false

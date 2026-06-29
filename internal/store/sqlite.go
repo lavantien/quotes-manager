@@ -24,9 +24,22 @@ const schemaSQL = `CREATE TABLE IF NOT EXISTS quotes (
     sources     TEXT    NOT NULL,
     sort_order  INTEGER NOT NULL DEFAULT 0
 );
-CREATE INDEX IF NOT EXISTS idx_quotes_sort_order ON quotes(sort_order);`
+CREATE INDEX IF NOT EXISTS idx_quotes_sort_order ON quotes(sort_order);
+CREATE TABLE IF NOT EXISTS collections (
+    id INTEGER PRIMARY KEY
+);
+CREATE TABLE IF NOT EXISTS collection_items (
+    collection_id INTEGER NOT NULL,
+    quote_id      INTEGER NOT NULL,
+    position      INTEGER NOT NULL,
+    PRIMARY KEY (collection_id, quote_id)
+);
+CREATE INDEX IF NOT EXISTS idx_collection_items_collection ON collection_items(collection_id, position);
+CREATE INDEX IF NOT EXISTS idx_collection_items_quote ON collection_items(quote_id);`
 
-const columns = "id, sort_order, sutta_id, citation, body_md, body_text, line_count, char_count, sources"
+var quoteColumns = []string{"id", "sort_order", "sutta_id", "citation", "body_md", "body_text", "line_count", "char_count", "sources"}
+
+var columns = strings.Join(quoteColumns, ", ")
 
 // SQLiteStore is a Store backed by a single SQLite file.
 type SQLiteStore struct {
@@ -109,11 +122,21 @@ func (s *SQLiteStore) Update(id int64, q *quote.Quote) error {
 }
 
 func (s *SQLiteStore) Delete(id int64) error {
-	res, err := s.db.Exec("DELETE FROM quotes WHERE id = ?", id)
+	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
-	return rowsAffected(res, id)
+	if _, err := tx.Exec("DELETE FROM collection_items WHERE quote_id = ?", id); err != nil {
+		return rollback(tx, err)
+	}
+	res, err := tx.Exec("DELETE FROM quotes WHERE id = ?", id)
+	if err != nil {
+		return rollback(tx, err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return rollback(tx, fmt.Errorf("%w: id %d", ErrNotFound, id))
+	}
+	return tx.Commit()
 }
 
 func (s *SQLiteStore) DeleteMany(ids []int64) error {
@@ -125,6 +148,9 @@ func (s *SQLiteStore) DeleteMany(ids []int64) error {
 		return err
 	}
 	for _, id := range ids {
+		if _, err := tx.Exec("DELETE FROM collection_items WHERE quote_id = ?", id); err != nil {
+			return rollback(tx, err)
+		}
 		if _, err := tx.Exec("DELETE FROM quotes WHERE id = ?", id); err != nil {
 			return rollback(tx, err)
 		}
@@ -148,6 +174,100 @@ func (s *SQLiteStore) Reorder(orderedIDs []int64) error {
 		if n, _ := res.RowsAffected(); n == 0 {
 			return rollback(tx, fmt.Errorf("%w: id %d", ErrNotFound, id))
 		}
+	}
+	return tx.Commit()
+}
+
+func (s *SQLiteStore) ListCollections() ([]Collection, error) {
+	rows, err := s.db.Query(
+		`SELECT c.id, (SELECT COUNT(*) FROM collection_items ci WHERE ci.collection_id = c.id)
+		 FROM collections c ORDER BY c.id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Collection
+	for rows.Next() {
+		var c Collection
+		if err := rows.Scan(&c.ID, &c.Count); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) CreateCollection(quoteIDs []int64) (int64, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	res, err := tx.Exec("INSERT INTO collections DEFAULT VALUES")
+	if err != nil {
+		return 0, rollback(tx, err)
+	}
+	cid, err := res.LastInsertId()
+	if err != nil {
+		return 0, rollback(tx, err)
+	}
+	for i, qid := range quoteIDs {
+		if _, err := tx.Exec(
+			"INSERT INTO collection_items (collection_id, quote_id, position) VALUES (?, ?, ?)",
+			cid, qid, i+1); err != nil {
+			return 0, rollback(tx, err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return cid, nil
+}
+
+func (s *SQLiteStore) GetCollection(id int64) (Collection, error) {
+	var c Collection
+	err := s.db.QueryRow(
+		`SELECT id, (SELECT COUNT(*) FROM collection_items ci WHERE ci.collection_id = id)
+		 FROM collections WHERE id = ?`, id).Scan(&c.ID, &c.Count)
+	if err == sql.ErrNoRows {
+		return Collection{}, ErrNotFound
+	}
+	return c, err
+}
+
+func (s *SQLiteStore) CollectionQuotes(id int64) ([]Quote, error) {
+	rows, err := s.db.Query(
+		"SELECT q."+strings.Join(quoteColumns, ", q.")+
+			" FROM quotes q JOIN collection_items ci ON ci.quote_id = q.id"+
+			" WHERE ci.collection_id = ? ORDER BY ci.position ASC", id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Quote
+	for rows.Next() {
+		q, err := scanQuote(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, q)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) DeleteCollection(id int64) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec("DELETE FROM collection_items WHERE collection_id = ?", id); err != nil {
+		return rollback(tx, err)
+	}
+	res, err := tx.Exec("DELETE FROM collections WHERE id = ?", id)
+	if err != nil {
+		return rollback(tx, err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return rollback(tx, fmt.Errorf("%w: id %d", ErrNotFound, id))
 	}
 	return tx.Commit()
 }

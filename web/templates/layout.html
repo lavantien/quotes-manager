@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Quotes</title>
+<title>{{.View.Title}}</title>
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/htmx.min.js" defer></script>
 <script src="/static/app.js" defer></script>
@@ -11,17 +11,26 @@
 <body>
 <main class="page">
   <header class="topbar">
-    <h1 class="topbar__title">Quotes</h1>
+    <div class="topbar__left">
+      <h1 class="topbar__title">{{.View.Title}}</h1>
+      <nav class="collections">
+        <a class="collections__link{{if not .View.IsCollection}} is-active{{end}}" href="/">Home</a>
+        {{range .Collections}}<a class="collections__link{{if eq .ID $.View.CollectionID}} is-active{{end}}" href="/collections/{{.ID}}">{{.ID}}{{if gt .Count 0}} <span class="collections__count">{{.Count}}</span>{{end}}</a>{{end}}
+      </nav>
+    </div>
     <div class="topbar__actions">
-      <button type="button" class="btn" data-action="copy-all">Copy all</button>
-      <button type="button" class="btn btn--primary" hx-get="/quotes/new" hx-target="#form-slot" hx-swap="innerHTML">+ New</button>
+      <button type="button" class="btn" data-action="copy-all" data-export="{{.View.ExportURL}}">Copy all</button>
+      {{if .View.CanNew}}<button type="button" class="btn btn--primary" hx-get="/quotes/new" hx-target="#form-slot" hx-swap="innerHTML">+ New</button>{{else}}<button type="button" class="btn btn--danger" hx-delete="/collections/{{.View.CollectionID}}" hx-confirm="Delete this collection?">Delete collection</button>{{end}}
     </div>
   </header>
-  <div id="form-slot" class="form-slot"></div>
+  {{if .View.CanNew}}<div id="form-slot" class="form-slot"></div>{{end}}
+  {{if .View.CanNew}}
   <div class="toolbar">
     <label class="select-all"><input type="checkbox" id="select-all"> select all</label>
     <button type="button" class="btn btn--danger" data-action="bulk-delete" disabled>Delete selected</button>
+    <button type="button" class="btn" data-action="add-collection" disabled>Add to collection</button>
   </div>
+  {{end}}
   {{template "content" .}}
 </main>
 </body>

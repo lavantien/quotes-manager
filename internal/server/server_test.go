@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -15,9 +16,11 @@ import (
 
 // fakeStore is an in-memory store.Store for handler tests.
 type fakeStore struct {
-	quotes  []store.Quote
-	nextID  int64
-	maxSort int64
+	quotes      []store.Quote
+	nextID      int64
+	maxSort     int64
+	collections []store.Collection
+	items       map[int64][]int64
 }
 
 func newFake(quotes ...store.Quote) *fakeStore {
@@ -34,7 +37,7 @@ func newFake(quotes ...store.Quote) *fakeStore {
 	if maxID == 0 {
 		maxID = 0
 	}
-	return &fakeStore{quotes: append([]store.Quote{}, quotes...), nextID: maxID, maxSort: maxSort}
+	return &fakeStore{quotes: append([]store.Quote{}, quotes...), nextID: maxID, maxSort: maxSort, items: map[int64][]int64{}}
 }
 
 func (f *fakeStore) List() ([]store.Quote, error) {
@@ -124,6 +127,52 @@ func (f *fakeStore) Reorder(orderedIDs []int64) error {
 		}
 	}
 	return nil
+}
+
+func (f *fakeStore) ListCollections() ([]store.Collection, error) {
+	return append([]store.Collection{}, f.collections...), nil
+}
+
+func (f *fakeStore) CreateCollection(quoteIDs []int64) (int64, error) {
+	var cid int64 = 1
+	if n := len(f.collections); n > 0 {
+		cid = f.collections[n-1].ID + 1
+	}
+	f.collections = append(f.collections, store.Collection{ID: cid, Count: len(quoteIDs)})
+	f.items[cid] = append([]int64{}, quoteIDs...)
+	return cid, nil
+}
+
+func (f *fakeStore) GetCollection(id int64) (store.Collection, error) {
+	for _, c := range f.collections {
+		if c.ID == id {
+			return c, nil
+		}
+	}
+	return store.Collection{}, store.ErrNotFound
+}
+
+func (f *fakeStore) CollectionQuotes(id int64) ([]store.Quote, error) {
+	var out []store.Quote
+	for _, qid := range f.items[id] {
+		for _, q := range f.quotes {
+			if q.ID == qid {
+				out = append(out, q)
+			}
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeStore) DeleteCollection(id int64) error {
+	for i, c := range f.collections {
+		if c.ID == id {
+			f.collections = append(f.collections[:i], f.collections[i+1:]...)
+			delete(f.items, id)
+			return nil
+		}
+	}
+	return store.ErrNotFound
 }
 
 func (f *fakeStore) Close() error { return nil }
@@ -340,5 +389,94 @@ func TestStaticAssetsServed(t *testing.T) {
 	}
 	if rec := do(t, srv, "GET", "/static/app.css", ""); !strings.Contains(rec.Body.String(), "--paper") {
 		t.Error("app.css not served correctly")
+	}
+}
+
+func fakeWithCollection(t *testing.T) (*fakeStore, int64) {
+	t.Helper()
+	fs := newFake(sampleQuote(1), sampleQuote(2), sampleQuote(3))
+	cid, err := fs.CreateCollection([]int64{1, 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return fs, cid
+}
+
+func TestCreateCollectionFromSelection(t *testing.T) {
+	fs := newFake(sampleQuote(1), sampleQuote(2))
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", "/collections", "id=1&id=2", "Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	loc := rec.Header().Get("HX-Redirect")
+	if !strings.HasPrefix(loc, "/collections/") {
+		t.Errorf("HX-Redirect = %q", loc)
+	}
+	if len(fs.collections) != 1 || fs.collections[0].Count != 2 {
+		t.Errorf("collections = %+v", fs.collections)
+	}
+}
+
+func TestCollectionViewIsReadOnly(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", fmt.Sprintf("/collections/%d", cid), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Human beings are shady") {
+		t.Error("collection view missing its quotes")
+	}
+	if strings.Contains(body, "+ New") {
+		t.Error("collection view must not show + New")
+	}
+	if !strings.Contains(body, "Delete collection") {
+		t.Error("collection view missing delete-collection button")
+	}
+	if strings.Contains(body, `draggable="true"`) {
+		t.Error("collection blocks must not be draggable")
+	}
+	if strings.Contains(body, `/edit"`) {
+		t.Error("collection blocks must not be editable")
+	}
+	if !strings.Contains(body, `data-action="copy"`) {
+		t.Error("collection blocks should be copyable")
+	}
+}
+
+func TestCollectionExport(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", fmt.Sprintf("/collections/%d/export.txt", cid), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), ".  \n.  \n.") {
+		t.Error("collection export missing dot separator")
+	}
+}
+
+func TestDeleteCollection(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "DELETE", fmt.Sprintf("/collections/%d", cid), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if rec.Header().Get("HX-Redirect") != "/" {
+		t.Errorf("HX-Redirect = %q", rec.Header().Get("HX-Redirect"))
+	}
+	if len(fs.collections) != 0 {
+		t.Errorf("collection not deleted: %+v", fs.collections)
+	}
+}
+
+func TestCollectionNotFound(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "GET", "/collections/999", "")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
 	}
 }

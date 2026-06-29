@@ -43,6 +43,10 @@ func (s *Server) routes() *http.ServeMux {
 	m.HandleFunc("POST /quotes/reorder", s.reorder)
 	m.HandleFunc("GET /quotes/{id}/copy", s.copyOne)
 	m.HandleFunc("GET /export.txt", s.exportAll)
+	m.HandleFunc("GET /collections/{cid}", s.collection)
+	m.HandleFunc("POST /collections", s.createCollection)
+	m.HandleFunc("DELETE /collections/{cid}", s.deleteCollection)
+	m.HandleFunc("GET /collections/{cid}/export.txt", s.collectionExport)
 	m.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS()))))
 	return m
 }
