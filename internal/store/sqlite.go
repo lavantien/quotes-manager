@@ -254,6 +254,32 @@ func (s *SQLiteStore) CollectionQuotes(id int64) ([]Quote, error) {
 	return out, rows.Err()
 }
 
+func (s *SQLiteStore) ReorderCollection(id int64, orderedQuoteIDs []int64) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	var one int64
+	if err := tx.QueryRow("SELECT 1 FROM collections WHERE id = ?", id).Scan(&one); err != nil {
+		if err == sql.ErrNoRows {
+			return rollback(tx, fmt.Errorf("%w: collection %d", ErrNotFound, id))
+		}
+		return rollback(tx, err)
+	}
+	for i, qid := range orderedQuoteIDs {
+		res, err := tx.Exec(
+			"UPDATE collection_items SET position = ? WHERE collection_id = ? AND quote_id = ?",
+			i+1, id, qid)
+		if err != nil {
+			return rollback(tx, err)
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return rollback(tx, fmt.Errorf("%w: quote %d not in collection %d", ErrNotFound, qid, id))
+		}
+	}
+	return tx.Commit()
+}
+
 func (s *SQLiteStore) DeleteCollection(id int64) error {
 	tx, err := s.db.Begin()
 	if err != nil {

@@ -250,6 +250,25 @@ func (s *Server) reorder(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (s *Server) collectionReorder(w http.ResponseWriter, r *http.Request) {
+	cid, ok := parseID(w, r, "cid")
+	if !ok {
+		return
+	}
+	var body struct {
+		IDs []int64 `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		badRequest(w)
+		return
+	}
+	if err := s.store.ReorderCollection(cid, body.IDs); err != nil {
+		handleStoreErr(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *Server) copyOne(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseID(w, r, "id")
 	if !ok {

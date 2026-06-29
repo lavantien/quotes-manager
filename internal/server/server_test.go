@@ -175,6 +175,24 @@ func (f *fakeStore) DeleteCollection(id int64) error {
 	return store.ErrNotFound
 }
 
+func (f *fakeStore) ReorderCollection(cid int64, orderedQuoteIDs []int64) error {
+	members, ok := f.items[cid]
+	if !ok {
+		return store.ErrNotFound
+	}
+	belong := make(map[int64]bool, len(members))
+	for _, qid := range members {
+		belong[qid] = true
+	}
+	for _, qid := range orderedQuoteIDs {
+		if !belong[qid] {
+			return store.ErrNotFound
+		}
+	}
+	f.items[cid] = append([]int64{}, orderedQuoteIDs...)
+	return nil
+}
+
 func (f *fakeStore) Close() error { return nil }
 
 // --- helpers ---
@@ -418,7 +436,7 @@ func TestCreateCollectionFromSelection(t *testing.T) {
 	}
 }
 
-func TestCollectionViewIsReadOnly(t *testing.T) {
+func TestCollectionView(t *testing.T) {
 	fs, cid := fakeWithCollection(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "GET", fmt.Sprintf("/collections/%d", cid), "")
@@ -435,14 +453,29 @@ func TestCollectionViewIsReadOnly(t *testing.T) {
 	if !strings.Contains(body, "Delete collection") {
 		t.Error("collection view missing delete-collection button")
 	}
-	if strings.Contains(body, `draggable="true"`) {
-		t.Error("collection blocks must not be draggable")
+	// Read-only for content (no edit/delete/new) but still sortable by drag.
+	if !strings.Contains(body, `draggable="true"`) {
+		t.Error("collection blocks should be draggable to reorder")
 	}
 	if strings.Contains(body, `/edit"`) {
 		t.Error("collection blocks must not be editable")
 	}
 	if !strings.Contains(body, `data-action="copy"`) {
 		t.Error("collection blocks should be copyable")
+	}
+}
+
+func TestCollectionReorder(t *testing.T) {
+	fs, cid := fakeWithCollection(t) // collection holds quotes 1, 2 (in that order)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/reorder", cid),
+		`{"ids":[2,1]}`, "Content-Type", "application/json")
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", rec.Code)
+	}
+	got, _ := fs.CollectionQuotes(cid)
+	if len(got) != 2 || got[0].ID != 2 || got[1].ID != 1 {
+		t.Errorf("after reorder = %+v", got)
 	}
 }
 

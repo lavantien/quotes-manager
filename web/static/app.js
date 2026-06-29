@@ -127,7 +127,7 @@
     var after = e.clientY - rect.top > rect.height / 2;
     if (after) target.after(dragged); else target.before(dragged);
     var ids = Array.from(ql.querySelectorAll(".quote")).map(function (el) { return Number(el.dataset.id); });
-    await fetch("/quotes/reorder", {
+    await fetch(ql.dataset.reorder || "/quotes/reorder", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: ids }),

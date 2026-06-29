@@ -148,3 +148,46 @@ func TestDeleteManyRemovesFromCollection(t *testing.T) {
 		t.Errorf("after bulk delete collection = %+v", qs)
 	}
 }
+
+func TestReorderCollection(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	cid, _ := s.CreateCollection([]int64{q1, q2, q3})
+
+	if err := s.ReorderCollection(cid, []int64{q3, q1, q2}); err != nil {
+		t.Fatal(err)
+	}
+	qs, _ := s.CollectionQuotes(cid)
+	want := []int64{q3, q1, q2}
+	for i, q := range qs {
+		if q.ID != want[i] {
+			t.Errorf("pos %d = %d, want %d", i, q.ID, want[i])
+		}
+	}
+}
+
+func TestReorderCollectionNotFound(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.ReorderCollection(999, []int64{1}); !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestReorderCollectionUnknownQuote(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"})) // not a member
+	cid, _ := s.CreateCollection([]int64{q1})
+
+	err := s.ReorderCollection(cid, []int64{q1, q2})
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
+	}
+	// Failed reorder must not leave partial state: q1 still first.
+	qs, _ := s.CollectionQuotes(cid)
+	if len(qs) != 1 || qs[0].ID != q1 {
+		t.Errorf("partial reorder changed state: %+v", qs)
+	}
+}

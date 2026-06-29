@@ -114,7 +114,6 @@ body {
 }
 .quote:hover { background: linear-gradient(var(--paper-tint), var(--paper-tint)) 0 -1px / 100% calc(100% + 1px) no-repeat; }
 .quote.dragging { opacity: 0.45; cursor: grabbing; }
-.quote--ro { cursor: default; }
 .quote__check { grid-area: check; padding-top: 0.4rem; }
 .quote__body {
   grid-area: body;
