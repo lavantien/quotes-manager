@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-29
+
+### Added
+- Numbered **collections**: select quotes on home and "Add to collection" to
+  create a new numbered collection. Collections appear as a nav between the title
+  and the action buttons.
+- Collection views (`GET /collections/{cid}`) render the same block layout, are
+  copyable (copy-one and copy-all via `/collections/{cid}/export.txt`), but are
+  read-only — no +New, edit, delete, or drag — since home remains the sole source
+  of truth. Each collection has a "Delete collection" button
+  (`DELETE /collections/{cid}`).
+- `internal/store`: `collections` and `collection_items` tables; `Collection`
+  type; `ListCollections`, `CreateCollection`, `GetCollection`,
+  `CollectionQuotes`, `DeleteCollection`. Deleting a quote on home also removes
+  it from every collection.
+
 ## [0.2.0] - 2026-06-29
 
 ### Added
@@ -64,5 +80,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Unattributed quotes (including all header-cited ones) are normalized to
   "the Buddha".
 
+[0.3.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.2.0
 [0.1.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.1.0
