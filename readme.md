@@ -1,9 +1,9 @@
 # quotes-manager
 
-A small Go 1.26 pipeline that distills the sutta quotes embedded in the essay
-dumps (`dumps/*.txt`) into one canonical format, loads them into SQLite, and
-exports a shortest-first text file. This is the seed step for a future
-Go + SQLite quotes-manager web application.
+A Go 1.26 application for a collection of sutta quotes. `cmd/extract` distills
+the quotes embedded in the essay dumps (`dumps/*.txt`) into one canonical format
+and a SQLite seed; `cmd/server` is the web application — a single binary that
+serves the quotes as draggable blocks persisted in SQLite in real time.
 
 ## Directory layout
 
@@ -13,17 +13,79 @@ dumps/                         source essays (input, hand-written)
   sacredness-and-profanity.txt          (sutta quotes, inline-cited)
   stream-entry-for-lay-buddhists.txt    (sutta quotes, inline + header-cited)
 internal/quote/                parser, normalizer, renderer, seed emitter (+ tests)
+internal/store/                SQLite store: CRUD + reorder, ordered by sort_order
+internal/seed/                 EnsureSeeded: canonical seed + sort_order migration
+internal/server/               HTMX handlers + server-rendered templates (+ tests)
 cmd/extract/                   CLI: reads dumps/ -> writes database/ + exports/
+cmd/server/                    web server: opens + seeds the DB, serves the UI
 database/
-  seed.sql                     generated schema + inserts (committed)
-  quotes.db                    generated SQLite database (gitignored)
+  seed.sql                     generated schema + inserts (committed, embedded)
+  quotes.db                    SQLite database (gitignored, created on run)
 exports/
   shortest-first.md            generated export, shortest-first (committed)
+web/
+  templates/                   layout, index, quote_list, quote_block, quote_form
+  static/                      app.css (warm-paper theme), app.js, htmx (vendored)
 go.mod
 readme.md
 changelog.md
 .gitignore
 ```
+
+## Web application
+
+Run the server (CGO is required for the SQLite driver):
+
+```sh
+CGO_ENABLED=1 go run ./cmd/server              # http://localhost:8080
+CGO_ENABLED=1 go run ./cmd/server -addr :9000  # custom port
+CGO_ENABLED=1 go run ./cmd/server -db /tmp/q.db # custom database path
+```
+
+On first run the server creates `database/quotes.db`, loads the canonical seed
+(109 quotes), and migrates it to carry a user-owned `sort_order` column. From
+then on your edits and reordering persist; the seed is never reapplied (so
+deleting a quote is permanent).
+
+The UI is a single list of quote blocks. Each block:
+
+- shows the quote in the canonical format — passages in italics, the sutta id
+  **bolded** and linked to `https://suttacentral.net/<id-without-spaces>`
+  (e.g. `MN 22` → `mn22`), opening in a new tab;
+- is **draggable** to reorder, and the new order is saved to the database;
+- has **Copy**, **Edit**, and **Delete** actions;
+- has a checkbox for **bulk delete** (with a select-all control in the toolbar).
+
+**+ New** opens a 3-field form (content, attribution, text ID). An empty
+attribution defaults to "the Buddha". **Copy all** copies every quote as one
+text joined by the dot separator.
+
+Every mutation (create / edit / delete / bulk delete / reorder) is written to
+SQLite before the UI is updated, so the page is always a faithful view of the
+database.
+
+### SQLite schema (web)
+
+The web adds one column to the seed schema:
+
+```sql
+CREATE TABLE quotes (
+    id          INTEGER PRIMARY KEY,     -- shortest-first rank (canonical)
+    sutta_id    TEXT    NOT NULL,
+    citation    TEXT    NOT NULL,
+    body_md     TEXT    NOT NULL,        -- canonical italicized format
+    body_text   TEXT    NOT NULL,
+    line_count  INTEGER NOT NULL,
+    char_count  INTEGER NOT NULL,
+    sources     TEXT    NOT NULL,
+    sort_order  INTEGER NOT NULL DEFAULT 0   -- user-owned display order
+);
+```
+
+`id` and `char_count` keep the canonical shortest-first ranking; `sort_order` is
+owned by the user and is the only thing drag-reorder changes.
+
+
 
 `database/seed.sql` and `exports/shortest-first.md` are generated — regenerate
 with `go run ./cmd/extract`. `database/quotes.db` is gitignored; populate it
@@ -119,9 +181,17 @@ char counts from 51 to 5032.
 ## Regenerate
 
 ```sh
-go test ./...                 # parser / renderer / seed tests
+CGO_ENABLED=1 go test ./...   # full test suite (CGO for the SQLite driver)
+CGO_ENABLED=1 go vet ./...    # static checks
 go run ./cmd/extract          # writes database/seed.sql + exports/shortest-first.md
-sqlite3 database/quotes.db < database/seed.sql   # (re)populate the database
+CGO_ENABLED=1 go run ./cmd/server   # run the web app (http://localhost:8080)
+```
+
+To rebuild `database/quotes.db` from a changed `seed.sql`, delete the database
+file and restart the server (it re-seeds only an empty/unseeded database):
+
+```sh
+rm database/quotes.db && CGO_ENABLED=1 go run ./cmd/server
 ```
 
 ## Notes

@@ -5,3 +5,7 @@ database/*.db
 *.exe
 *.test
 *.out
+
+# Browser automation scratch (Playwright MCP screenshots / snapshots)
+.playwright-mcp/
+*.png
