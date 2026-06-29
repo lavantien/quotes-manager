@@ -10,11 +10,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Numbered **collections**: select quotes on home and "Add to collection" to
   create a new numbered collection. Collections appear as a nav between the title
   and the action buttons.
-- Collection views (`GET /collections/{cid}`) render the same block layout, are
-  copyable (copy-one and copy-all via `/collections/{cid}/export.txt`), but are
-  read-only — no +New, edit, delete, or drag — since home remains the sole source
-  of truth. Each collection has a "Delete collection" button
-  (`DELETE /collections/{cid}`).
+- Collection views (`GET /collections/{cid}`) render the same block layout,
+  copyable (copy-one and copy-all via `/collections/{cid}/export.txt`) and
+  drag-to-reorder (`POST /collections/{cid}/reorder`), but read-only for content
+  — no +New, edit, or delete — since home remains the sole source of truth. Each
+  collection has a "Delete collection" button (`DELETE /collections/{cid}`).
 - `internal/store`: `collections` and `collection_items` tables; `Collection`
   type; `ListCollections`, `CreateCollection`, `GetCollection`,
   `CollectionQuotes`, `DeleteCollection`. Deleting a quote on home also removes

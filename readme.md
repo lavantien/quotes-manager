@@ -24,7 +24,7 @@ database/
 exports/
   shortest-first.md            generated export, shortest-first (committed)
 web/
-  templates/                   layout, index, quote_list, quote_block, quote_form
+  templates/                   layout, index, quote_list, quote_block, quote_block_ro, quote_form
   static/                      app.css (warm-paper theme), app.js, htmx (vendored)
 go.mod
 readme.md
@@ -64,6 +64,18 @@ Every mutation (create / edit / delete / bulk delete / reorder) is written to
 SQLite before the UI is updated, so the page is always a faithful view of the
 database.
 
+### Collections
+
+Select quotes and click **Add to collection** (beside Delete selected) to create
+a new numbered collection. Collections appear as a nav between the title and the
+action buttons.
+
+A collection view shows its quotes in the same block layout: **copyable**
+(copy-one, copy-all via `/collections/{id}/export.txt`) and **drag-to-reorder**
+(saved to the collection's own order), but read-only for content — no +New,
+edit, or delete — so home stays the sole source of truth. Each collection has a
+**Delete collection** button.
+
 ### SQLite schema (web)
 
 The web adds one column to the seed schema:
@@ -84,6 +96,21 @@ CREATE TABLE quotes (
 
 `id` and `char_count` keep the canonical shortest-first ranking; `sort_order` is
 owned by the user and is the only thing drag-reorder changes.
+
+Collections are numbered subsets curated from home (deleting a quote on home
+also removes it from every collection):
+
+```sql
+CREATE TABLE collections (
+    id INTEGER PRIMARY KEY
+);
+CREATE TABLE collection_items (
+    collection_id INTEGER NOT NULL,
+    quote_id      INTEGER NOT NULL,
+    position      INTEGER NOT NULL,
+    PRIMARY KEY (collection_id, quote_id)
+);
+```
 
 
 
