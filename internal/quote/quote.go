@@ -26,6 +26,13 @@ func newQuote(sutta, citation string, passages []string, source string) *Quote {
 	}
 }
 
+// New constructs a Quote for callers outside the parser (e.g. the web form).
+// Sources is empty; suttaID and citation are taken as-is, so callers should
+// pre-normalize them (CanonicalSuttaID, default attribution) before calling.
+func New(suttaID, citation string, passages []string) *Quote {
+	return &Quote{SuttaID: suttaID, Citation: citation, Passages: passages}
+}
+
 // BodyText is the plain passages joined by newlines (no markdown, no citation).
 func (q *Quote) BodyText() string {
 	return strings.Join(q.Passages, "\n")

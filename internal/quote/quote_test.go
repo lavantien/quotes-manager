@@ -2,6 +2,22 @@ package quote
 
 import "testing"
 
+func TestNew(t *testing.T) {
+	q := New("MN 22", "the Buddha, MN 22", []string{"one", "two"})
+	if q.SuttaID != "MN 22" || q.Citation != "the Buddha, MN 22" {
+		t.Errorf("fields = %+v", q)
+	}
+	if len(q.Passages) != 2 || q.Passages[0] != "one" || q.Passages[1] != "two" {
+		t.Errorf("passages = %#v", q.Passages)
+	}
+	if len(q.Sources) != 0 {
+		t.Errorf("sources = %#v, want empty", q.Sources)
+	}
+	if q.LineCount() != 2 || q.CharCount() != 6 {
+		t.Errorf("derived = line %d char %d", q.LineCount(), q.CharCount())
+	}
+}
+
 func TestDedupMergesSources(t *testing.T) {
 	q1 := newQuote("AN 8.53", "AN 8.53", []string{"Gotami quote."}, "sacredness-and-profanity.txt")
 	q2 := newQuote("AN 8.53", "AN 8.53", []string{"Gotami quote."}, "stream-entry-for-lay-buddhists.txt")
