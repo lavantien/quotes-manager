@@ -1,0 +1,13 @@
+{{define "quote_block"}}
+<article class="quote" id="quote-{{.ID}}" data-id="{{.ID}}" draggable="true">
+  <div class="quote__check">
+    <input type="checkbox" class="select" name="id" value="{{.ID}}" aria-label="Select quote">
+  </div>
+  <div class="quote__body">{{display .}}</div>
+  <div class="quote__actions">
+    <button type="button" class="btn btn--sm" data-action="copy" data-id="{{.ID}}">Copy</button>
+    <button type="button" class="btn btn--sm" hx-get="/quotes/{{.ID}}/edit" hx-target="#quote-{{.ID}}" hx-swap="outerHTML">Edit</button>
+    <button type="button" class="btn btn--sm btn--danger" hx-delete="/quotes/{{.ID}}" hx-target="#quote-{{.ID}}" hx-swap="delete" hx-confirm="Delete this quote?">Delete</button>
+  </div>
+</article>
+{{end}}

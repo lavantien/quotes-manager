@@ -1,0 +1,5 @@
+{{define "quote_list"}}
+<div id="quote-list" class="quote-list">
+{{range .Quotes}}{{template "quote_block" .}}{{end}}{{if not .Quotes}}<p class="empty">No quotes yet.</p>{{end}}
+</div>
+{{end}}

@@ -1,0 +1,13 @@
+{{define "quote_form"}}
+<form class="quote-form" hx-post="{{.Action}}"{{if .ID}} hx-target="#quote-{{.ID}}" hx-swap="outerHTML"{{else}} hx-target="#quote-list" hx-swap="afterbegin"{{end}}>
+  <textarea class="quote-form__content" name="content" rows="4" placeholder="Quote text…" required>{{.Content}}</textarea>
+  <div class="quote-form__row">
+    <input class="quote-form__input" type="text" name="attribution" value="{{.Attribution}}" placeholder="Attribution (e.g. the Buddha)">
+    <input class="quote-form__input" type="text" name="text_id" value="{{.TextID}}" placeholder="Text ID (e.g. MN 22)" required>
+  </div>
+  <div class="quote-form__row quote-form__row--actions">
+    <button type="submit" class="btn btn--primary">{{.SubmitLabel}}</button>
+    <button type="button" class="btn" data-action="cancel">Cancel</button>
+  </div>
+</form>
+{{end}}
