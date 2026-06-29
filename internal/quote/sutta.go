@@ -38,6 +38,18 @@ func CanonicalSuttaID(s string) string {
 	return strings.TrimSpace(suttaIDRe.FindString(s))
 }
 
+// SuttaURL returns the suttacentral URL for a sutta id (or any string carrying
+// one). The signature is the canonical id lowercased with all spaces removed:
+//
+//	"MN 22"              -> "https://suttacentral.net/mn22"
+//	"AN 4.180"           -> "https://suttacentral.net/an4.180"
+//	"KN Snp 2.14"        -> "https://suttacentral.net/knsnp2.14"
+//	"the Buddha, MN 22"  -> "https://suttacentral.net/mn22"
+func SuttaURL(id string) string {
+	sig := strings.ToLower(strings.ReplaceAll(CanonicalSuttaID(id), " ", ""))
+	return "https://suttacentral.net/" + sig
+}
+
 // cleanCitation drops a trailing URL-in-parens and trims whitespace.
 func cleanCitation(s string) string {
 	return strings.TrimSpace(urlParensRe.ReplaceAllString(strings.TrimSpace(s), ""))
