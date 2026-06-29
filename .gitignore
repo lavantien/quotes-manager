@@ -1,0 +1,7 @@
+# SQLite database (regenerated from database/seed.sql)
+database/*.db
+
+# Go build / test artifacts
+*.exe
+*.test
+*.out
