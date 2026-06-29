@@ -20,6 +20,20 @@
     setTimeout(function () { btn.textContent = orig; btn.disabled = false; }, 1200);
   }
 
+  // copyFromUrl writes url's text to the clipboard. The write is started
+  // synchronously (within the user gesture) by handing ClipboardItem a promise
+  // for the data, so transient activation is not lost while the text is fetched.
+  // Falls back to fetch-then-writeText where ClipboardItem is unavailable.
+  function copyFromUrl(url) {
+    var data = fetch(url).then(function (r) { return r.text(); })
+      .then(function (t) { return new Blob([t], { type: "text/plain" }); });
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      return navigator.clipboard.write([new ClipboardItem({ "text/plain": data })]);
+    }
+    return data.then(function (blob) { return blob.text(); })
+      .then(function (t) { return navigator.clipboard.writeText(t); });
+  }
+
   document.addEventListener("change", function (e) {
     if (e.target.id === "select-all") {
       document.querySelectorAll(".quote__check input.select").forEach(function (cb) { cb.checked = e.target.checked; });
@@ -35,13 +49,11 @@
     var action = btn.dataset.action;
 
     if (action === "copy") {
-      var res = await fetch("/quotes/" + btn.dataset.id + "/copy");
-      if (res.ok) { await navigator.clipboard.writeText(await res.text()); flash(btn, "Copied"); }
+      copyFromUrl("/quotes/" + btn.dataset.id + "/copy").then(function () { flash(btn, "Copied"); }).catch(function () {});
     }
 
     if (action === "copy-all") {
-      var r = await fetch("/export.txt");
-      if (r.ok) { await navigator.clipboard.writeText(await r.text()); flash(btn, "Copied all"); }
+      copyFromUrl("/export.txt").then(function () { flash(btn, "Copied all"); }).catch(function () {});
     }
 
     if (action === "bulk-delete") {
