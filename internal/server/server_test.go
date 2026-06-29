@@ -323,6 +323,11 @@ func TestEditFormPrefilled(t *testing.T) {
 	if !strings.Contains(body, `Human beings are shady`) {
 		t.Error("edit form missing content")
 	}
+	// The edit form keeps the block's id so HTMX can target it on submit after
+	// the form replaced the block via outerHTML.
+	if !strings.Contains(body, `id="quote-1"`) {
+		t.Error("edit form missing id=quote-1 handle")
+	}
 }
 
 func TestStaticAssetsServed(t *testing.T) {
