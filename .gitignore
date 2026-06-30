@@ -9,3 +9,5 @@ database/*.db
 # Browser automation scratch (Playwright MCP screenshots / snapshots)
 .playwright-mcp/
 *.png
+# ...but the committed home screenshot for the README is tracked.
+!docs/home.png
