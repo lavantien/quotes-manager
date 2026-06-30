@@ -29,6 +29,9 @@
   <div class="toolbar">
     <label class="select-all"><input type="checkbox" id="select-all"> select all</label>
     <button type="button" class="btn btn--danger" data-action="bulk-delete" disabled>Delete selected</button>
+    <select id="collection-target" class="collection-target" disabled>
+      <option value="new">+ New collection</option>{{range .Collections}}<option value="{{.ID}}">Collection {{.ID}}{{if gt .Count 0}} ({{.Count}}){{end}}</option>{{end}}
+    </select>
     <button type="button" class="btn" data-action="add-collection" disabled>Add to collection</button>
   </div>
   {{end}}

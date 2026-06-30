@@ -168,6 +168,33 @@ func (f *fakeStore) ReorderCollection(cid int64, orderedQuoteIDs []int64) error 
 	return nil
 }
 
+func (f *fakeStore) AddToCollection(cid int64, quoteIDs []int64) error {
+	members, ok := f.items[cid]
+	if !ok {
+		return store.ErrNotFound
+	}
+	belong := make(map[int64]bool, len(members))
+	for _, qid := range members {
+		belong[qid] = true
+	}
+	seen := make(map[int64]bool)
+	var add []int64
+	for _, qid := range quoteIDs {
+		if qid <= 0 || seen[qid] || belong[qid] {
+			continue
+		}
+		seen[qid] = true
+		add = append(add, qid)
+	}
+	f.items[cid] = append(add, members...)
+	for i := range f.collections {
+		if f.collections[i].ID == cid {
+			f.collections[i].Count = len(f.items[cid])
+		}
+	}
+	return nil
+}
+
 func (f *fakeStore) Close() error { return nil }
 
 // --- helpers ---
@@ -423,6 +450,33 @@ func TestCreateCollectionFromSelection(t *testing.T) {
 	}
 	if len(fs.collections) != 1 || fs.collections[0].Count != 2 {
 		t.Errorf("collections = %+v", fs.collections)
+	}
+}
+
+func TestAddToCollectionItems(t *testing.T) {
+	fs, cid := fakeWithCollection(t) // collection holds quotes 1, 2; quote 3 also exists
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/items", cid), "id=3",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if loc := rec.Header().Get("HX-Redirect"); loc != fmt.Sprintf("/collections/%d", cid) {
+		t.Errorf("HX-Redirect = %q, want /collections/%d", loc, cid)
+	}
+	// New item (3) lands on top; existing order (1, 2) preserved.
+	qs, _ := fs.CollectionQuotes(cid)
+	if len(qs) != 3 || qs[0].ID != 3 || qs[1].ID != 1 || qs[2].ID != 2 {
+		t.Errorf("after add = %+v", qs)
+	}
+}
+
+func TestAddToCollectionItemsUnknownCollection(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "POST", "/collections/999/items", "id=1",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
 	}
 }
 

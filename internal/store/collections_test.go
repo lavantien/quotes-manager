@@ -191,3 +191,76 @@ func TestReorderCollectionUnknownQuote(t *testing.T) {
 		t.Errorf("partial reorder changed state: %+v", qs)
 	}
 }
+
+func TestAddToCollectionPrependsOnTop(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	cid, _ := s.CreateCollection([]int64{q1, q2})
+
+	if err := s.AddToCollection(cid, []int64{q3}); err != nil {
+		t.Fatal(err)
+	}
+	qs, _ := s.CollectionQuotes(cid)
+	want := []int64{q3, q1, q2}
+	if len(qs) != len(want) {
+		t.Fatalf("len = %d, want %d (%+v)", len(qs), len(want), qs)
+	}
+	for i, q := range qs {
+		if q.ID != want[i] {
+			t.Errorf("pos %d = %d, want %d", i, q.ID, want[i])
+		}
+	}
+}
+
+func TestAddToCollectionPreservesExistingOrder(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	q4 := mustCreate(t, s, quote.New("D", "D", []string{"d"}))
+	cid, _ := s.CreateCollection([]int64{q3, q1, q2}) // manual order
+
+	if err := s.AddToCollection(cid, []int64{q4}); err != nil {
+		t.Fatal(err)
+	}
+	qs, _ := s.CollectionQuotes(cid)
+	want := []int64{q4, q3, q1, q2} // new on top, existing order unchanged
+	for i, q := range qs {
+		if q.ID != want[i] {
+			t.Errorf("pos %d = %d, want %d", i, q.ID, want[i])
+		}
+	}
+}
+
+func TestAddToCollectionSkipsDuplicates(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	cid, _ := s.CreateCollection([]int64{q1, q2})
+
+	// q1 is already a member; q3 is new. q3 lands on top; q1 is not duplicated.
+	if err := s.AddToCollection(cid, []int64{q1, q3, q1}); err != nil {
+		t.Fatal(err)
+	}
+	qs, _ := s.CollectionQuotes(cid)
+	want := []int64{q3, q1, q2}
+	if len(qs) != len(want) {
+		t.Fatalf("len = %d, want %d (%+v)", len(qs), len(want), qs)
+	}
+	for i, q := range qs {
+		if q.ID != want[i] {
+			t.Errorf("pos %d = %d, want %d", i, q.ID, want[i])
+		}
+	}
+}
+
+func TestAddToCollectionUnknownCollection(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	if err := s.AddToCollection(999, []int64{q1}); !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
+	}
+}

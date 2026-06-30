@@ -118,6 +118,26 @@ func (s *Server) createCollection(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// addCollectionItems appends the selected quotes to an existing collection
+// (new items land on top) and redirects to it. Mirrors createCollection, which
+// instead spins up a brand-new collection.
+func (s *Server) addCollectionItems(w http.ResponseWriter, r *http.Request) {
+	cid, ok := parseID(w, r, "cid")
+	if !ok {
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		badRequest(w)
+		return
+	}
+	if err := s.store.AddToCollection(cid, parseIDs(r.PostForm["id"])); err != nil {
+		handleStoreErr(w, err)
+		return
+	}
+	w.Header().Set("HX-Redirect", fmt.Sprintf("/collections/%d", cid))
+	w.WriteHeader(http.StatusOK)
+}
+
 func (s *Server) deleteCollection(w http.ResponseWriter, r *http.Request) {
 	cid, ok := parseID(w, r, "cid")
 	if !ok {

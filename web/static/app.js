@@ -12,6 +12,8 @@
     var any = selectedIds().length > 0;
     document.querySelectorAll('[data-action="bulk-delete"], [data-action="add-collection"]')
       .forEach(function (b) { b.disabled = !any; });
+    var target = document.getElementById("collection-target");
+    if (target) target.disabled = !any;
   }
 
   function flash(btn, text) {
@@ -60,9 +62,12 @@
     if (action === "add-collection") {
       var cids = selectedIds();
       if (cids.length === 0) return;
+      var target = document.getElementById("collection-target");
+      var val = target ? target.value : "new";
       var body = new URLSearchParams();
       cids.forEach(function (id) { body.append("id", id); });
-      var res = await fetch("/collections", { method: "POST", body: body });
+      var url = val === "new" ? "/collections" : "/collections/" + val + "/items";
+      var res = await fetch(url, { method: "POST", body: body });
       var loc = res.headers.get("HX-Redirect");
       if (res.ok && loc) location.href = loc;
     }

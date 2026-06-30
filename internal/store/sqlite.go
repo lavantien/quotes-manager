@@ -201,6 +201,71 @@ func (s *SQLiteStore) CreateCollection(quoteIDs []int64) (int64, error) {
 	return cid, nil
 }
 
+// AddToCollection prepends quoteIDs onto the top of an existing collection in
+// the order given, shifting existing members down so their relative order is
+// preserved. Quotes already in the collection (and repeats within quoteIDs) are
+// skipped — no duplicates, and the existing copy keeps its place. ErrNotFound if
+// the collection does not exist.
+func (s *SQLiteStore) AddToCollection(cid int64, quoteIDs []int64) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	var one int64
+	if err := tx.QueryRow("SELECT 1 FROM collections WHERE id = ?", cid).Scan(&one); err != nil {
+		if err == sql.ErrNoRows {
+			return rollback(tx, fmt.Errorf("%w: collection %d", ErrNotFound, cid))
+		}
+		return rollback(tx, err)
+	}
+	members, err := collectionMembers(tx, cid)
+	if err != nil {
+		return rollback(tx, err)
+	}
+	// De-duplicate the incoming list and drop ids already in the collection,
+	// preserving first-seen order.
+	seen := make(map[int64]bool)
+	var add []int64
+	for _, qid := range quoteIDs {
+		if qid <= 0 || seen[qid] || members[qid] {
+			continue
+		}
+		seen[qid] = true
+		add = append(add, qid)
+	}
+	if len(add) > 0 {
+		if _, err := tx.Exec("UPDATE collection_items SET position = position + ? WHERE collection_id = ?", len(add), cid); err != nil {
+			return rollback(tx, err)
+		}
+		for i, qid := range add {
+			if _, err := tx.Exec(
+				"INSERT INTO collection_items (collection_id, quote_id, position) VALUES (?, ?, ?)",
+				cid, qid, i+1); err != nil {
+				return rollback(tx, err)
+			}
+		}
+	}
+	return tx.Commit()
+}
+
+// collectionMembers returns the set of quote_ids already in a collection.
+func collectionMembers(tx *sql.Tx, cid int64) (map[int64]bool, error) {
+	rows, err := tx.Query("SELECT quote_id FROM collection_items WHERE collection_id = ?", cid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make(map[int64]bool)
+	for rows.Next() {
+		var qid int64
+		if err := rows.Scan(&qid); err != nil {
+			return nil, err
+		}
+		out[qid] = true
+	}
+	return out, rows.Err()
+}
+
 func (s *SQLiteStore) GetCollection(id int64) (Collection, error) {
 	var c Collection
 	err := s.db.QueryRow(

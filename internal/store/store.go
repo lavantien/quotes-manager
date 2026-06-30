@@ -38,6 +38,7 @@ type Store interface {
 	DeleteMany(ids []int64) error                              // empty slice is a no-op
 	ListCollections() ([]Collection, error)                    // ordered by id
 	CreateCollection(quoteIDs []int64) (int64, error)          // new numbered collection; returns its id
+	AddToCollection(id int64, quoteIDs []int64) error          // prepends to top; ErrNotFound on unknown cid
 	GetCollection(id int64) (Collection, error)                // ErrNotFound if missing
 	CollectionQuotes(id int64) ([]Quote, error)                // ordered by collection position
 	ReorderCollection(id int64, orderedQuoteIDs []int64) error // single tx; ErrNotFound on bad cid / non-member
