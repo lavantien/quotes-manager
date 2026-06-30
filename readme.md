@@ -1,5 +1,9 @@
 # quotes-manager
 
+<!-- coverage:START -->
+![coverage](https://img.shields.io/badge/coverage-16.6%25-red)
+<!-- coverage:END -->
+
 A Go 1.26 application for a collection of sutta quotes. `cmd/extract` distills
 the quotes embedded in the essay dumps (`dumps/*.txt`) into one canonical format
 and a SQLite seed; `cmd/server` is the web application — a single binary that

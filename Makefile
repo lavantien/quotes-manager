@@ -5,7 +5,7 @@ export CGO_ENABLED := 1
 ADDR ?= :8080
 DB   ?= database/quotes.db
 
-.PHONY: help all test vet fmt run server extract seed tidy clean
+.PHONY: help all test vet fmt run server extract seed tidy clean coverage
 
 help: ## show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make <target>\n\nTargets:\n"} \
@@ -37,3 +37,8 @@ tidy: ## go mod tidy
 
 clean: ## remove generated artifacts (database, binaries)
 	rm -f $(DB) *.exe *.test *.out
+
+coverage: ## recompute Go test coverage and refresh the README coverage badge
+	go test -coverpkg=./... -coverprofile=coverage.out ./...
+	go run ./cmd/coverage -profile=coverage.out -readme=readme.md
+	rm -f coverage.out
