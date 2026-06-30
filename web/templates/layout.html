@@ -13,6 +13,7 @@
   <header class="topbar">
     <div class="topbar__left">
       <h1 class="topbar__title">{{.View.Title}}</h1>
+      <span class="topbar__count">{{.Count}} blocks</span>
       <nav class="collections">
         <a class="collections__link{{if not .View.IsCollection}} is-active{{end}}" href="/">Home</a>
         {{range .Collections}}<a class="collections__link{{if eq .ID $.View.CollectionID}} is-active{{end}}" href="/collections/{{.ID}}">{{.ID}}{{if gt .Count 0}} <span class="collections__count">{{.Count}}</span>{{end}}</a>{{end}}

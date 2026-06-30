@@ -50,40 +50,33 @@ func TestCreateListRoundTrip(t *testing.T) {
 	}
 }
 
-func TestCreateAssignsIncreasingSortOrder(t *testing.T) {
+func TestListOrderedByCharCount(t *testing.T) {
 	s := newTestStore(t)
-	for range 3 {
-		mustCreate(t, s, quote.New("X", "X", []string{"a"}))
-	}
+	long := mustCreate(t, s, quote.New("Long", "Long", []string{"abcdef"})) // 6 runes
+	short := mustCreate(t, s, quote.New("Short", "Short", []string{"ab"}))  // 2 runes
+	mid := mustCreate(t, s, quote.New("Mid", "Mid", []string{"abcd"}))      // 4 runes
 	got, err := s.List()
 	if err != nil {
 		t.Fatal(err)
 	}
+	want := []int64{short, mid, long}
 	for i, q := range got {
-		if q.SortOrder != int64(i+1) {
-			t.Errorf("pos %d SortOrder = %d, want %d", i, q.SortOrder, i+1)
+		if q.ID != want[i] {
+			t.Errorf("pos %d ID = %d (char_count %d), want %d", i, q.ID, q.CharCount, want[i])
 		}
 	}
 }
 
-func TestListOrderedBySortOrder(t *testing.T) {
+func TestListCharCountTieBreaksByID(t *testing.T) {
 	s := newTestStore(t)
-	a := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
-	b := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
-	c := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
-
-	if err := s.Reorder([]int64{c, a, b}); err != nil {
-		t.Fatal(err)
-	}
+	a := mustCreate(t, s, quote.New("A", "A", []string{"xx"})) // 2 runes, lower id
+	b := mustCreate(t, s, quote.New("B", "B", []string{"yy"})) // 2 runes, higher id
 	got, err := s.List()
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []int64{c, a, b}
-	for i, q := range got {
-		if q.ID != want[i] {
-			t.Errorf("pos %d ID = %d, want %d", i, q.ID, want[i])
-		}
+	if len(got) != 2 || got[0].ID != a || got[1].ID != b {
+		t.Errorf("tie-break order = %+v, want [%d %d]", got, a, b)
 	}
 }
 
@@ -177,55 +170,5 @@ func TestSourcesRoundTrip(t *testing.T) {
 	}
 	if len(got.Sources) != 2 || got.Sources[0] != "a.txt" || got.Sources[1] != "b.txt" {
 		t.Errorf("Sources = %#v", got.Sources)
-	}
-}
-
-func TestReorderRejectsUnknownID(t *testing.T) {
-	s := newTestStore(t)
-	a := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
-	if err := s.Reorder([]int64{a, 9999}); !errors.Is(err, ErrNotFound) {
-		t.Errorf("unknown id err = %v, want ErrNotFound", err)
-	}
-	// Failed reorder must not leave partial state: order unchanged.
-	got, _ := s.List()
-	if len(got) != 1 || got[0].ID != a {
-		t.Errorf("partial reorder changed state: %+v", got)
-	}
-}
-
-func TestReorderPersistsAcrossReopen(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "q.db")
-	s, err := Open(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ids := make([]int64, 3)
-	for i, name := range []string{"A", "B", "C"} {
-		ids[i] = mustCreate(t, s, quote.New(name, name, []string{"x"}))
-	}
-	want := []int64{ids[2], ids[0], ids[1]}
-	if err := s.Reorder(want); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	s2, err := Open(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = s2.Close() }()
-	got, err := s2.List()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != len(want) {
-		t.Fatalf("len = %d, want %d", len(got), len(want))
-	}
-	for i, q := range got {
-		if q.ID != want[i] {
-			t.Errorf("pos %d ID = %d, want %d", i, q.ID, want[i])
-		}
 	}
 }

@@ -119,7 +119,7 @@
   document.addEventListener("drop", async function (e) {
     var target = e.target.closest && e.target.closest(".quote");
     var ql = list();
-    if (!target || !ql || dragId === null) return;
+    if (!target || !ql || dragId === null || !ql.dataset.reorder) return;
     e.preventDefault();
     var dragged = ql.querySelector('.quote[data-id="' + dragId + '"]');
     if (!dragged || dragged === target) return;
@@ -127,7 +127,7 @@
     var after = e.clientY - rect.top > rect.height / 2;
     if (after) target.after(dragged); else target.before(dragged);
     var ids = Array.from(ql.querySelectorAll(".quote")).map(function (el) { return Number(el.dataset.id); });
-    await fetch(ql.dataset.reorder || "/quotes/reorder", {
+    await fetch(ql.dataset.reorder, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: ids }),

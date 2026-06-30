@@ -10,9 +10,8 @@ import (
 	"github.com/lavantien/quotes-manager/internal/quote"
 )
 
-// schemaSQL creates the quotes table including the user-owned sort_order column.
-// (Legacy databases created by database/seed.sql lack sort_order; those are
-// migrated by internal/seed.)
+// schemaSQL creates the quotes table. char_count is the rune-count sort key
+// (home is ordered by char_count, then id); id is the seed's shortest-first rank.
 const schemaSQL = `CREATE TABLE IF NOT EXISTS quotes (
     id          INTEGER PRIMARY KEY,
     sutta_id    TEXT    NOT NULL,
@@ -21,10 +20,9 @@ const schemaSQL = `CREATE TABLE IF NOT EXISTS quotes (
     body_text   TEXT    NOT NULL,
     line_count  INTEGER NOT NULL,
     char_count  INTEGER NOT NULL,
-    sources     TEXT    NOT NULL,
-    sort_order  INTEGER NOT NULL DEFAULT 0
+    sources     TEXT    NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_quotes_sort_order ON quotes(sort_order);
+CREATE INDEX IF NOT EXISTS idx_quotes_char_count ON quotes(char_count);
 CREATE TABLE IF NOT EXISTS collections (
     id INTEGER PRIMARY KEY
 );
@@ -37,7 +35,7 @@ CREATE TABLE IF NOT EXISTS collection_items (
 CREATE INDEX IF NOT EXISTS idx_collection_items_collection ON collection_items(collection_id, position);
 CREATE INDEX IF NOT EXISTS idx_collection_items_quote ON collection_items(quote_id);`
 
-var quoteColumns = []string{"id", "sort_order", "sutta_id", "citation", "body_md", "body_text", "line_count", "char_count", "sources"}
+var quoteColumns = []string{"id", "sutta_id", "citation", "body_md", "body_text", "line_count", "char_count", "sources"}
 
 var columns = strings.Join(quoteColumns, ", ")
 
@@ -67,7 +65,7 @@ func (s *SQLiteStore) DB() *sql.DB { return s.db }
 func (s *SQLiteStore) Close() error { return s.db.Close() }
 
 func (s *SQLiteStore) List() ([]Quote, error) {
-	rows, err := s.db.Query("SELECT " + columns + " FROM quotes ORDER BY sort_order ASC, id ASC")
+	rows, err := s.db.Query("SELECT " + columns + " FROM quotes ORDER BY char_count ASC, id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +92,8 @@ func (s *SQLiteStore) Get(id int64) (Quote, error) {
 
 func (s *SQLiteStore) Create(q *quote.Quote) (int64, error) {
 	res, err := s.db.Exec(
-		`INSERT INTO quotes (sutta_id, citation, body_md, body_text, line_count, char_count, sources, sort_order)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM quotes))`,
+		`INSERT INTO quotes (sutta_id, citation, body_md, body_text, line_count, char_count, sources)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		q.SuttaID, q.Citation, q.BodyMD(), q.BodyText(), q.LineCount(), q.CharCount(),
 		strings.Join(q.Sources, ";"),
 	)
@@ -153,26 +151,6 @@ func (s *SQLiteStore) DeleteMany(ids []int64) error {
 		}
 		if _, err := tx.Exec("DELETE FROM quotes WHERE id = ?", id); err != nil {
 			return rollback(tx, err)
-		}
-	}
-	return tx.Commit()
-}
-
-func (s *SQLiteStore) Reorder(orderedIDs []int64) error {
-	if len(orderedIDs) == 0 {
-		return nil
-	}
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
-	for i, id := range orderedIDs {
-		res, err := tx.Exec("UPDATE quotes SET sort_order = ? WHERE id = ?", i+1, id)
-		if err != nil {
-			return rollback(tx, err)
-		}
-		if n, _ := res.RowsAffected(); n == 0 {
-			return rollback(tx, fmt.Errorf("%w: id %d", ErrNotFound, id))
 		}
 	}
 	return tx.Commit()
@@ -305,7 +283,7 @@ type scanner interface {
 func scanQuote(sc scanner) (Quote, error) {
 	var q Quote
 	var sources string
-	err := sc.Scan(&q.ID, &q.SortOrder, &q.SuttaID, &q.Citation, &q.BodyMD, &q.BodyText, &q.LineCount, &q.CharCount, &sources)
+	err := sc.Scan(&q.ID, &q.SuttaID, &q.Citation, &q.BodyMD, &q.BodyText, &q.LineCount, &q.CharCount, &sources)
 	if err != nil {
 		return Quote{}, err
 	}

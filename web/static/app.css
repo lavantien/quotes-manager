@@ -48,6 +48,15 @@ body {
   letter-spacing: 0.01em;
 }
 .topbar__actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+.topbar__count {
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  background: var(--paper-tint);
+  border: 1px solid var(--rule);
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+}
 
 .topbar__left { display: flex; align-items: baseline; gap: 1.5rem; flex-wrap: wrap; }
 .collections { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: baseline; }

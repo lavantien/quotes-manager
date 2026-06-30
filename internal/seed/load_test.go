@@ -28,17 +28,6 @@ func quoteCount(t *testing.T, db *sql.DB) int {
 	return n
 }
 
-func assertSortOrderMatchesID(t *testing.T, db *sql.DB) {
-	t.Helper()
-	var bad int
-	if err := db.QueryRow("SELECT COUNT(*) FROM quotes WHERE sort_order <> id OR sort_order = 0").Scan(&bad); err != nil {
-		t.Fatal(err)
-	}
-	if bad != 0 {
-		t.Errorf("%d rows have sort_order != id or unset", bad)
-	}
-}
-
 // TestEnsureSeededFreshDB loads the canonical seed into an empty database.
 func TestEnsureSeededFreshDB(t *testing.T) {
 	db := openDB(t)
@@ -48,18 +37,16 @@ func TestEnsureSeededFreshDB(t *testing.T) {
 	if n := quoteCount(t, db); n == 0 {
 		t.Error("fresh DB has no seeded quotes")
 	}
-	assertSortOrderMatchesID(t, db)
 }
 
 // TestEnsureSeededOnEmptyPrecreatedTable mirrors the server flow: store.Open
-// creates an empty table (with sort_order) before EnsureSeeded runs. EnsureSeeded
-// must still recognize this as fresh and load the seed.
+// creates an empty table before EnsureSeeded runs. EnsureSeeded must still
+// recognize this as fresh and load the seed.
 func TestEnsureSeededOnEmptyPrecreatedTable(t *testing.T) {
 	db := openDB(t)
 	if _, err := db.Exec(`CREATE TABLE quotes (
 		id INTEGER PRIMARY KEY, sutta_id TEXT, citation TEXT, body_md TEXT,
-		body_text TEXT, line_count INTEGER, char_count INTEGER, sources TEXT,
-		sort_order INTEGER NOT NULL DEFAULT 0)`); err != nil {
+		body_text TEXT, line_count INTEGER, char_count INTEGER, sources TEXT)`); err != nil {
 		t.Fatal(err)
 	}
 	if err := EnsureSeeded(db); err != nil {
@@ -71,8 +58,8 @@ func TestEnsureSeededOnEmptyPrecreatedTable(t *testing.T) {
 }
 
 // TestEnsureSeededLegacyPreservesData: a database created by the old seed.sql
-// (109 rows, no sort_order) must keep its rows and gain sort_order = id, without
-// being dropped.
+// (rows already present, no app_meta marker) must keep its rows untouched,
+// without being dropped or re-seeded.
 func TestEnsureSeededLegacyPreservesData(t *testing.T) {
 	db := openDB(t)
 	if _, err := db.Exec(`CREATE TABLE quotes (
@@ -87,13 +74,12 @@ func TestEnsureSeededLegacyPreservesData(t *testing.T) {
 	if err := EnsureSeeded(db); err != nil {
 		t.Fatal(err)
 	}
-	assertSortOrderMatchesID(t, db)
 	var n int
-	if err := db.QueryRow("SELECT COUNT(*) FROM quotes WHERE id = 5 AND sort_order = 5 AND sutta_id = 'X'").Scan(&n); err != nil {
+	if err := db.QueryRow("SELECT COUNT(*) FROM quotes WHERE id = 5 AND sutta_id = 'X'").Scan(&n); err != nil {
 		t.Fatal(err)
 	}
 	if n != 1 {
-		t.Errorf("legacy row not preserved/migrated: n=%d", n)
+		t.Errorf("legacy row not preserved: n=%d", n)
 	}
 }
 

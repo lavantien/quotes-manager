@@ -10,7 +10,6 @@ import (
 // Quote is a persisted quote row.
 type Quote struct {
 	ID        int64
-	SortOrder int64
 	SuttaID   string
 	Citation  string
 	BodyMD    string
@@ -31,13 +30,12 @@ var ErrNotFound = errors.New("quote not found")
 
 // Store is the persistence interface for quotes.
 type Store interface {
-	List() ([]Quote, error)                                    // ordered by sort_order, then id
+	List() ([]Quote, error)                                    // ordered by char_count, then id
 	Get(id int64) (Quote, error)                               // ErrNotFound if missing
-	Create(q *quote.Quote) (int64, error)                      // assigns sort_order = max + 1
+	Create(q *quote.Quote) (int64, error)                      // char_count is the rune-count sort key
 	Update(id int64, q *quote.Quote) error                     // re-derives body/count fields
 	Delete(id int64) error                                     // ErrNotFound if missing
 	DeleteMany(ids []int64) error                              // empty slice is a no-op
-	Reorder(orderedIDs []int64) error                          // single transaction; ErrNotFound on unknown id
 	ListCollections() ([]Collection, error)                    // ordered by id
 	CreateCollection(quoteIDs []int64) (int64, error)          // new numbered collection; returns its id
 	GetCollection(id int64) (Collection, error)                // ErrNotFound if missing

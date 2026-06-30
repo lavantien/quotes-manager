@@ -18,6 +18,7 @@ type pageData struct {
 	Quotes      []store.Quote
 	Collections []store.Collection
 	View        viewSpec
+	Count       int
 }
 
 // viewSpec describes which view is rendered (home or a collection) and drives the
@@ -52,16 +53,23 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
-	s.render(w, "page", pageData{Quotes: qs, Collections: cols, View: viewSpec{Title: "Quotes", ExportURL: "/export.txt"}})
+	s.render(w, "page", pageData{Quotes: qs, Collections: cols, Count: len(qs), View: viewSpec{Title: "Quotes", ExportURL: "/export.txt"}})
 }
 
-func (s *Server) listFragment(w http.ResponseWriter, r *http.Request) {
+// renderQuoteList re-renders the full (char_count-sorted) quote list as an
+// HTMX fragment. Used after a create so the new quote lands in sorted order
+// instead of being appended/prepended to the DOM.
+func (s *Server) renderQuoteList(w http.ResponseWriter) {
 	qs, err := s.store.List()
 	if err != nil {
 		serverError(w, err)
 		return
 	}
 	s.render(w, "quote_list", pageData{Quotes: qs})
+}
+
+func (s *Server) listFragment(w http.ResponseWriter, r *http.Request) {
+	s.renderQuoteList(w)
 }
 
 func (s *Server) collection(w http.ResponseWriter, r *http.Request) {
@@ -86,6 +94,7 @@ func (s *Server) collection(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "page", pageData{
 		Quotes:      qs,
 		Collections: cols,
+		Count:       len(qs),
 		View: viewSpec{
 			IsCollection: true,
 			CollectionID: cid,
@@ -168,18 +177,13 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 		badRequest(w)
 		return
 	}
-	id, err := s.store.Create(buildQuote(r.PostForm))
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	created, err := s.store.Get(id)
-	if err != nil {
+	if _, err := s.store.Create(buildQuote(r.PostForm)); err != nil {
 		serverError(w, err)
 		return
 	}
 	if isHTMX(r) {
-		s.render(w, "quote_block", created)
+		// Re-render the whole list so the new quote is placed in char_count order.
+		s.renderQuoteList(w)
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -233,21 +237,6 @@ func (s *Server) bulkDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
-}
-
-func (s *Server) reorder(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		IDs []int64 `json:"ids"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		badRequest(w)
-		return
-	}
-	if err := s.store.Reorder(body.IDs); err != nil {
-		handleStoreErr(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) collectionReorder(w http.ResponseWriter, r *http.Request) {

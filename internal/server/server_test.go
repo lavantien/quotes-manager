@@ -18,34 +18,26 @@ import (
 type fakeStore struct {
 	quotes      []store.Quote
 	nextID      int64
-	maxSort     int64
 	collections []store.Collection
 	items       map[int64][]int64
 }
 
 func newFake(quotes ...store.Quote) *fakeStore {
 	maxID := int64(0)
-	maxSort := int64(0)
 	for _, q := range quotes {
 		if q.ID > maxID {
 			maxID = q.ID
 		}
-		if q.SortOrder > maxSort {
-			maxSort = q.SortOrder
-		}
 	}
-	if maxID == 0 {
-		maxID = 0
-	}
-	return &fakeStore{quotes: append([]store.Quote{}, quotes...), nextID: maxID, maxSort: maxSort, items: map[int64][]int64{}}
+	return &fakeStore{quotes: append([]store.Quote{}, quotes...), nextID: maxID, items: map[int64][]int64{}}
 }
 
 func (f *fakeStore) List() ([]store.Quote, error) {
 	out := make([]store.Quote, len(f.quotes))
 	copy(out, f.quotes)
 	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].SortOrder != out[j].SortOrder {
-			return out[i].SortOrder < out[j].SortOrder
+		if out[i].CharCount != out[j].CharCount {
+			return out[i].CharCount < out[j].CharCount
 		}
 		return out[i].ID < out[j].ID
 	})
@@ -63,9 +55,8 @@ func (f *fakeStore) Get(id int64) (store.Quote, error) {
 
 func (f *fakeStore) Create(q *quote.Quote) (int64, error) {
 	f.nextID++
-	f.maxSort++
 	row := store.Quote{
-		ID: f.nextID, SortOrder: f.maxSort, SuttaID: q.SuttaID, Citation: q.Citation,
+		ID: f.nextID, SuttaID: q.SuttaID, Citation: q.Citation,
 		BodyMD: q.BodyMD(), BodyText: q.BodyText(), LineCount: q.LineCount(),
 		CharCount: q.CharCount(), Sources: append([]string(nil), q.Sources...),
 	}
@@ -110,22 +101,6 @@ func (f *fakeStore) DeleteMany(ids []int64) error {
 		}
 	}
 	f.quotes = keep
-	return nil
-}
-
-func (f *fakeStore) Reorder(orderedIDs []int64) error {
-	for i, id := range orderedIDs {
-		found := false
-		for j := range f.quotes {
-			if f.quotes[j].ID == id {
-				f.quotes[j].SortOrder = int64(i + 1)
-				found = true
-			}
-		}
-		if !found {
-			return store.ErrNotFound
-		}
-	}
 	return nil
 }
 
@@ -216,7 +191,7 @@ func do(t *testing.T, srv *server.Server, method, target, body string, hdrs ...s
 func sampleQuote(id int64) store.Quote {
 	q := quote.New("MN 22", "the Buddha, MN 22", []string{`"Human beings are shady."`})
 	return store.Quote{
-		ID: id, SortOrder: id, SuttaID: q.SuttaID, Citation: q.Citation,
+		ID: id, SuttaID: q.SuttaID, Citation: q.Citation,
 		BodyMD: q.BodyMD(), BodyText: q.BodyText(), LineCount: q.LineCount(), CharCount: q.CharCount(),
 	}
 }
@@ -237,6 +212,23 @@ func TestIndexListsQuotesAndLinksSuttacentral(t *testing.T) {
 	}
 	if !strings.Contains(body, `<strong>MN 22</strong>`) {
 		t.Error("index missing bolded sutta id")
+	}
+}
+
+func TestIndexShowsBlockCount(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1), sampleQuote(2)))
+	rec := do(t, srv, "GET", "/", "")
+	if !strings.Contains(rec.Body.String(), "2 blocks") {
+		t.Error("index missing block count badge")
+	}
+}
+
+func TestCollectionViewShowsBlockCount(t *testing.T) {
+	fs, cid := fakeWithCollection(t) // holds quotes 1, 2
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", fmt.Sprintf("/collections/%d", cid), "")
+	if !strings.Contains(rec.Body.String(), "2 blocks") {
+		t.Error("collection view missing block count badge")
 	}
 }
 
@@ -326,19 +318,17 @@ func TestBulkDelete(t *testing.T) {
 	}
 }
 
-func TestReorder(t *testing.T) {
-	fs := newFake(sampleQuote(1), sampleQuote(2), sampleQuote(3))
+func TestCreateRendersSortedList(t *testing.T) {
+	fs := newFake()
 	srv := newServer(t, fs)
-	rec := do(t, srv, "POST", "/quotes/reorder", `{"ids":[3,1,2]}`, "Content-Type", "application/json")
-	if rec.Code != http.StatusNoContent {
-		t.Fatalf("status = %d, want 204", rec.Code)
+	body := "content=%22Be+your+own+island.%22&attribution=the+Buddha&text_id=MN+44"
+	rec := do(t, srv, "POST", "/quotes", body, "Content-Type", "application/x-www-form-urlencoded", "HX-Request", "true")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
 	}
-	want := []int64{3, 1, 2}
-	got, _ := fs.List()
-	for i, q := range got {
-		if q.ID != want[i] {
-			t.Errorf("pos %d ID = %d, want %d", i, q.ID, want[i])
-		}
+	// create re-renders the whole list so the new quote lands in char_count order.
+	if !strings.Contains(rec.Body.String(), `id="quote-list"`) {
+		t.Error("create should re-render the full quote list, not a single block")
 	}
 }
 
