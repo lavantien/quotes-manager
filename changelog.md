@@ -4,6 +4,36 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-30
+
+### Added
+- **Choose a target collection.** The "Add to collection" control on home now
+  includes a dropdown: add selected quotes to an **existing** collection (new
+  items prepended on top; duplicates skipped) via `POST /collections/{cid}/items`,
+  or pick **+ New collection** for the previous create flow. Backed by
+  `store.AddToCollection`.
+- **Block-count badge.** Each page (home and collection) shows its block count
+  beside the title.
+- **Coverage badge.** `make coverage` runs the suite with `-coverpkg=./...` and
+  `cmd/coverage` (backed by `internal/coverbadge`) refreshes a shields.io
+  test-coverage badge in the README between markers. The percentage is parsed
+  from the real Go cover profile — it is never hand-set.
+- **Home screenshot.** `make screenshot` runs `cmd/screenshot`, which serves the
+  seeded app in-process and captures `docs/home.png` via chromedp (system Chrome
+  or Edge; `QUOTES_BROWSER` overrides). The README embeds it at the top.
+
+### Changed
+- Home is now ordered by `char_count` (shortest-first). A newly added quote
+  slots into its sorted place automatically — `List` orders by `char_count, id`
+  and `create` re-renders the full list.
+
+### Removed
+- Home drag-reorder and the entire `sort_order` machinery (column + index,
+  `Quote.SortOrder`, `store.Reorder`, the `POST /quotes/reorder` route, and the
+  `internal/seed` sort_order migration). Collections still support manual
+  drag-reorder. Legacy databases carrying a leftover `sort_order` column keep
+  working — the column is simply ignored.
+
 ## [0.3.0] - 2026-06-29
 
 ### Added
@@ -80,6 +110,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Unattributed quotes (including all header-cited ones) are normalized to
   "the Buddha".
 
+[0.4.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.4.0
 [0.3.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.2.0
 [0.1.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.1.0
