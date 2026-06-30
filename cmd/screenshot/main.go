@@ -63,7 +63,7 @@ func run() error {
 	}
 	srv := &http.Server{Handler: server.New(st)}
 	go func() { _ = srv.Serve(ln) }()
-	defer srv.Shutdown(context.Background())
+	defer func() { _ = srv.Shutdown(context.Background()) }()
 	url := "http://" + ln.Addr().String() + "/"
 
 	allocOpts := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("hide-scrollbars", "true"))
