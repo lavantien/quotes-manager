@@ -4,6 +4,8 @@ import (
 	"errors"
 	"sort"
 	"testing"
+
+	"github.com/lavantien/quotes-manager/internal/quote"
 )
 
 // TestCategorySchemaCreatesTables confirms Open provisions the categories and
@@ -101,6 +103,76 @@ func TestGetCategory(t *testing.T) {
 		t.Errorf("got %+v", c)
 	}
 	if _, err := s.GetCategory(999); !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestRenameCategory(t *testing.T) {
+	s := newTestStore(t)
+	id, _ := s.CreateCategory("wisdom")
+	if err := s.RenameCategory(id, "insight"); err != nil {
+		t.Fatal(err)
+	}
+	c, _ := s.GetCategory(id)
+	if c.Name != "insight" {
+		t.Errorf("name = %q, want insight", c.Name)
+	}
+}
+
+func TestRenameCategoryDuplicate(t *testing.T) {
+	s := newTestStore(t)
+	id, _ := s.CreateCategory("wisdom")
+	if _, err := s.CreateCategory("joy"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RenameCategory(id, "joy"); !errors.Is(err, ErrDuplicate) {
+		t.Errorf("err = %v, want ErrDuplicate", err)
+	}
+	// A failed rename must leave the original name intact.
+	c, _ := s.GetCategory(id)
+	if c.Name != "wisdom" {
+		t.Errorf("name changed on failed rename: %q", c.Name)
+	}
+}
+
+func TestRenameCategoryNotFound(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.RenameCategory(999, "x"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestDeleteCategoryCascadesItems(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	cid, _ := s.CreateCategory("wisdom")
+	// SetQuoteCategories arrives in the next step; tag the quotes directly.
+	if _, err := s.db.Exec("INSERT INTO category_items (category_id, quote_id) VALUES (?,?), (?,?)", cid, q1, cid, q2); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.DeleteCategory(cid); err != nil {
+		t.Fatal(err)
+	}
+	if cats, _ := s.ListCategories(); len(cats) != 0 {
+		t.Errorf("category not deleted: %+v", cats)
+	}
+	var n int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM category_items WHERE category_id = ?", cid).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Errorf("%d category_items rows survived the cascade", n)
+	}
+	// The quotes themselves are untouched.
+	if qs, _ := s.List(); len(qs) != 2 {
+		t.Errorf("quotes lost: %+v", qs)
+	}
+}
+
+func TestDeleteCategoryNotFound(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.DeleteCategory(999); !errors.Is(err, ErrNotFound) {
 		t.Errorf("err = %v, want ErrNotFound", err)
 	}
 }

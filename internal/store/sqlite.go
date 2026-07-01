@@ -402,6 +402,37 @@ func (s *SQLiteStore) GetCategory(id int64) (Category, error) {
 	return c, err
 }
 
+func (s *SQLiteStore) RenameCategory(id int64, name string) error {
+	res, err := s.db.Exec("UPDATE categories SET name = ? WHERE id = ?", name, id)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return fmt.Errorf("%w: category %q", ErrDuplicate, name)
+		}
+		return err
+	}
+	return rowsAffected(res, id)
+}
+
+// DeleteCategory removes a category and untaggs every quote that carried it;
+// the quotes themselves are left intact. ErrNotFound if the category is missing.
+func (s *SQLiteStore) DeleteCategory(id int64) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec("DELETE FROM category_items WHERE category_id = ?", id); err != nil {
+		return rollback(tx, err)
+	}
+	res, err := tx.Exec("DELETE FROM categories WHERE id = ?", id)
+	if err != nil {
+		return rollback(tx, err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return rollback(tx, fmt.Errorf("%w: id %d", ErrNotFound, id))
+	}
+	return tx.Commit()
+}
+
 // isUniqueViolation reports whether err is a SQLite uniqueness-constraint
 // failure (e.g. a duplicate category name).
 func isUniqueViolation(err error) bool {
