@@ -20,8 +20,8 @@ dumps/                         source essays (input, hand-written)
   sacredness-and-profanity.txt          (sutta quotes, inline-cited)
   stream-entry-for-lay-buddhists.txt    (sutta quotes, inline + header-cited)
 internal/quote/                parser, normalizer, renderer, seed emitter (+ tests)
-internal/store/                SQLite store: CRUD + collections, ordered by char_count
-internal/seed/                 EnsureSeeded: canonical seed on a fresh database
+internal/store/                SQLite store: CRUD + collections + categories, ordered by char_count
+internal/seed/                 EnsureSeeded: canonical seed (+ sample categories) on a fresh database
 internal/server/               HTMX handlers + server-rendered templates (+ tests)
 internal/coverbadge/           Go-cover parser + README badge renderer (+ tests)
 cmd/extract/                   CLI: reads dumps/ -> writes database/ + exports/
@@ -36,7 +36,7 @@ docs/
 exports/
   shortest-first.md            generated export, shortest-first (committed)
 web/
-  templates/                   layout, index, quote_list, quote_block, quote_block_ro, quote_form
+  templates/                   layout, index, quote_list, quote_block(_ro), quote_form, sidebar, quote_chips, quote_category_editor
   static/                      app.css (warm-paper theme), app.js, htmx (vendored)
 go.mod
 readme.md
@@ -58,11 +58,13 @@ On first run the server creates `database/quotes.db` and loads the canonical
 seed (109 quotes). From then on your edits persist; the seed is never reapplied
 (so deleting a quote is permanent).
 
-The UI is a single list of quote blocks. Each block:
+The UI is a left **sidebar** (Collections + Categories) beside a list of quote
+blocks. Each block:
 
 - shows the quote in the canonical format — passages in italics, the sutta id
   **bolded** and linked to `https://suttacentral.net/<id-without-spaces>`
   (e.g. `MN 22` → `mn22`), opening in a new tab;
+- shows its **categories** as chips, with an inline ✎ editor to tag it;
 - has **Copy**, **Edit**, and **Delete** actions;
 - has a checkbox for **bulk delete** (with a select-all control in the toolbar).
 
@@ -82,14 +84,23 @@ before the UI is updated, so the page is always a faithful view of the database.
 Select quotes and use the **Add to collection** control (beside Delete
 selected). A dropdown picks the target: an **existing collection** (the selected
 quotes are prepended on top; duplicates are skipped) or **+ New collection** to
-spin up a new numbered one. Collections appear as a nav between the title and
-the action buttons.
+spin up a new numbered one. Collections appear in the sidebar on the left.
 
 A collection view shows its quotes in the same block layout: **copyable**
 (copy-one, copy-all via `/collections/{id}/export.txt`) and **drag-to-reorder**
 (saved to the collection's own order), but read-only for content — no +New,
 edit, or delete — so home stays the sole source of truth. Each collection has a
 **Delete collection** button.
+
+### Categories
+
+**Categories** are named tags managed independently in the sidebar — create,
+rename, or delete them inline (names are unique, case-insensitive). Each quote
+block shows its categories as chips; the inline ✎ editor toggles any
+combination and can create a new category on the spot. Clicking a category in
+the sidebar filters the list to its quotes — a read-only **category view**, like
+a collection, with Copy all via `/categories/{id}/export.txt`. Deleting a
+category untaggs its quotes; deleting a quote clears its tags.
 
 ### SQLite schema (web)
 
@@ -123,6 +134,21 @@ CREATE TABLE collection_items (
     quote_id      INTEGER NOT NULL,
     position      INTEGER NOT NULL,
     PRIMARY KEY (collection_id, quote_id)
+);
+```
+
+Categories are named tags (deleting a quote clears its tags; deleting a category
+untaggs its quotes):
+
+```sql
+CREATE TABLE categories (
+    id   INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE COLLATE NOCASE
+);
+CREATE TABLE category_items (
+    category_id INTEGER NOT NULL,
+    quote_id    INTEGER NOT NULL,
+    PRIMARY KEY (category_id, quote_id)
 );
 ```
 
