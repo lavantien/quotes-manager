@@ -176,3 +176,126 @@ func TestDeleteCategoryNotFound(t *testing.T) {
 		t.Errorf("err = %v, want ErrNotFound", err)
 	}
 }
+
+func TestCategoryQuotesOrderedByCharCount(t *testing.T) {
+	s := newTestStore(t)
+	long := mustCreate(t, s, quote.New("L", "L", []string{"abcdef"})) // 6 runes
+	mid := mustCreate(t, s, quote.New("M", "M", []string{"abcd"}))    // 4 runes
+	short := mustCreate(t, s, quote.New("S", "S", []string{"ab"}))    // 2 runes
+	cid, _ := s.CreateCategory("wisdom")
+	for _, q := range []int64{long, mid, short} { // tagged out of order
+		if err := s.SetQuoteCategories(q, []int64{cid}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	qs, err := s.CategoryQuotes(cid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []int64{short, mid, long}
+	if len(qs) != len(want) {
+		t.Fatalf("len = %d, want %d (%+v)", len(qs), len(want), qs)
+	}
+	for i, q := range qs {
+		if q.ID != want[i] {
+			t.Errorf("pos %d = %d, want %d", i, q.ID, want[i])
+		}
+	}
+}
+
+func TestSetQuoteCategoriesFullReplace(t *testing.T) {
+	s := newTestStore(t)
+	q := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	c1, _ := s.CreateCategory("wisdom")
+	c2, _ := s.CreateCategory("joy")
+	c3, _ := s.CreateCategory("impermanence")
+	if err := s.SetQuoteCategories(q, []int64{c1, c2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetQuoteCategories(q, []int64{c2, c3}); err != nil { // c1 dropped, c3 added
+		t.Fatal(err)
+	}
+	got := catNames(mustMap(t, s)[q])
+	sort.Strings(got)
+	if len(got) != 2 || got[0] != "impermanence" || got[1] != "joy" {
+		t.Errorf("categories = %v, want [impermanence joy]", got)
+	}
+}
+
+func TestSetQuoteCategoriesDedupes(t *testing.T) {
+	s := newTestStore(t)
+	q := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	cid, _ := s.CreateCategory("wisdom")
+	if err := s.SetQuoteCategories(q, []int64{cid, cid, cid}); err != nil {
+		t.Fatal(err)
+	}
+	got := mustMap(t, s)[q]
+	if len(got) != 1 || got[0].ID != cid {
+		t.Errorf("memberships = %+v, want one (%d)", got, cid)
+	}
+}
+
+func TestSetQuoteCategoriesUnknownQuote(t *testing.T) {
+	s := newTestStore(t)
+	cid, _ := s.CreateCategory("wisdom")
+	if err := s.SetQuoteCategories(999, []int64{cid}); !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestSetQuoteCategoriesUnknownCategory(t *testing.T) {
+	s := newTestStore(t)
+	q := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	cid, _ := s.CreateCategory("wisdom")
+	if err := s.SetQuoteCategories(q, []int64{cid, 999}); !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
+	}
+	// All-or-nothing: the valid membership was not written.
+	if got := mustMap(t, s)[q]; len(got) != 0 {
+		t.Errorf("partial state written: %+v", got)
+	}
+}
+
+func TestQuoteCategoryMap(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	c1, _ := s.CreateCategory("wisdom")
+	c2, _ := s.CreateCategory("joy")
+	if err := s.SetQuoteCategories(q1, []int64{c1, c2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetQuoteCategories(q2, []int64{c1}); err != nil {
+		t.Fatal(err)
+	}
+	m := mustMap(t, s)
+	if got := catNames(m[q1]); len(got) != 2 {
+		t.Errorf("q1 = %v, want 2 categories", got)
+	}
+	if got := catNames(m[q2]); len(got) != 1 || got[0] != "wisdom" {
+		t.Errorf("q2 = %v, want [wisdom]", got)
+	}
+	// Quotes without categories are simply absent from the map.
+	if _, ok := m[999]; ok {
+		t.Error("absent quote should not appear in the map")
+	}
+}
+
+// mustMap returns the quote->categories map or fails the test.
+func mustMap(t *testing.T, s *SQLiteStore) map[int64][]Category {
+	t.Helper()
+	m, err := s.QuoteCategoryMap()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return m
+}
+
+// catNames returns just the names of a category slice (order preserved).
+func catNames(cs []Category) []string {
+	out := make([]string, len(cs))
+	for i, c := range cs {
+		out[i] = c.Name
+	}
+	return out
+}

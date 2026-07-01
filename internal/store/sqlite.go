@@ -433,6 +433,98 @@ func (s *SQLiteStore) DeleteCategory(id int64) error {
 	return tx.Commit()
 }
 
+// CategoryQuotes returns the quotes tagged with a category in home order
+// (char_count, then id) — categories are unordered tags, so there is no
+// curated position like a collection has.
+func (s *SQLiteStore) CategoryQuotes(id int64) ([]Quote, error) {
+	rows, err := s.db.Query(
+		"SELECT q."+strings.Join(quoteColumns, ", q.")+
+			" FROM quotes q JOIN category_items ci ON ci.quote_id = q.id"+
+			" WHERE ci.category_id = ? ORDER BY q.char_count ASC, q.id ASC", id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Quote
+	for rows.Next() {
+		q, err := scanQuote(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, q)
+	}
+	return out, rows.Err()
+}
+
+// SetQuoteCategories replaces a quote's category set in a single transaction:
+// it validates the quote and every category id first, then deletes the old
+// memberships and inserts the new ones. ErrNotFound (and no partial state) on
+// an unknown quote or category id.
+func (s *SQLiteStore) SetQuoteCategories(quoteID int64, categoryIDs []int64) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	var one int64
+	if err := tx.QueryRow("SELECT 1 FROM quotes WHERE id = ?", quoteID).Scan(&one); err != nil {
+		if err == sql.ErrNoRows {
+			return rollback(tx, fmt.Errorf("%w: quote %d", ErrNotFound, quoteID))
+		}
+		return rollback(tx, err)
+	}
+	// De-duplicate the incoming list, dropping non-positive ids.
+	seen := make(map[int64]bool)
+	var ids []int64
+	for _, cid := range categoryIDs {
+		if cid <= 0 || seen[cid] {
+			continue
+		}
+		seen[cid] = true
+		ids = append(ids, cid)
+	}
+	for _, cid := range ids {
+		if err := tx.QueryRow("SELECT 1 FROM categories WHERE id = ?", cid).Scan(&one); err != nil {
+			if err == sql.ErrNoRows {
+				return rollback(tx, fmt.Errorf("%w: category %d", ErrNotFound, cid))
+			}
+			return rollback(tx, err)
+		}
+	}
+	if _, err := tx.Exec("DELETE FROM category_items WHERE quote_id = ?", quoteID); err != nil {
+		return rollback(tx, err)
+	}
+	for _, cid := range ids {
+		if _, err := tx.Exec("INSERT INTO category_items (category_id, quote_id) VALUES (?, ?)", cid, quoteID); err != nil {
+			return rollback(tx, err)
+		}
+	}
+	return tx.Commit()
+}
+
+// QuoteCategoryMap returns quote_id -> its categories in a single query, for
+// rendering chip rows on a list of quotes without an N+1 lookup.
+func (s *SQLiteStore) QuoteCategoryMap() (map[int64][]Category, error) {
+	rows, err := s.db.Query(
+		`SELECT ci.quote_id, c.id, c.name
+		 FROM category_items ci
+		 JOIN categories c ON c.id = ci.category_id
+		 ORDER BY ci.quote_id ASC, c.name COLLATE NOCASE ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make(map[int64][]Category)
+	for rows.Next() {
+		var qid int64
+		var c Category
+		if err := rows.Scan(&qid, &c.ID, &c.Name); err != nil {
+			return nil, err
+		}
+		out[qid] = append(out[qid], c)
+	}
+	return out, rows.Err()
+}
+
 // isUniqueViolation reports whether err is a SQLite uniqueness-constraint
 // failure (e.g. a duplicate category name).
 func isUniqueViolation(err error) bool {
