@@ -15,23 +15,45 @@ import (
 )
 
 type pageData struct {
-	Quotes      []store.Quote
-	Collections []store.Collection
-	View        viewSpec
-	Count       int
+	Quotes           []store.Quote
+	Collections      []store.Collection
+	Categories       []store.Category
+	QuoteCategoryMap map[int64][]store.Category
+	View             viewSpec
+	Count            int
 }
 
-// viewSpec describes which view is rendered (home or a collection) and drives the
-// layout: home allows +New and the selection toolbar; a collection is read-only
-// (copyable) with a delete-collection button.
+// viewSpec describes which view is rendered (home, a collection, or a category)
+// and drives the layout: home allows +New and the selection toolbar; a collection
+// or category is read-only (copyable) with a delete button.
 type viewSpec struct {
 	IsCollection bool
 	CollectionID int64
+	IsCategory   bool
+	CategoryID   int64
 	Title        string
 	ExportURL    string
 }
 
-func (v viewSpec) CanNew() bool { return !v.IsCollection }
+func (v viewSpec) CanNew() bool { return !v.IsCollection && !v.IsCategory }
+
+// basePageData loads the sidebar (collections + categories) and the per-quote
+// category map shared by every full-page render.
+func (s *Server) basePageData() (pageData, error) {
+	cols, err := s.store.ListCollections()
+	if err != nil {
+		return pageData{}, err
+	}
+	cats, err := s.store.ListCategories()
+	if err != nil {
+		return pageData{}, err
+	}
+	catMap, err := s.store.QuoteCategoryMap()
+	if err != nil {
+		return pageData{}, err
+	}
+	return pageData{Collections: cols, Categories: cats, QuoteCategoryMap: catMap}, nil
+}
 
 type formData struct {
 	ID          int64
@@ -43,17 +65,20 @@ type formData struct {
 }
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
+	data, err := s.basePageData()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
 	qs, err := s.store.List()
 	if err != nil {
 		serverError(w, err)
 		return
 	}
-	cols, err := s.store.ListCollections()
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	s.render(w, "page", pageData{Quotes: qs, Collections: cols, Count: len(qs), View: viewSpec{Title: "Quotes", ExportURL: "/export.txt"}})
+	data.Quotes = qs
+	data.Count = len(qs)
+	data.View = viewSpec{Title: "Quotes", ExportURL: "/export.txt"}
+	s.render(w, "page", data)
 }
 
 // renderQuoteList re-renders the full (char_count-sorted) quote list as an
@@ -86,22 +111,52 @@ func (s *Server) collection(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
-	cols, err := s.store.ListCollections()
+	data, err := s.basePageData()
 	if err != nil {
 		serverError(w, err)
 		return
 	}
-	s.render(w, "page", pageData{
-		Quotes:      qs,
-		Collections: cols,
-		Count:       len(qs),
-		View: viewSpec{
-			IsCollection: true,
-			CollectionID: cid,
-			Title:        fmt.Sprintf("Collection %d", cid),
-			ExportURL:    fmt.Sprintf("/collections/%d/export.txt", cid),
-		},
-	})
+	data.Quotes = qs
+	data.Count = len(qs)
+	data.View = viewSpec{
+		IsCollection: true,
+		CollectionID: cid,
+		Title:        fmt.Sprintf("Collection %d", cid),
+		ExportURL:    fmt.Sprintf("/collections/%d/export.txt", cid),
+	}
+	s.render(w, "page", data)
+}
+
+// category renders a read-only view of the quotes tagged with a category.
+func (s *Server) category(w http.ResponseWriter, r *http.Request) {
+	ctid, ok := parseID(w, r, "ctid")
+	if !ok {
+		return
+	}
+	c, err := s.store.GetCategory(ctid)
+	if err != nil {
+		handleStoreErr(w, err)
+		return
+	}
+	qs, err := s.store.CategoryQuotes(ctid)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	data, err := s.basePageData()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	data.Quotes = qs
+	data.Count = len(qs)
+	data.View = viewSpec{
+		IsCategory: true,
+		CategoryID: ctid,
+		Title:      fmt.Sprintf("#%s", c.Name),
+		ExportURL:  fmt.Sprintf("/categories/%d/export.txt", ctid),
+	}
+	s.render(w, "page", data)
 }
 
 func (s *Server) createCollection(w http.ResponseWriter, r *http.Request) {

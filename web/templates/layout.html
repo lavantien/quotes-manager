@@ -21,7 +21,7 @@
     </div>
     <div class="topbar__actions">
       <button type="button" class="btn" data-action="copy-all" data-export="{{.View.ExportURL}}">Copy all</button>
-      {{if .View.CanNew}}<button type="button" class="btn btn--primary" hx-get="/quotes/new" hx-target="#form-slot" hx-swap="innerHTML">+ New</button>{{else}}<button type="button" class="btn btn--danger" hx-delete="/collections/{{.View.CollectionID}}" hx-confirm="Delete this collection?">Delete collection</button>{{end}}
+      {{if .View.CanNew}}<button type="button" class="btn btn--primary" hx-get="/quotes/new" hx-target="#form-slot" hx-swap="innerHTML">+ New</button>{{else if .View.IsCollection}}<button type="button" class="btn btn--danger" hx-delete="/collections/{{.View.CollectionID}}" hx-confirm="Delete this collection?">Delete collection</button>{{else if .View.IsCategory}}<button type="button" class="btn btn--danger" hx-delete="/categories/{{.View.CategoryID}}" hx-confirm="Delete this category? The quotes themselves are kept.">Delete category</button>{{end}}
     </div>
   </header>
   {{if .View.CanNew}}<div id="form-slot" class="form-slot"></div>{{end}}

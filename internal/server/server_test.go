@@ -728,3 +728,55 @@ func TestCollectionNotFound(t *testing.T) {
 		t.Errorf("status = %d, want 404", rec.Code)
 	}
 }
+
+func fakeWithCategory(t *testing.T) (*fakeStore, int64) {
+	t.Helper()
+	fs := newFake(sampleQuote(1), sampleQuote(2), sampleQuote(3))
+	cid, err := fs.CreateCategory("wisdom")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, qid := range []int64{1, 2} {
+		if err := fs.SetQuoteCategories(qid, []int64{cid}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return fs, cid
+}
+
+func TestCategoryView(t *testing.T) {
+	fs, cid := fakeWithCategory(t) // category tags quotes 1 and 2
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", fmt.Sprintf("/categories/%d", cid), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Human beings are shady") {
+		t.Error("category view missing its quotes")
+	}
+	if !strings.Contains(body, "#wisdom") {
+		t.Error("category view missing #name title")
+	}
+	if strings.Contains(body, "+ New") {
+		t.Error("category view must not show + New")
+	}
+	if !strings.Contains(body, "Delete category") {
+		t.Error("category view missing delete-category button")
+	}
+	// Read-only like a collection: copyable, not editable.
+	if strings.Contains(body, `/edit"`) {
+		t.Error("category blocks must not be editable")
+	}
+	if !strings.Contains(body, `data-action="copy"`) {
+		t.Error("category blocks should be copyable")
+	}
+}
+
+func TestCategoryViewNotFound(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "GET", "/categories/999", "")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
