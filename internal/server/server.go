@@ -48,7 +48,11 @@ func (s *Server) routes() *http.ServeMux {
 	m.HandleFunc("DELETE /collections/{cid}", s.deleteCollection)
 	m.HandleFunc("POST /collections/{cid}/reorder", s.collectionReorder)
 	m.HandleFunc("GET /collections/{cid}/export.txt", s.collectionExport)
+	m.HandleFunc("GET /sidebar", s.sidebar)
 	m.HandleFunc("GET /categories/{ctid}", s.category)
+	m.HandleFunc("POST /categories", s.createCategory)
+	m.HandleFunc("POST /categories/{ctid}/rename", s.renameCategory)
+	m.HandleFunc("DELETE /categories/{ctid}", s.deleteCategory)
 	m.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS()))))
 	return m
 }

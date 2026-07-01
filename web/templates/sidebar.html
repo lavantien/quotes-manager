@@ -1,0 +1,21 @@
+{{define "sidebar"}}
+<aside class="sidebar">
+  <section class="sidebar__section">
+    <h2 class="sidebar__heading">Collections</h2>
+    <a class="sidebar__link{{if and (not .View.IsCollection) (not .View.IsCategory)}} is-active{{end}}" href="/">Home</a>
+    {{range .Collections}}<a class="sidebar__link{{if eq .ID $.View.CollectionID}} is-active{{end}}" href="/collections/{{.ID}}">{{.ID}}{{if gt .Count 0}} <span class="sidebar__count">{{.Count}}</span>{{end}}</a>{{end}}
+  </section>
+  <section class="sidebar__section">
+    <h2 class="sidebar__heading">Categories</h2>
+    {{range .Categories}}<div class="sidebar__cat" data-id="{{.ID}}">
+      <a class="sidebar__link{{if eq .ID $.View.CategoryID}} is-active{{end}}" href="/categories/{{.ID}}">{{.Name}}{{if gt .Count 0}} <span class="sidebar__count">{{.Count}}</span>{{end}}</a>
+      <button type="button" class="sidebar__icon" data-action="rename-category" data-id="{{.ID}}" data-name="{{.Name}}" aria-label="Rename category">&#9998;</button>
+      <button type="button" class="sidebar__icon sidebar__icon--danger" hx-delete="/categories/{{.ID}}" hx-confirm="Delete this category? The quotes themselves are kept." aria-label="Delete category">&#10005;</button>
+    </div>{{else}}<p class="sidebar__empty">No categories yet.</p>{{end}}
+    <form class="sidebar__new" data-action="new-category">
+      <input class="sidebar__input" type="text" name="name" placeholder="+ new category" required maxlength="100">
+      <button class="btn btn--sm" type="submit">Add</button>
+    </form>
+  </section>
+</aside>
+{{end}}

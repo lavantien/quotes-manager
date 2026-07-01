@@ -780,3 +780,122 @@ func TestCategoryViewNotFound(t *testing.T) {
 		t.Errorf("status = %d, want 404", rec.Code)
 	}
 }
+
+func TestSidebarListsCollectionsAndCategories(t *testing.T) {
+	fs := newFake(sampleQuote(1))
+	if _, err := fs.CreateCategory("wisdom"); err != nil {
+		t.Fatal(err)
+	}
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", "/sidebar", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `<aside class="sidebar">`) {
+		t.Error("sidebar fragment missing root element")
+	}
+	if !strings.Contains(body, "Collections") || !strings.Contains(body, "Categories") {
+		t.Error("sidebar missing section headings")
+	}
+	if !strings.Contains(body, "wisdom") {
+		t.Error("sidebar missing category link")
+	}
+}
+
+func TestCreateCategory(t *testing.T) {
+	fs := newFake(sampleQuote(1))
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", "/categories", "name=wisdom", "Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "wisdom") {
+		t.Error("create response should include the new category in the sidebar")
+	}
+	if len(fs.categories) != 1 || fs.categories[0].Name != "wisdom" {
+		t.Errorf("categories = %+v", fs.categories)
+	}
+}
+
+func TestCreateCategoryDuplicate(t *testing.T) {
+	fs := newFake(sampleQuote(1))
+	if _, err := fs.CreateCategory("wisdom"); err != nil {
+		t.Fatal(err)
+	}
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", "/categories", "name=wisdom", "Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusConflict {
+		t.Errorf("status = %d, want 409", rec.Code)
+	}
+	if len(fs.categories) != 1 {
+		t.Errorf("duplicate create should not add a category: %+v", fs.categories)
+	}
+}
+
+func TestCreateCategoryEmptyName(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "POST", "/categories", "name=%20%20", "Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestRenameCategory(t *testing.T) {
+	fs := newFake(sampleQuote(1))
+	cid, err := fs.CreateCategory("wisdom")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/categories/%d/rename", cid), "name=insight",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "insight") {
+		t.Error("rename response should include the renamed category")
+	}
+	if fs.categories[0].Name != "insight" {
+		t.Errorf("name = %q, want insight", fs.categories[0].Name)
+	}
+}
+
+func TestRenameCategoryDuplicate(t *testing.T) {
+	fs := newFake(sampleQuote(1))
+	cid, err := fs.CreateCategory("wisdom")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fs.CreateCategory("joy"); err != nil {
+		t.Fatal(err)
+	}
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/categories/%d/rename", cid), "name=joy",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusConflict {
+		t.Errorf("status = %d, want 409", rec.Code)
+	}
+	if fs.categories[0].Name != "wisdom" {
+		t.Errorf("failed rename changed the name: %q", fs.categories[0].Name)
+	}
+}
+
+func TestDeleteCategoryHandler(t *testing.T) {
+	fs := newFake(sampleQuote(1))
+	cid, err := fs.CreateCategory("wisdom")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := newServer(t, fs)
+	rec := do(t, srv, "DELETE", fmt.Sprintf("/categories/%d", cid), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if rec.Header().Get("HX-Redirect") != "/" {
+		t.Errorf("HX-Redirect = %q, want /", rec.Header().Get("HX-Redirect"))
+	}
+	if len(fs.categories) != 0 {
+		t.Errorf("category not deleted: %+v", fs.categories)
+	}
+}

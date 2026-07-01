@@ -206,6 +206,73 @@ func (s *Server) deleteCollection(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// renderSidebar writes the sidebar fragment with fresh collection/category data;
+// shared by the OOB-refresh endpoint and the create/rename handlers so a single
+// swap refreshes both sections (and the counts).
+func (s *Server) renderSidebar(w http.ResponseWriter) {
+	data, err := s.basePageData()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	s.render(w, "sidebar", data)
+}
+
+func (s *Server) sidebar(w http.ResponseWriter, r *http.Request) {
+	s.renderSidebar(w)
+}
+
+func (s *Server) createCategory(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		badRequest(w)
+		return
+	}
+	name := strings.TrimSpace(r.PostForm.Get("name"))
+	if name == "" {
+		badRequest(w)
+		return
+	}
+	if _, err := s.store.CreateCategory(name); err != nil {
+		handleStoreErr(w, err)
+		return
+	}
+	s.renderSidebar(w)
+}
+
+func (s *Server) renameCategory(w http.ResponseWriter, r *http.Request) {
+	ctid, ok := parseID(w, r, "ctid")
+	if !ok {
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		badRequest(w)
+		return
+	}
+	name := strings.TrimSpace(r.PostForm.Get("name"))
+	if name == "" {
+		badRequest(w)
+		return
+	}
+	if err := s.store.RenameCategory(ctid, name); err != nil {
+		handleStoreErr(w, err)
+		return
+	}
+	s.renderSidebar(w)
+}
+
+func (s *Server) deleteCategory(w http.ResponseWriter, r *http.Request) {
+	ctid, ok := parseID(w, r, "ctid")
+	if !ok {
+		return
+	}
+	if err := s.store.DeleteCategory(ctid); err != nil {
+		handleStoreErr(w, err)
+		return
+	}
+	w.Header().Set("HX-Redirect", "/")
+	w.WriteHeader(http.StatusOK)
+}
+
 func (s *Server) collectionExport(w http.ResponseWriter, r *http.Request) {
 	cid, ok := parseID(w, r, "cid")
 	if !ok {
@@ -429,6 +496,10 @@ func writeText(w http.ResponseWriter, s string) {
 func handleStoreErr(w http.ResponseWriter, err error) {
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
+		return
+	}
+	if errors.Is(err, store.ErrDuplicate) {
+		http.Error(w, "name already in use", http.StatusConflict)
 		return
 	}
 	serverError(w, err)
