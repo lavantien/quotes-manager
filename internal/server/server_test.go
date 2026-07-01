@@ -947,8 +947,8 @@ func TestSetQuoteCategories(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d", rec.Code)
 	}
-	if rec.Header().Get("HX-Trigger") == "" {
-		t.Error("set should trigger a sidebar refresh")
+	if !strings.Contains(rec.Body.String(), "joy") {
+		t.Error("set response should render the updated chip row")
 	}
 	m, _ := fs.QuoteCategoryMap()
 	if len(m[3]) != 2 {

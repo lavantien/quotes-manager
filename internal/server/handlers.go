@@ -379,8 +379,8 @@ func (s *Server) resolveCategoryID(name string) (int64, error) {
 }
 
 // setQuoteCategories replaces a quote's categories from the editor submission
-// (checked ids plus an optional new name), refreshes the sidebar counts
-// out-of-band, and returns the fresh chip row.
+// (checked ids plus an optional new name) and returns the fresh chip row; the
+// client also asks /sidebar for refreshed counts.
 func (s *Server) setQuoteCategories(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseID(w, r, "id")
 	if !ok {
@@ -403,7 +403,6 @@ func (s *Server) setQuoteCategories(w http.ResponseWriter, r *http.Request) {
 		handleStoreErr(w, err)
 		return
 	}
-	w.Header().Set("HX-Trigger", `{"qm:refresh-sidebar":"*"}`)
 	s.renderQuoteChips(w, id)
 }
 

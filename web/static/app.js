@@ -37,6 +37,18 @@
       .then(function (t) { return navigator.clipboard.writeText(t); });
   }
 
+  // swapSidebar replaces the sidebar with fresh HTML fetched from /sidebar, so
+  // category changes anywhere refresh both sections (and the counts).
+  function swapSidebar(html) {
+    var aside = document.querySelector(".sidebar");
+    if (aside) aside.outerHTML = html;
+  }
+  function refreshSidebar() {
+    fetch("/sidebar")
+      .then(function (r) { return r.ok ? r.text() : ""; })
+      .then(function (html) { if (html) swapSidebar(html); });
+  }
+
   document.addEventListener("change", function (e) {
     if (e.target.id === "select-all") {
       document.querySelectorAll(".quote__check input.select").forEach(function (cb) { cb.checked = e.target.checked; });
@@ -87,6 +99,90 @@
       if (slot && slot.contains(btn)) { slot.innerHTML = ""; return; }
       // Inline edit: the block was replaced by the form; reload to restore it.
       location.reload();
+    }
+
+    if (action === "cancel-categories") {
+      var chipsSlot = document.getElementById("chips-" + btn.dataset.id);
+      fetch("/quotes/" + btn.dataset.id + "/categories")
+        .then(function (r) { return r.text(); })
+        .then(function (html) { if (chipsSlot) chipsSlot.outerHTML = html; });
+    }
+
+    if (action === "rename-category") {
+      startRename(btn);
+    }
+  });
+
+  // Inline category rename: swap the link for an input, commit on Enter/blur.
+  function startRename(btn) {
+    var cat = btn.closest(".sidebar__cat");
+    if (!cat || cat.querySelector(".sidebar__rename")) return;
+    var link = cat.querySelector(".sidebar__link");
+    if (!link) return;
+    var id = btn.dataset.id;
+    var name = btn.dataset.name || link.textContent.trim();
+    var input = document.createElement("input");
+    input.className = "sidebar__rename";
+    input.type = "text";
+    input.value = name;
+    input.maxLength = 100;
+    cat.replaceChild(input, link);
+    input.focus();
+    input.select();
+    var settled = false;
+    function commit() {
+      if (settled) return;
+      settled = true;
+      var val = input.value.trim();
+      if (val && val !== name) {
+        var body = new URLSearchParams();
+        body.set("name", val);
+        fetch("/categories/" + id + "/rename", { method: "POST", body: body })
+          .then(function (r) { if (r.ok) r.text().then(swapSidebar); else refreshSidebar(); });
+      } else {
+        refreshSidebar();
+      }
+    }
+    input.addEventListener("blur", commit);
+    input.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") { ev.preventDefault(); input.blur(); }
+      else if (ev.key === "Escape") { settled = true; refreshSidebar(); }
+    });
+  }
+
+  // Category mutations that return a fresh sidebar fragment.
+  document.addEventListener("submit", async function (e) {
+    var form = e.target.closest && e.target.closest("form[data-action]");
+    if (!form) return;
+    var action = form.dataset.action;
+
+    if (action === "new-category") {
+      e.preventDefault();
+      var input = form.querySelector('input[name="name"]');
+      var name = (input && input.value || "").trim();
+      if (!name) return;
+      var body = new URLSearchParams();
+      body.set("name", name);
+      var addBtn = form.querySelector('button[type="submit"]');
+      var res = await fetch("/categories", { method: "POST", body: body });
+      if (res.ok) {
+        swapSidebar(await res.text());
+      } else if (addBtn) {
+        flash(addBtn, "Exists");
+      }
+    }
+
+    if (action === "save-categories") {
+      e.preventDefault();
+      var qid = form.dataset.id;
+      var saveBody = new URLSearchParams(new FormData(form));
+      var saveRes = await fetch("/quotes/" + qid + "/categories", { method: "POST", body: saveBody });
+      if (saveRes.ok) {
+        var html = await saveRes.text();
+        var chips = document.getElementById("chips-" + qid);
+        if (chips) chips.outerHTML = html;
+        refreshSidebar();
+      }
     }
   });
 
