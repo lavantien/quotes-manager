@@ -2,10 +2,11 @@ package store
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/mattn/go-sqlite3"
 
 	"github.com/lavantien/quotes-manager/internal/quote"
 )
@@ -36,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_collection_items_collection ON collection_items(c
 CREATE INDEX IF NOT EXISTS idx_collection_items_quote ON collection_items(quote_id);
 CREATE TABLE IF NOT EXISTS categories (
     id   INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
+    name TEXT NOT NULL UNIQUE COLLATE NOCASE
 );
 CREATE TABLE IF NOT EXISTS category_items (
     category_id INTEGER NOT NULL,
@@ -350,6 +351,65 @@ func (s *SQLiteStore) DeleteCollection(id int64) error {
 		return rollback(tx, fmt.Errorf("%w: id %d", ErrNotFound, id))
 	}
 	return tx.Commit()
+}
+
+// --- categories ---
+
+func (s *SQLiteStore) ListCategories() ([]Category, error) {
+	rows, err := s.db.Query(
+		`SELECT c.id, c.name,
+		        (SELECT COUNT(*) FROM category_items ci WHERE ci.category_id = c.id)
+		 FROM categories c
+		 ORDER BY c.name COLLATE NOCASE ASC, c.id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Category
+	for rows.Next() {
+		var c Category
+		if err := rows.Scan(&c.ID, &c.Name, &c.Count); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) CreateCategory(name string) (int64, error) {
+	res, err := s.db.Exec("INSERT INTO categories (name) VALUES (?)", name)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return 0, fmt.Errorf("%w: category %q", ErrDuplicate, name)
+		}
+		return 0, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+func (s *SQLiteStore) GetCategory(id int64) (Category, error) {
+	var c Category
+	err := s.db.QueryRow(
+		`SELECT id, name, (SELECT COUNT(*) FROM category_items ci WHERE ci.category_id = id)
+		 FROM categories WHERE id = ?`, id).Scan(&c.ID, &c.Name, &c.Count)
+	if err == sql.ErrNoRows {
+		return Category{}, ErrNotFound
+	}
+	return c, err
+}
+
+// isUniqueViolation reports whether err is a SQLite uniqueness-constraint
+// failure (e.g. a duplicate category name).
+func isUniqueViolation(err error) bool {
+	var se sqlite3.Error
+	if errors.As(err, &se) {
+		return se.ExtendedCode == sqlite3.ErrConstraintUnique || se.Code == sqlite3.ErrConstraint
+	}
+	return false
 }
 
 type scanner interface {
