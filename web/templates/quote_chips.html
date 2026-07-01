@@ -1,0 +1,5 @@
+{{define "quote_chips"}}
+<div class="quote__chips" id="chips-{{.ID}}">
+  {{range .Categories}}<a class="category-chip" href="/categories/{{.ID}}">{{.Name}}</a>{{end}}
+</div>
+{{end}}

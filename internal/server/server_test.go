@@ -899,3 +899,93 @@ func TestDeleteCategoryHandler(t *testing.T) {
 		t.Errorf("category not deleted: %+v", fs.categories)
 	}
 }
+
+func TestQuoteChips(t *testing.T) {
+	fs, _ := fakeWithCategory(t) // quote 1 tagged "wisdom"
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", "/quotes/1/categories", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `id="chips-1"`) {
+		t.Error("chips fragment missing chips-1 handle")
+	}
+	if !strings.Contains(body, "wisdom") {
+		t.Error("chips fragment missing the category chip")
+	}
+}
+
+func TestEditQuoteCategories(t *testing.T) {
+	fs, _ := fakeWithCategory(t) // quote 1 tagged "wisdom" (category id 1)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", "/quotes/1/categories/edit", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `name="id"`) {
+		t.Error("editor missing category checkbox")
+	}
+	if !strings.Contains(body, `value="1" checked`) {
+		t.Error("editor should pre-check the quote's current category")
+	}
+	if !strings.Contains(body, `name="new_name"`) {
+		t.Error("editor missing new-category field")
+	}
+}
+
+func TestSetQuoteCategories(t *testing.T) {
+	fs, cid := fakeWithCategory(t) // quote 3 exists, untagged
+	cid2, err := fs.CreateCategory("joy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", "/quotes/3/categories", fmt.Sprintf("id=%d&id=%d", cid, cid2),
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if rec.Header().Get("HX-Trigger") == "" {
+		t.Error("set should trigger a sidebar refresh")
+	}
+	m, _ := fs.QuoteCategoryMap()
+	if len(m[3]) != 2 {
+		t.Errorf("quote 3 tags = %+v, want 2", m[3])
+	}
+}
+
+func TestSetQuoteCategoriesWithNewName(t *testing.T) {
+	fs := newFake(sampleQuote(1))
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", "/quotes/1/categories", "new_name=insight",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "insight") {
+		t.Error("chip row should include the newly created category")
+	}
+	if len(fs.categories) != 1 || fs.categories[0].Name != "insight" {
+		t.Errorf("category not created: %+v", fs.categories)
+	}
+	m, _ := fs.QuoteCategoryMap()
+	if len(m[1]) != 1 || m[1][0].Name != "insight" {
+		t.Errorf("quote 1 not tagged: %+v", m[1])
+	}
+}
+
+func TestSetQuoteCategoriesUnknownQuote(t *testing.T) {
+	fs := newFake(sampleQuote(1))
+	cid, err := fs.CreateCategory("wisdom")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", "/quotes/999/categories", fmt.Sprintf("id=%d", cid),
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}

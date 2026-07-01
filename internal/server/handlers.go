@@ -64,6 +64,23 @@ type formData struct {
 	SubmitLabel string
 }
 
+// chipsData drives the quote_chips fragment (a quote's category chip row).
+type chipsData struct {
+	ID         int64
+	Categories []store.Category
+}
+
+// editorData drives the inline category checkbox editor for a quote.
+type editorData struct {
+	ID    int64
+	Items []categoryItem
+}
+
+type categoryItem struct {
+	Category store.Category
+	Checked  bool
+}
+
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 	data, err := s.basePageData()
 	if err != nil {
@@ -271,6 +288,111 @@ func (s *Server) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
+}
+
+// renderQuoteChips writes the chip row for a quote from the current memberships.
+func (s *Server) renderQuoteChips(w http.ResponseWriter, id int64) {
+	m, err := s.store.QuoteCategoryMap()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	s.render(w, "quote_chips", chipsData{ID: id, Categories: m[id]})
+}
+
+// quoteChips returns a quote's read-only chip row (used to cancel the editor).
+func (s *Server) quoteChips(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(w, r, "id")
+	if !ok {
+		return
+	}
+	if _, err := s.store.Get(id); err != nil {
+		handleStoreErr(w, err)
+		return
+	}
+	s.renderQuoteChips(w, id)
+}
+
+// editQuoteCategories returns the inline checkbox editor with a quote's current
+// categories pre-checked.
+func (s *Server) editQuoteCategories(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(w, r, "id")
+	if !ok {
+		return
+	}
+	if _, err := s.store.Get(id); err != nil {
+		handleStoreErr(w, err)
+		return
+	}
+	all, err := s.store.ListCategories()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	m, err := s.store.QuoteCategoryMap()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	current := make(map[int64]bool, len(m[id]))
+	for _, c := range m[id] {
+		current[c.ID] = true
+	}
+	items := make([]categoryItem, len(all))
+	for i, c := range all {
+		items[i] = categoryItem{Category: c, Checked: current[c.ID]}
+	}
+	s.render(w, "quote_category_editor", editorData{ID: id, Items: items})
+}
+
+// resolveCategoryID returns the id of name, creating the category if needed. A
+// name that already exists (case-insensitively) resolves to the existing id so
+// typing a known name simply selects it.
+func (s *Server) resolveCategoryID(name string) (int64, error) {
+	if id, err := s.store.CreateCategory(name); err == nil {
+		return id, nil
+	} else if !errors.Is(err, store.ErrDuplicate) {
+		return 0, err
+	}
+	cats, err := s.store.ListCategories()
+	if err != nil {
+		return 0, err
+	}
+	for _, c := range cats {
+		if strings.EqualFold(c.Name, name) {
+			return c.ID, nil
+		}
+	}
+	return 0, store.ErrDuplicate
+}
+
+// setQuoteCategories replaces a quote's categories from the editor submission
+// (checked ids plus an optional new name), refreshes the sidebar counts
+// out-of-band, and returns the fresh chip row.
+func (s *Server) setQuoteCategories(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(w, r, "id")
+	if !ok {
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		badRequest(w)
+		return
+	}
+	ids := parseIDs(r.PostForm["id"])
+	if newName := strings.TrimSpace(r.PostForm.Get("new_name")); newName != "" {
+		cid, err := s.resolveCategoryID(newName)
+		if err != nil {
+			handleStoreErr(w, err)
+			return
+		}
+		ids = append(ids, cid)
+	}
+	if err := s.store.SetQuoteCategories(id, ids); err != nil {
+		handleStoreErr(w, err)
+		return
+	}
+	w.Header().Set("HX-Trigger", `{"qm:refresh-sidebar":"*"}`)
+	s.renderQuoteChips(w, id)
 }
 
 func (s *Server) collectionExport(w http.ResponseWriter, r *http.Request) {

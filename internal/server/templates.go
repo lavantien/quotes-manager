@@ -25,6 +25,8 @@ func mustTemplates() *template.Template {
 		"templates/quote_block_ro.html",
 		"templates/quote_form.html",
 		"templates/sidebar.html",
+		"templates/quote_chips.html",
+		"templates/quote_category_editor.html",
 	))
 }
 

@@ -1,0 +1,11 @@
+{{define "quote_category_editor"}}
+<form class="category-editor" id="chips-{{.ID}}"
+      hx-post="/quotes/{{.ID}}/categories" hx-target="#chips-{{.ID}}" hx-swap="outerHTML">
+  {{range .Items}}<label class="category-editor__item"><input type="checkbox" name="id" value="{{.Category.ID}}"{{if .Checked}} checked{{end}}><span>#{{.Category.Name}}</span></label>{{end}}
+  <div class="category-editor__row">
+    <input class="category-editor__new" type="text" name="new_name" placeholder="+ new category" maxlength="100">
+    <button class="btn btn--sm" type="submit">Done</button>
+    <button class="btn btn--sm" type="button" data-action="cancel-categories" data-id="{{.ID}}">Cancel</button>
+  </div>
+</form>
+{{end}}
