@@ -114,3 +114,56 @@ func TestEnsureSeededDoesNotReseedAfterDelete(t *testing.T) {
 		t.Errorf("EnsureSeeded resurrected %d deleted quotes", n)
 	}
 }
+
+// TestEnsureSeededSeedsSampleCategories: on a fresh database where the
+// categories tables already exist (as store.Open provisions them before
+// seeding), EnsureSeeded tags a few quotes with example categories so the
+// sidebar and chip rows are non-empty out of the box.
+func TestEnsureSeededSeedsSampleCategories(t *testing.T) {
+	db := openDB(t)
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE);
+		CREATE TABLE IF NOT EXISTS category_items (category_id INTEGER NOT NULL, quote_id INTEGER NOT NULL, PRIMARY KEY (category_id, quote_id))`); err != nil {
+		t.Fatal(err)
+	}
+	if err := EnsureSeeded(db); err != nil {
+		t.Fatal(err)
+	}
+	var cats, items int
+	if err := db.QueryRow("SELECT COUNT(*) FROM categories").Scan(&cats); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow("SELECT COUNT(*) FROM category_items").Scan(&items); err != nil {
+		t.Fatal(err)
+	}
+	if cats == 0 || items == 0 {
+		t.Errorf("expected sample categories/tags, got cats=%d items=%d", cats, items)
+	}
+}
+
+// TestSeedCategoriesIdempotent: re-entering the seeding path (e.g. recovery
+// from a partial failure) must not duplicate category tags.
+func TestSeedCategoriesIdempotent(t *testing.T) {
+	db := openDB(t)
+	db.Exec(`CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE);
+		CREATE TABLE IF NOT EXISTS category_items (category_id INTEGER NOT NULL, quote_id INTEGER NOT NULL, PRIMARY KEY (category_id, quote_id))`)
+	if err := EnsureSeeded(db); err != nil {
+		t.Fatal(err)
+	}
+	var first int
+	if err := db.QueryRow("SELECT COUNT(*) FROM category_items").Scan(&first); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("DELETE FROM app_meta WHERE key = 'seeded'"); err != nil {
+		t.Fatal(err)
+	}
+	if err := EnsureSeeded(db); err != nil {
+		t.Fatal(err)
+	}
+	var second int
+	if err := db.QueryRow("SELECT COUNT(*) FROM category_items").Scan(&second); err != nil {
+		t.Fatal(err)
+	}
+	if first != second {
+		t.Errorf("re-seed changed category_items %d -> %d", first, second)
+	}
+}
