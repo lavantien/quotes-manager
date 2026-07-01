@@ -53,6 +53,7 @@ func (s *Server) routes() *http.ServeMux {
 	m.HandleFunc("GET /collections/{cid}/export.txt", s.collectionExport)
 	m.HandleFunc("GET /sidebar", s.sidebar)
 	m.HandleFunc("GET /categories/{ctid}", s.category)
+	m.HandleFunc("GET /categories/{ctid}/export.txt", s.categoryExport)
 	m.HandleFunc("POST /categories", s.createCategory)
 	m.HandleFunc("POST /categories/{ctid}/rename", s.renameCategory)
 	m.HandleFunc("DELETE /categories/{ctid}", s.deleteCategory)

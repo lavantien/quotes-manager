@@ -976,6 +976,40 @@ func TestSetQuoteCategoriesWithNewName(t *testing.T) {
 	}
 }
 
+// TestSetQuoteCategoriesWithExistingName: typing an already-existing category
+// name in the editor selects it instead of erroring or duplicating it.
+func TestSetQuoteCategoriesWithExistingName(t *testing.T) {
+	fs := newFake(sampleQuote(1))
+	if _, err := fs.CreateCategory("wisdom"); err != nil {
+		t.Fatal(err)
+	}
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", "/quotes/1/categories", "new_name=wisdom",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	m, _ := fs.QuoteCategoryMap()
+	if len(m[1]) != 1 || m[1][0].Name != "wisdom" {
+		t.Errorf("quote 1 should be tagged with existing wisdom: %+v", m[1])
+	}
+	if len(fs.categories) != 1 {
+		t.Errorf("should not duplicate the category: %+v", fs.categories)
+	}
+}
+
+func TestCategoryExport(t *testing.T) {
+	fs, cid := fakeWithCategory(t) // category tags quotes 1 and 2
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", fmt.Sprintf("/categories/%d/export.txt", cid), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), ".  \n.  \n.") {
+		t.Error("category export missing dot separator")
+	}
+}
+
 func TestSetQuoteCategoriesUnknownQuote(t *testing.T) {
 	fs := newFake(sampleQuote(1))
 	cid, err := fs.CreateCategory("wisdom")

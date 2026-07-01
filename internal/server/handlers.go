@@ -423,6 +423,24 @@ func (s *Server) collectionExport(w http.ResponseWriter, r *http.Request) {
 	writeText(w, quote.RenderExportFile(quotes))
 }
 
+// categoryExport renders a category's quotes as the plain-text export format.
+func (s *Server) categoryExport(w http.ResponseWriter, r *http.Request) {
+	ctid, ok := parseID(w, r, "ctid")
+	if !ok {
+		return
+	}
+	qs, err := s.store.CategoryQuotes(ctid)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	quotes := make([]*quote.Quote, len(qs))
+	for i, q := range qs {
+		quotes[i] = quote.New(q.SuttaID, q.Citation, splitPassages(q.BodyText))
+	}
+	writeText(w, quote.RenderExportFile(quotes))
+}
+
 func (s *Server) newForm(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "quote_form", formData{Action: "/quotes", SubmitLabel: "Add quote"})
 }
