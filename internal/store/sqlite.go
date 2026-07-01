@@ -33,7 +33,18 @@ CREATE TABLE IF NOT EXISTS collection_items (
     PRIMARY KEY (collection_id, quote_id)
 );
 CREATE INDEX IF NOT EXISTS idx_collection_items_collection ON collection_items(collection_id, position);
-CREATE INDEX IF NOT EXISTS idx_collection_items_quote ON collection_items(quote_id);`
+CREATE INDEX IF NOT EXISTS idx_collection_items_quote ON collection_items(quote_id);
+CREATE TABLE IF NOT EXISTS categories (
+    id   INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS category_items (
+    category_id INTEGER NOT NULL,
+    quote_id    INTEGER NOT NULL,
+    PRIMARY KEY (category_id, quote_id)
+);
+CREATE INDEX IF NOT EXISTS idx_category_items_category ON category_items(category_id);
+CREATE INDEX IF NOT EXISTS idx_category_items_quote ON category_items(quote_id);`
 
 var quoteColumns = []string{"id", "sutta_id", "citation", "body_md", "body_text", "line_count", "char_count", "sources"}
 

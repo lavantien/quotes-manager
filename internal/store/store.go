@@ -25,8 +25,20 @@ type Collection struct {
 	Count int
 }
 
+// Category is a named tag applied to one or more quotes. Count is the number of
+// quotes tagged with it (populated by ListCategories for sidebar rendering).
+type Category struct {
+	ID    int64
+	Name  string
+	Count int
+}
+
 // ErrNotFound is returned when a quote id does not exist.
 var ErrNotFound = errors.New("quote not found")
+
+// ErrDuplicate is returned when a uniqueness constraint (e.g. a category name)
+// is violated.
+var ErrDuplicate = errors.New("duplicate")
 
 // Store is the persistence interface for quotes.
 type Store interface {
