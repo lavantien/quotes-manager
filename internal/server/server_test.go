@@ -20,6 +20,8 @@ type fakeStore struct {
 	nextID      int64
 	collections []store.Collection
 	items       map[int64][]int64
+	categories  []store.Category
+	tags        map[int64][]int64 // quote_id -> category_ids
 }
 
 func newFake(quotes ...store.Quote) *fakeStore {
@@ -29,7 +31,12 @@ func newFake(quotes ...store.Quote) *fakeStore {
 			maxID = q.ID
 		}
 	}
-	return &fakeStore{quotes: append([]store.Quote{}, quotes...), nextID: maxID, items: map[int64][]int64{}}
+	return &fakeStore{
+		quotes: append([]store.Quote{}, quotes...),
+		nextID: maxID,
+		items:  map[int64][]int64{},
+		tags:   map[int64][]int64{},
+	}
 }
 
 func (f *fakeStore) List() ([]store.Quote, error) {
@@ -193,6 +200,170 @@ func (f *fakeStore) AddToCollection(cid int64, quoteIDs []int64) error {
 		}
 	}
 	return nil
+}
+
+func (f *fakeStore) ListCategories() ([]store.Category, error) {
+	out := make([]store.Category, 0, len(f.categories))
+	for _, c := range f.categories {
+		out = append(out, store.Category{ID: c.ID, Name: c.Name, Count: f.catCount(c.ID)})
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		li, lj := strings.ToLower(out[i].Name), strings.ToLower(out[j].Name)
+		if li != lj {
+			return li < lj
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out, nil
+}
+
+func (f *fakeStore) CreateCategory(name string) (int64, error) {
+	for _, c := range f.categories {
+		if strings.EqualFold(c.Name, name) {
+			return 0, fmt.Errorf("%w: category %q", store.ErrDuplicate, name)
+		}
+	}
+	var id int64 = 1
+	if n := len(f.categories); n > 0 {
+		id = f.categories[n-1].ID + 1
+	}
+	f.categories = append(f.categories, store.Category{ID: id, Name: name})
+	return id, nil
+}
+
+func (f *fakeStore) GetCategory(id int64) (store.Category, error) {
+	for _, c := range f.categories {
+		if c.ID == id {
+			return store.Category{ID: c.ID, Name: c.Name, Count: f.catCount(c.ID)}, nil
+		}
+	}
+	return store.Category{}, store.ErrNotFound
+}
+
+func (f *fakeStore) RenameCategory(id int64, name string) error {
+	for i, c := range f.categories {
+		if c.ID == id {
+			for _, other := range f.categories {
+				if other.ID != id && strings.EqualFold(other.Name, name) {
+					return fmt.Errorf("%w: category %q", store.ErrDuplicate, name)
+				}
+			}
+			f.categories[i].Name = name
+			return nil
+		}
+	}
+	return store.ErrNotFound
+}
+
+func (f *fakeStore) DeleteCategory(id int64) error {
+	for i, c := range f.categories {
+		if c.ID == id {
+			f.categories = append(f.categories[:i], f.categories[i+1:]...)
+			for qid, cids := range f.tags {
+				f.tags[qid] = removeID(cids, id)
+			}
+			return nil
+		}
+	}
+	return store.ErrNotFound
+}
+
+func (f *fakeStore) CategoryQuotes(id int64) ([]store.Quote, error) {
+	var out []store.Quote
+	for _, q := range f.quotes {
+		if containsID(f.tags[q.ID], id) {
+			out = append(out, q)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].CharCount != out[j].CharCount {
+			return out[i].CharCount < out[j].CharCount
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out, nil
+}
+
+func (f *fakeStore) SetQuoteCategories(quoteID int64, categoryIDs []int64) error {
+	found := false
+	for _, q := range f.quotes {
+		if q.ID == quoteID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return store.ErrNotFound
+	}
+	known := make(map[int64]bool, len(f.categories))
+	for _, c := range f.categories {
+		known[c.ID] = true
+	}
+	seen := make(map[int64]bool)
+	var ids []int64
+	for _, cid := range categoryIDs {
+		if cid <= 0 || seen[cid] {
+			continue
+		}
+		if !known[cid] {
+			return store.ErrNotFound
+		}
+		seen[cid] = true
+		ids = append(ids, cid)
+	}
+	f.tags[quoteID] = ids
+	return nil
+}
+
+func (f *fakeStore) QuoteCategoryMap() (map[int64][]store.Category, error) {
+	out := make(map[int64][]store.Category)
+	for qid, cids := range f.tags {
+		var cs []store.Category
+		for _, cid := range cids {
+			for _, c := range f.categories {
+				if c.ID == cid {
+					cs = append(cs, store.Category{ID: c.ID, Name: c.Name})
+				}
+			}
+		}
+		sort.SliceStable(cs, func(i, j int) bool {
+			return strings.ToLower(cs[i].Name) < strings.ToLower(cs[j].Name)
+		})
+		if len(cs) > 0 {
+			out[qid] = cs
+		}
+	}
+	return out, nil
+}
+
+// catCount reports how many quotes are tagged with the category.
+func (f *fakeStore) catCount(cid int64) int {
+	n := 0
+	for _, cids := range f.tags {
+		if containsID(cids, cid) {
+			n++
+		}
+	}
+	return n
+}
+
+func containsID(xs []int64, x int64) bool {
+	for _, v := range xs {
+		if v == x {
+			return true
+		}
+	}
+	return false
+}
+
+func removeID(xs []int64, x int64) []int64 {
+	out := xs[:0]
+	for _, v := range xs {
+		if v != x {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 func (f *fakeStore) Close() error { return nil }
