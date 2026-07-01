@@ -81,6 +81,13 @@ type categoryItem struct {
 	Checked  bool
 }
 
+// quoteView bundles a quote with its categories for block rendering, so the
+// chips can be shown without an N+1 lookup per block.
+type quoteView struct {
+	Quote store.Quote
+	Cats  []store.Category
+}
+
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 	data, err := s.basePageData()
 	if err != nil {
@@ -107,7 +114,12 @@ func (s *Server) renderQuoteList(w http.ResponseWriter) {
 		serverError(w, err)
 		return
 	}
-	s.render(w, "quote_list", pageData{Quotes: qs})
+	catMap, err := s.store.QuoteCategoryMap()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	s.render(w, "quote_list", pageData{Quotes: qs, QuoteCategoryMap: catMap})
 }
 
 func (s *Server) listFragment(w http.ResponseWriter, r *http.Request) {

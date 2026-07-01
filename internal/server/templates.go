@@ -16,6 +16,12 @@ func mustTemplates() *template.Template {
 		"display": func(q store.Quote) template.HTML {
 			return quote.New(q.SuttaID, q.Citation, splitPassages(q.BodyText)).DisplayHTML()
 		},
+		"withCats": func(q store.Quote, m map[int64][]store.Category) quoteView {
+			return quoteView{Quote: q, Cats: m[q.ID]}
+		},
+		"chipsFor": func(id int64, cats []store.Category) chipsData {
+			return chipsData{ID: id, Categories: cats}
+		},
 	})
 	return template.Must(tmpl.ParseFS(web.Templates,
 		"templates/layout.html",

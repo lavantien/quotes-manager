@@ -989,3 +989,28 @@ func TestSetQuoteCategoriesUnknownQuote(t *testing.T) {
 		t.Errorf("status = %d, want 404", rec.Code)
 	}
 }
+
+func TestIndexSidebarAndChips(t *testing.T) {
+	fs, _ := fakeWithCategory(t) // quote 1 tagged "wisdom"
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", "/", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `<aside class="sidebar">`) {
+		t.Error("home should render the sidebar")
+	}
+	if !strings.Contains(body, "Categories") {
+		t.Error("sidebar should show the Categories heading")
+	}
+	if !strings.Contains(body, "wisdom") {
+		t.Error("sidebar should list the category")
+	}
+	if !strings.Contains(body, `class="category-chip"`) {
+		t.Error("quote block should render category chips")
+	}
+	if !strings.Contains(body, `/quotes/1/categories/edit`) {
+		t.Error("editable block should expose the category editor trigger")
+	}
+}

@@ -1,8 +1,9 @@
 {{define "quote_block_ro"}}
-<article class="quote quote--ro" id="quote-{{.ID}}" data-id="{{.ID}}" draggable="true">
-  <div class="quote__body">{{display .}}</div>
+<article class="quote quote--ro" id="quote-{{.Quote.ID}}" data-id="{{.Quote.ID}}" draggable="true">
+  <div class="quote__body">{{display .Quote}}</div>
+  {{template "quote_chips" (chipsFor .Quote.ID .Cats)}}
   <div class="quote__actions">
-    <button type="button" class="btn btn--sm" data-action="copy" data-id="{{.ID}}">Copy</button>
+    <button type="button" class="btn btn--sm" data-action="copy" data-id="{{.Quote.ID}}">Copy</button>
   </div>
 </article>
 {{end}}
