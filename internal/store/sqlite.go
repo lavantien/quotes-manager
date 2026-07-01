@@ -139,6 +139,9 @@ func (s *SQLiteStore) Delete(id int64) error {
 	if _, err := tx.Exec("DELETE FROM collection_items WHERE quote_id = ?", id); err != nil {
 		return rollback(tx, err)
 	}
+	if _, err := tx.Exec("DELETE FROM category_items WHERE quote_id = ?", id); err != nil {
+		return rollback(tx, err)
+	}
 	res, err := tx.Exec("DELETE FROM quotes WHERE id = ?", id)
 	if err != nil {
 		return rollback(tx, err)
@@ -159,6 +162,9 @@ func (s *SQLiteStore) DeleteMany(ids []int64) error {
 	}
 	for _, id := range ids {
 		if _, err := tx.Exec("DELETE FROM collection_items WHERE quote_id = ?", id); err != nil {
+			return rollback(tx, err)
+		}
+		if _, err := tx.Exec("DELETE FROM category_items WHERE quote_id = ?", id); err != nil {
 			return rollback(tx, err)
 		}
 		if _, err := tx.Exec("DELETE FROM quotes WHERE id = ?", id); err != nil {

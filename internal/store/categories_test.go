@@ -299,3 +299,51 @@ func catNames(cs []Category) []string {
 	}
 	return out
 }
+
+func TestDeleteQuoteRemovesCategoryMembership(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	cid, _ := s.CreateCategory("wisdom")
+	if err := s.SetQuoteCategories(q1, []int64{cid}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetQuoteCategories(q2, []int64{cid}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Delete(q1); err != nil {
+		t.Fatal(err)
+	}
+	m := mustMap(t, s)
+	if _, ok := m[q1]; ok {
+		t.Errorf("deleted quote still tagged: %+v", m[q1])
+	}
+	cats, _ := s.ListCategories()
+	if cats[0].Count != 1 {
+		t.Errorf("count = %d, want 1", cats[0].Count)
+	}
+}
+
+func TestDeleteManyRemovesCategoryMembership(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	cid, _ := s.CreateCategory("wisdom")
+	for _, q := range []int64{q1, q2, q3} {
+		if err := s.SetQuoteCategories(q, []int64{cid}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.DeleteMany([]int64{q1, q3}); err != nil {
+		t.Fatal(err)
+	}
+	m := mustMap(t, s)
+	if _, ok := m[q1]; ok {
+		t.Errorf("deleted quote still tagged: %+v", m[q1])
+	}
+	cats, _ := s.ListCategories()
+	if cats[0].Count != 1 {
+		t.Errorf("count = %d, want 1", cats[0].Count)
+	}
+}
