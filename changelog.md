@@ -4,6 +4,33 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-07-01
+
+### Added
+- **Categories.** Named, reusable tags for quotes — managed independently of
+  collections. Create, rename, and delete them from the sidebar; names are
+  unique (case-insensitive). Backed by the `categories` and `category_items`
+  tables and `store.ListCategories`, `CreateCategory`, `GetCategory`,
+  `RenameCategory`, `DeleteCategory`, `CategoryQuotes`, `SetQuoteCategories`,
+  and `QuoteCategoryMap`.
+- **Per-quote categories.** Each quote block shows its categories as chips and
+  an inline ✎ editor (`GET /quotes/{id}/categories/edit`) that toggles any
+  combination of categories and can create a new one inline; saving commits the
+  full set via `POST /quotes/{id}/categories` (`store.SetQuoteCategories`).
+- **Category view.** `GET /categories/{ctid}` filters the list to a category's
+  quotes (in home order) with `GET /categories/{ctid}/export.txt` for Copy all —
+  read-only, mirroring the collection view.
+- **Sidebar layout.** The home page is now a sticky left sidebar (Collections +
+  Categories, each with counts and inline manage affordances) beside the quote
+  list. Deleting a category untaggs its quotes; deleting a quote clears its tags.
+
+### Changed
+- `store.Delete`/`DeleteMany` now cascade `category_items` alongside
+  `collection_items` in the same transaction.
+- A fresh database is seeded with three example categories (`suffering`,
+  `renunciation`, `right view`) tagging the shortest quotes, so the sidebar and
+  chip rows are non-empty out of the box.
+
 ## [0.4.0] - 2026-06-30
 
 ### Added
@@ -110,6 +137,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Unattributed quotes (including all header-cited ones) are normalized to
   "the Buddha".
 
+[0.5.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.5.0
 [0.4.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.4.0
 [0.3.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.2.0
