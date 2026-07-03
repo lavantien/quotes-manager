@@ -77,3 +77,46 @@ func TestRenderExportFileSeparator(t *testing.T) {
 		t.Errorf("unexpected export layout:\n%s", got)
 	}
 }
+
+func TestBodyMDEmptyPassages(t *testing.T) {
+	q := New("MN 22", "the Buddha, MN 22", nil)
+	if got := q.BodyMD(); got != "" {
+		t.Errorf("BodyMD(nil passages) = %q, want empty", got)
+	}
+	if got := string(q.DisplayHTML()); got != "" {
+		t.Errorf("DisplayHTML(nil passages) = %q, want empty", got)
+	}
+}
+
+func TestDisplayHTMLNoSuttaID(t *testing.T) {
+	// A citation with no recognizable sutta id: the whole citation is emitted as
+	// escaped text, with no suttacentral link.
+	q := New("", "a sage of old", []string{`"wisdom"`})
+	got := string(q.DisplayHTML())
+	mustContain(t, got, `<em>&#34;wisdom&#34;</em>`)
+	mustContain(t, got, " — a sage of old")
+	if strings.Contains(got, "sutta-link") {
+		t.Errorf("unexpected sutta link for citation without id: %s", got)
+	}
+}
+
+func TestDisplayHEscape(t *testing.T) {
+	q := New("MN 22", "the Buddha, MN 22", []string{"<script>alert(1)</script> & more"})
+	got := string(q.DisplayHTML())
+	mustContain(t, got, `&lt;script&gt;alert(1)&lt;/script&gt;`)
+	if strings.Contains(got, "<script>") {
+		t.Errorf("unescaped script tag: %s", got)
+	}
+	mustContain(t, got, "&amp; more")
+}
+
+func TestRenderExportFileEmptyAndSingle(t *testing.T) {
+	if got := RenderExportFile(nil); got != "\n" {
+		t.Errorf("RenderExportFile(nil) = %q, want %q", got, "\n")
+	}
+	got := RenderExportFile([]*Quote{newQuote("A", "A", []string{`"a"`}, "x")})
+	want := "*\"a\"* - **A**\n"
+	if got != want {
+		t.Errorf("RenderExportFile(single) = %q, want %q", got, want)
+	}
+}

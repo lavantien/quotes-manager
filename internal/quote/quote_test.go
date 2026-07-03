@@ -58,3 +58,96 @@ func TestSortByCharCountShortestFirst(t *testing.T) {
 		t.Errorf("shortest not first")
 	}
 }
+
+func TestSortByCharCountTieBreakers(t *testing.T) {
+	t.Run("sutta id breaks ties", func(t *testing.T) {
+		bb := newQuote("BBB", "BBB", []string{"xx"}, "a")
+		aaa := newQuote("AAA", "AAA", []string{"yy"}, "a")
+		qs := []*Quote{bb, aaa}
+		SortByCharCount(qs)
+		if qs[0].SuttaID != "AAA" || qs[1].SuttaID != "BBB" {
+			t.Errorf("tie-break order = %s, %s; want AAA, BBB", qs[0].SuttaID, qs[1].SuttaID)
+		}
+	})
+	t.Run("body text breaks sutta-id ties", func(t *testing.T) {
+		high := newQuote("AAA", "AAA", []string{"zz"}, "a")
+		low := newQuote("AAA", "AAA", []string{"aa"}, "a")
+		qs := []*Quote{high, low}
+		SortByCharCount(qs)
+		if qs[0].BodyText() != "aa" || qs[1].BodyText() != "zz" {
+			t.Errorf("body-text tie-break = %q, %q; want aa, zz", qs[0].BodyText(), qs[1].BodyText())
+		}
+	})
+}
+
+func TestCharCountCountsRunes(t *testing.T) {
+	// Pāli diacritics are multibyte in UTF-8 but one rune each; the sort key
+	// must count runes, not bytes.
+	q := New("AN 1", "AN 1", []string{"āīū"})
+	if q.CharCount() != 3 {
+		t.Errorf("CharCount = %d, want 3 (rune count, not bytes)", q.CharCount())
+	}
+}
+
+func TestBodyTextDirect(t *testing.T) {
+	if got := (&Quote{Passages: []string{"a", "b"}}).BodyText(); got != "a\nb" {
+		t.Errorf("BodyText = %q, want %q", got, "a\nb")
+	}
+	if got := (&Quote{}).BodyText(); got != "" {
+		t.Errorf("empty BodyText = %q, want empty", got)
+	}
+}
+
+func TestDedupEmpty(t *testing.T) {
+	if got := Dedup(nil); len(got) != 0 {
+		t.Errorf("Dedup(nil) = %#v, want empty", got)
+	}
+	if got := Dedup([]*Quote{}); len(got) != 0 {
+		t.Errorf("Dedup(empty) = %#v, want empty", got)
+	}
+}
+
+func TestDedupCollapsesWhitespace(t *testing.T) {
+	// Passages that differ only by runs of whitespace dedup together.
+	a := newQuote("MN 1", "MN 1", []string{"foo bar"}, "a")
+	b := newQuote("MN 2", "MN 2", []string{"foo\t bar"}, "b")
+	out := Dedup([]*Quote{a, b})
+	if len(out) != 1 {
+		t.Fatalf("got %d quotes, want 1 (whitespace-collapsed dup)", len(out))
+	}
+	if len(out[0].Sources) != 2 {
+		t.Errorf("merged sources = %#v", out[0].Sources)
+	}
+}
+
+func TestCollapseWhitespace(t *testing.T) {
+	cases := map[string]string{
+		"normal":        "normal",
+		"":              "",
+		"double  space": "double space",
+		"tab\tsep":      "tab sep",
+		"new\nline":     "new line",
+		"car\rret":      "car ret",
+		"non break":     "non break",
+		"  leading":     " leading",
+	}
+	for in, want := range cases {
+		if got := collapseWhitespace(in); got != want {
+			t.Errorf("collapseWhitespace(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestMergeSourcesDedup(t *testing.T) {
+	q := &Quote{Sources: []string{"a"}}
+	q.mergeSources("b", "a", "c")
+	want := []string{"a", "b", "c"}
+	if len(q.Sources) != len(want) {
+		t.Fatalf("Sources = %#v, want %#v", q.Sources, want)
+	}
+	for i := range want {
+		if q.Sources[i] != want[i] {
+			t.Errorf("Sources[%d] = %q, want %q", i, q.Sources[i], want[i])
+		}
+	}
+}

@@ -216,3 +216,139 @@ func TestParseAdjacentCitedQuotesDontMerge(t *testing.T) {
 		t.Errorf("quotes should not merge: %#v", qs)
 	}
 }
+
+func TestParseEmptyInputs(t *testing.T) {
+	for name, in := range map[string][]File{
+		"nil":   nil,
+		"empty": {},
+		"blank": {{Name: "x", Content: ""}},
+	} {
+		if qs := Parse(in); len(qs) != 0 {
+			t.Errorf("%s: Parse = %#v, want no quotes", name, qs)
+		}
+	}
+}
+
+func TestParseDividersOnly(t *testing.T) {
+	if qs := Parse([]File{{Name: "x", Content: ".\n\n.\n"}}); len(qs) != 0 {
+		t.Errorf("got %d quotes, want 0", len(qs))
+	}
+}
+
+func TestParseMultiFileOrder(t *testing.T) {
+	files := []File{
+		{Name: "first.txt", Content: "\"From file one.\" - MN 1\n"},
+		{Name: "second.txt", Content: "\"From file two.\" - MN 2\n"},
+	}
+	qs := Parse(files)
+	if len(qs) != 2 {
+		t.Fatalf("got %d quotes, want 2", len(qs))
+	}
+	if qs[0].SuttaID != "MN 1" || qs[1].SuttaID != "MN 2" {
+		t.Errorf("order = %s, %s; want MN 1, MN 2", qs[0].SuttaID, qs[1].SuttaID)
+	}
+	if qs[0].Sources[0] != "first.txt" || qs[1].Sources[0] != "second.txt" {
+		t.Errorf("source attribution lost: %#v / %#v", qs[0].Sources, qs[1].Sources)
+	}
+}
+
+func TestParseHeaderNoPassages(t *testing.T) {
+	// A lone header at EOF with no following passages emits nothing.
+	if qs := Parse([]File{{Name: "x", Content: "MN 22:\n"}}); len(qs) != 0 {
+		t.Errorf("got %d quotes, want 0", len(qs))
+	}
+}
+
+func TestParseHeaderThenHeader(t *testing.T) {
+	// A second header flushes the first (which had no passages) without emitting.
+	doc := "MN 1:\n\nMN 2:\n\n\"Absorbed passage.\" - SN 1\n"
+	qs := Parse([]File{{Name: "x", Content: doc}})
+	if len(qs) != 1 {
+		t.Fatalf("got %d quotes, want 1: %+v", len(qs), qs)
+	}
+	if qs[0].SuttaID != "MN 2" {
+		t.Errorf("SuttaID = %q, want MN 2 (second header wins)", qs[0].SuttaID)
+	}
+}
+
+func TestParseOrphanDroppedAtEOF(t *testing.T) {
+	// A quote-opening fragment with no cited terminator is dropped at EOF.
+	if qs := Parse([]File{{Name: "x", Content: "\"An orphan with no citation.\n"}}); len(qs) != 0 {
+		t.Errorf("got %d quotes, want 0 (orphan dropped)", len(qs))
+	}
+}
+
+func TestSplitBlocks(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		if got := splitBlocks(""); len(got) != 0 {
+			t.Errorf("splitBlocks(\"\") = %#v, want none", got)
+		}
+	})
+	t.Run("no trailing newline", func(t *testing.T) {
+		got := splitBlocks("a\nb")
+		if len(got) != 1 || len(got[0].lines) != 2 {
+			t.Errorf("got %#v, want one 2-line block", got)
+		}
+	})
+	t.Run("CRLF input", func(t *testing.T) {
+		got := splitBlocks("a\r\nb")
+		if len(got) != 1 || got[0].lines[0] != "a" || got[0].lines[1] != "b" {
+			t.Errorf("CRLF handling = %#v", got)
+		}
+	})
+	t.Run("many blank lines", func(t *testing.T) {
+		if got := splitBlocks("a\n\n\n\nb"); len(got) != 2 {
+			t.Errorf("got %d blocks, want 2", len(got))
+		}
+	})
+}
+
+func TestIsDivider(t *testing.T) {
+	cases := []struct {
+		name  string
+		lines []string
+		want  bool
+	}{
+		{"empty", nil, false},
+		{"single", []string{"."}, true},
+		{"multi", []string{".", "."}, true},
+		{"mixed", []string{".", "x"}, false},
+		{"non", []string{"text"}, false},
+	}
+	for _, c := range cases {
+		if got := isDivider(c.lines); got != c.want {
+			t.Errorf("isDivider(%v) = %v, want %v", c.lines, got, c.want)
+		}
+	}
+}
+
+func TestStartsQuote(t *testing.T) {
+	cases := []struct {
+		line string
+		want bool
+	}{
+		{`"straight"`, true},
+		{"“curly”", true},
+		{"plain text", false},
+		{`  "indented`, true},
+	}
+	for _, c := range cases {
+		if got := startsQuote(c.line); got != c.want {
+			t.Errorf("startsQuote(%q) = %v, want %v", c.line, got, c.want)
+		}
+	}
+}
+
+func TestCleanUnderscoreAndCombined(t *testing.T) {
+	cases := map[string]string{
+		"_underscore_":      "underscore",
+		"*_combined_*":      "combined",
+		"(3) *quoted text*": "quoted text",
+		"_":                 "",
+	}
+	for in, want := range cases {
+		if got := clean(in); got != want {
+			t.Errorf("clean(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
