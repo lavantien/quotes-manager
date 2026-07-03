@@ -77,3 +77,43 @@ func TestRenderBadgeNoMarkers(t *testing.T) {
 		t.Errorf("readme changed without markers:\n%s", got)
 	}
 }
+
+func TestBadgeURL(t *testing.T) {
+	got := BadgeURL(90)
+	for _, want := range []string{"90.0%25", "brightgreen", "img.shields.io"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("BadgeURL(90) = %q, missing %q", got, want)
+		}
+	}
+}
+
+func TestPctSkipsMalformedLine(t *testing.T) {
+	// A line missing the stmt/count fields is skipped; the valid line still counts.
+	got, err := Pct("mode: set\nfoo.go:1.1,2.2\nbar.go:1.1,2.2 3 1\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != 100.0 {
+		t.Errorf("Pct = %.2f, want 100 (malformed line skipped)", got)
+	}
+}
+
+func TestPctBadNumStmt(t *testing.T) {
+	if _, err := Pct("mode: set\nfoo.go:1.1,2.2 x 1\n"); err == nil {
+		t.Error("non-numeric numStmt should error")
+	}
+}
+
+func TestPctBadCount(t *testing.T) {
+	if _, err := Pct("mode: set\nfoo.go:1.1,2.2 3 y\n"); err == nil {
+		t.Error("non-numeric count should error")
+	}
+}
+
+func TestRenderBadgeReversedMarkers(t *testing.T) {
+	// End marker before start marker: readme returned unchanged.
+	readme := EndMarker + "\nbadge\n" + StartMarker
+	if got := RenderBadge(readme, 50); got != readme {
+		t.Errorf("reversed markers should be a no-op:\n%s", got)
+	}
+}

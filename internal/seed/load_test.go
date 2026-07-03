@@ -221,3 +221,43 @@ func TestSeedCategoriesIdempotent(t *testing.T) {
 		t.Errorf("re-seed changed category_items %d -> %d", first, second)
 	}
 }
+
+// TestEnsureSeededClosedDB: a closed database surfaces the first Exec error
+// rather than hanging or panicking.
+func TestEnsureSeededClosedDB(t *testing.T) {
+	db := openDB(t)
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := EnsureSeeded(db); err == nil {
+		t.Error("EnsureSeeded on a closed DB should error")
+	}
+}
+
+// TestTableExistsError drives the helper's error path via a closed connection.
+func TestTableExistsError(t *testing.T) {
+	db := openDB(t)
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tableExists(db, "quotes"); err == nil {
+		t.Error("tableExists on a closed DB should error")
+	}
+}
+
+// TestMetaValueMissingTable: querying a key before the app_meta table exists
+// yields a non-ErrNoRows error (surfaced, not swallowed as empty).
+func TestMetaValueMissingTable(t *testing.T) {
+	db := openDB(t)
+	if _, err := metaValue(db, "seeded"); err == nil {
+		t.Error("metaValue on a missing app_meta table should error")
+	}
+}
+
+// TestSetMetaMissingTable: the upsert fails when app_meta does not exist yet.
+func TestSetMetaMissingTable(t *testing.T) {
+	db := openDB(t)
+	if err := setMeta(db, "seeded", "1"); err == nil {
+		t.Error("setMeta on a missing app_meta table should error")
+	}
+}
