@@ -16,22 +16,30 @@ func mustTemplates() *template.Template {
 		"display": func(q store.Quote) template.HTML {
 			return quote.New(q.SuttaID, q.Citation, splitPassages(q.BodyText)).DisplayHTML()
 		},
-		"withCats": func(q store.Quote, m map[int64][]store.Category) quoteView {
-			return quoteView{Quote: q, Cats: m[q.ID]}
+		"withView": func(q store.Quote, cm map[int64][]store.Category, colm map[int64][]store.Collection) quoteView {
+			return quoteView{Quote: q, Cats: cm[q.ID], Cols: colm[q.ID]}
 		},
 		"chipsFor": func(id int64, cats []store.Category) chipsData {
 			return chipsData{ID: id, Categories: cats}
 		},
+		"colChipsFor": func(id int64, cols []store.Collection) colChipsData {
+			return colChipsData{ID: id, Collections: cols}
+		},
+		"colLabel": func(c store.Collection) string { return collectionLabel(c) },
+		"add":      func(a, b int) int { return a + b },
 	})
 	return template.Must(tmpl.ParseFS(web.Templates,
 		"templates/layout.html",
-		"templates/index.html",
+		"templates/rail_left.html",
+		"templates/rail_right.html",
+		"templates/root_zone.html",
+		"templates/collection_zone.html",
 		"templates/quote_list.html",
 		"templates/quote_block.html",
 		"templates/quote_block_ro.html",
 		"templates/quote_form.html",
-		"templates/sidebar.html",
 		"templates/quote_chips.html",
+		"templates/quote_collection_chips.html",
 		"templates/quote_category_editor.html",
 	))
 }

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -14,94 +13,12 @@ import (
 	"github.com/lavantien/quotes-manager/internal/store"
 )
 
-type pageData struct {
-	Quotes           []store.Quote
-	Collections      []store.Collection
-	Categories       []store.Category
-	QuoteCategoryMap map[int64][]store.Category
-	View             viewSpec
-	Count            int
-}
-
-// viewSpec describes which view is rendered (home, a collection, or a category)
-// and drives the layout: home allows +New and the selection toolbar; a collection
-// or category is read-only (copyable) with a delete button.
-type viewSpec struct {
-	IsCollection bool
-	CollectionID int64
-	IsCategory   bool
-	CategoryID   int64
-	Title        string
-	ExportURL    string
-}
-
-func (v viewSpec) CanNew() bool { return !v.IsCollection && !v.IsCategory }
-
-// basePageData loads the sidebar (collections + categories) and the per-quote
-// category map shared by every full-page render.
-func (s *Server) basePageData() (pageData, error) {
-	cols, err := s.store.ListCollections()
-	if err != nil {
-		return pageData{}, err
-	}
-	cats, err := s.store.ListCategories()
-	if err != nil {
-		return pageData{}, err
-	}
-	catMap, err := s.store.QuoteCategoryMap()
-	if err != nil {
-		return pageData{}, err
-	}
-	return pageData{Collections: cols, Categories: cats, QuoteCategoryMap: catMap}, nil
-}
-
-type formData struct {
-	ID          int64
-	Content     string
-	Attribution string
-	TextID      string
-	Action      string
-	SubmitLabel string
-}
-
-// chipsData drives the quote_chips fragment (a quote's category chip row).
-type chipsData struct {
-	ID         int64
-	Categories []store.Category
-}
-
-// editorData drives the inline category checkbox editor for a quote.
-type editorData struct {
-	ID    int64
-	Items []categoryItem
-}
-
-type categoryItem struct {
-	Category store.Category
-	Checked  bool
-}
-
-// quoteView bundles a quote with its categories for block rendering, so the
-// chips can be shown without an N+1 lookup per block.
-type quoteView struct {
-	Quote store.Quote
-	Cats  []store.Category
-}
-
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
-	data, err := s.basePageData()
+	data, err := s.buildPageData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
 	if err != nil {
 		serverError(w, err)
 		return
 	}
-	qs, err := s.store.List()
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	data.Quotes = qs
-	data.Count = len(qs)
-	data.View = viewSpec{Title: "Quotes", ExportURL: "/export.txt"}
 	s.render(w, "page", data)
 }
 
@@ -119,136 +36,50 @@ func (s *Server) renderQuoteList(w http.ResponseWriter) {
 		serverError(w, err)
 		return
 	}
-	s.render(w, "quote_list", pageData{Quotes: qs, QuoteCategoryMap: catMap})
+	colMap, err := s.store.QuoteCollectionMap()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	s.render(w, "quote_list", pageData{Root: rootPane{Quotes: qs}, CatMap: catMap, ColMap: colMap})
 }
 
 func (s *Server) listFragment(w http.ResponseWriter, r *http.Request) {
 	s.renderQuoteList(w)
 }
 
-func (s *Server) collection(w http.ResponseWriter, r *http.Request) {
-	cid, ok := parseID(w, r, "cid")
-	if !ok {
-		return
+// parseQueryID reads an optional positive int64 query parameter, returning 0
+// when it is absent or invalid.
+func parseQueryID(r *http.Request, key string) int64 {
+	v := r.URL.Query().Get(key)
+	if v == "" {
+		return 0
 	}
-	if _, err := s.store.GetCollection(cid); err != nil {
-		handleStoreErr(w, err)
-		return
+	id, err := strconv.ParseInt(v, 10, 64)
+	if err != nil || id <= 0 {
+		return 0
 	}
-	qs, err := s.store.CollectionQuotes(cid)
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	data, err := s.basePageData()
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	data.Quotes = qs
-	data.Count = len(qs)
-	data.View = viewSpec{
-		IsCollection: true,
-		CollectionID: cid,
-		Title:        fmt.Sprintf("Collection %d", cid),
-		ExportURL:    fmt.Sprintf("/collections/%d/export.txt", cid),
-	}
-	s.render(w, "page", data)
+	return id
 }
 
-// category renders a read-only view of the quotes tagged with a category.
+// category renders the full dual-pane page with the root column filtered to a
+// category. Kept as a deep-link/refresh-friendly full-page route alongside the
+// in-place htmx pane swaps.
 func (s *Server) category(w http.ResponseWriter, r *http.Request) {
 	ctid, ok := parseID(w, r, "ctid")
 	if !ok {
 		return
 	}
-	c, err := s.store.GetCategory(ctid)
-	if err != nil {
+	if _, err := s.store.GetCategory(ctid); err != nil {
 		handleStoreErr(w, err)
 		return
 	}
-	qs, err := s.store.CategoryQuotes(ctid)
+	data, err := s.buildPageData(ctid, parseQueryID(r, "col"))
 	if err != nil {
 		serverError(w, err)
 		return
-	}
-	data, err := s.basePageData()
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	data.Quotes = qs
-	data.Count = len(qs)
-	data.View = viewSpec{
-		IsCategory: true,
-		CategoryID: ctid,
-		Title:      fmt.Sprintf("#%s", c.Name),
-		ExportURL:  fmt.Sprintf("/categories/%d/export.txt", ctid),
 	}
 	s.render(w, "page", data)
-}
-
-func (s *Server) createCollection(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		badRequest(w)
-		return
-	}
-	cid, err := s.store.CreateCollection(parseIDs(r.PostForm["id"]))
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	w.Header().Set("HX-Redirect", fmt.Sprintf("/collections/%d", cid))
-	w.WriteHeader(http.StatusOK)
-}
-
-// addCollectionItems appends the selected quotes to an existing collection
-// (new items land on top) and redirects to it. Mirrors createCollection, which
-// instead spins up a brand-new collection.
-func (s *Server) addCollectionItems(w http.ResponseWriter, r *http.Request) {
-	cid, ok := parseID(w, r, "cid")
-	if !ok {
-		return
-	}
-	if err := r.ParseForm(); err != nil {
-		badRequest(w)
-		return
-	}
-	if err := s.store.AddToCollection(cid, parseIDs(r.PostForm["id"])); err != nil {
-		handleStoreErr(w, err)
-		return
-	}
-	w.Header().Set("HX-Redirect", fmt.Sprintf("/collections/%d", cid))
-	w.WriteHeader(http.StatusOK)
-}
-
-func (s *Server) deleteCollection(w http.ResponseWriter, r *http.Request) {
-	cid, ok := parseID(w, r, "cid")
-	if !ok {
-		return
-	}
-	if err := s.store.DeleteCollection(cid); err != nil {
-		handleStoreErr(w, err)
-		return
-	}
-	w.Header().Set("HX-Redirect", "/")
-	w.WriteHeader(http.StatusOK)
-}
-
-// renderSidebar writes the sidebar fragment with fresh collection/category data;
-// shared by the OOB-refresh endpoint and the create/rename handlers so a single
-// swap refreshes both sections (and the counts).
-func (s *Server) renderSidebar(w http.ResponseWriter) {
-	data, err := s.basePageData()
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	s.render(w, "sidebar", data)
-}
-
-func (s *Server) sidebar(w http.ResponseWriter, r *http.Request) {
-	s.renderSidebar(w)
 }
 
 func (s *Server) createCategory(w http.ResponseWriter, r *http.Request) {
@@ -265,7 +96,7 @@ func (s *Server) createCategory(w http.ResponseWriter, r *http.Request) {
 		handleStoreErr(w, err)
 		return
 	}
-	s.renderSidebar(w)
+	s.renderLeftRail(w, r)
 }
 
 func (s *Server) renameCategory(w http.ResponseWriter, r *http.Request) {
@@ -286,7 +117,7 @@ func (s *Server) renameCategory(w http.ResponseWriter, r *http.Request) {
 		handleStoreErr(w, err)
 		return
 	}
-	s.renderSidebar(w)
+	s.renderLeftRail(w, r)
 }
 
 func (s *Server) deleteCategory(w http.ResponseWriter, r *http.Request) {
@@ -300,6 +131,17 @@ func (s *Server) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
+}
+
+// renderLeftRail writes the left-rail fragment (Home + Categories). Active
+// cat/col come from the request query so the highlight survives a rail swap.
+func (s *Server) renderLeftRail(w http.ResponseWriter, r *http.Request) {
+	data, err := s.railData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	s.render(w, "rail_left", data)
 }
 
 // renderQuoteChips writes the chip row for a quote from the current memberships.
@@ -379,8 +221,8 @@ func (s *Server) resolveCategoryID(name string) (int64, error) {
 }
 
 // setQuoteCategories replaces a quote's categories from the editor submission
-// (checked ids plus an optional new name) and returns the fresh chip row; the
-// client also asks /sidebar for refreshed counts.
+// (checked ids plus an optional new name) and returns the fresh chip row plus an
+// out-of-band refresh of the left rail so category counts stay in sync.
 func (s *Server) setQuoteCategories(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseID(w, r, "id")
 	if !ok {
@@ -403,24 +245,19 @@ func (s *Server) setQuoteCategories(w http.ResponseWriter, r *http.Request) {
 		handleStoreErr(w, err)
 		return
 	}
-	s.renderQuoteChips(w, id)
-}
-
-func (s *Server) collectionExport(w http.ResponseWriter, r *http.Request) {
-	cid, ok := parseID(w, r, "cid")
-	if !ok {
-		return
-	}
-	qs, err := s.store.CollectionQuotes(cid)
+	m, err := s.store.QuoteCategoryMap()
 	if err != nil {
 		serverError(w, err)
 		return
 	}
-	quotes := make([]*quote.Quote, len(qs))
-	for i, q := range qs {
-		quotes[i] = quote.New(q.SuttaID, q.Citation, splitPassages(q.BodyText))
+	rail, err := s.railData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
+	if err != nil {
+		serverError(w, err)
+		return
 	}
-	writeText(w, quote.RenderExportFile(quotes))
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	s.exec(w, "quote_chips", chipsData{ID: id, Categories: m[id]})
+	s.exec(w, "rail_left_oob", rail)
 }
 
 // categoryExport renders a category's quotes as the plain-text export format.
@@ -501,10 +338,26 @@ func (s *Server) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isHTMX(r) {
-		s.render(w, "quote_block", updated)
+		s.renderQuoteBlock(w, updated)
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// renderQuoteBlock writes a single editable block with its current category and
+// collection chips, used after an inline edit saves.
+func (s *Server) renderQuoteBlock(w http.ResponseWriter, q store.Quote) {
+	catMap, err := s.store.QuoteCategoryMap()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	colMap, err := s.store.QuoteCollectionMap()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	s.render(w, "quote_block", quoteView{Quote: q, Cats: catMap[q.ID], Cols: colMap[q.ID]})
 }
 
 func (s *Server) delete(w http.ResponseWriter, r *http.Request) {
@@ -530,25 +383,6 @@ func (s *Server) bulkDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
-}
-
-func (s *Server) collectionReorder(w http.ResponseWriter, r *http.Request) {
-	cid, ok := parseID(w, r, "cid")
-	if !ok {
-		return
-	}
-	var body struct {
-		IDs []int64 `json:"ids"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		badRequest(w)
-		return
-	}
-	if err := s.store.ReorderCollection(cid, body.IDs); err != nil {
-		handleStoreErr(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) copyOne(w http.ResponseWriter, r *http.Request) {

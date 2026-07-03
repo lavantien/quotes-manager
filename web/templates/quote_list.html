@@ -1,5 +1,5 @@
 {{define "quote_list"}}
-<div id="quote-list" class="quote-list" data-reorder="{{if $.View.IsCollection}}/collections/{{$.View.CollectionID}}/reorder{{end}}">
-{{range .Quotes}}{{if or $.View.IsCollection $.View.IsCategory}}{{template "quote_block_ro" (withCats . $.QuoteCategoryMap)}}{{else}}{{template "quote_block" (withCats . $.QuoteCategoryMap)}}{{end}}{{end}}{{if not .Quotes}}<p class="empty">No quotes here.</p>{{end}}
+<div id="quote-list" class="quote-list">
+  {{range .Root.Quotes}}{{template "quote_block" (withView . $.CatMap $.ColMap)}}{{end}}{{if not .Root.Quotes}}<p class="empty">No quotes here.</p>{{end}}
 </div>
 {{end}}

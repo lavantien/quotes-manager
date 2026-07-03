@@ -5,6 +5,7 @@
   </div>
   <div class="quote__body">{{display .Quote}}</div>
   {{template "quote_chips" (chipsFor .Quote.ID .Cats)}}
+  {{template "quote_collection_chips" (colChipsFor .Quote.ID .Cols)}}
   <div class="quote__actions">
     <button type="button" class="btn btn--sm" data-action="copy" data-id="{{.Quote.ID}}">Copy</button>
     <button type="button" class="btn btn--sm" hx-get="/quotes/{{.Quote.ID}}/edit" hx-target="#quote-{{.Quote.ID}}" hx-swap="outerHTML">Edit</button>

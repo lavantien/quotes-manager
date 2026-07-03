@@ -671,9 +671,17 @@ func TestCreateCollectionFromSelection(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d", rec.Code)
 	}
-	loc := rec.Header().Get("HX-Redirect")
-	if !strings.HasPrefix(loc, "/collections/") {
-		t.Errorf("HX-Redirect = %q", loc)
+	// Creating from the selection makes the new collection active and swaps the
+	// collection zone in place (no full redirect).
+	if loc := rec.Header().Get("HX-Redirect"); loc != "" {
+		t.Errorf("create should swap in place, got HX-Redirect = %q", loc)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `id="collection-zone"`) {
+		t.Error("create should return the active collection zone")
+	}
+	if !strings.Contains(body, "Human beings are shady") {
+		t.Error("new collection should contain the selected quotes")
 	}
 	if len(fs.collections) != 1 || fs.collections[0].Count != 2 {
 		t.Errorf("collections = %+v", fs.collections)
@@ -688,8 +696,8 @@ func TestAddToCollectionItems(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
-	if loc := rec.Header().Get("HX-Redirect"); loc != fmt.Sprintf("/collections/%d", cid) {
-		t.Errorf("HX-Redirect = %q, want /collections/%d", loc, cid)
+	if loc := rec.Header().Get("HX-Redirect"); loc != fmt.Sprintf("/?col=%d", cid) {
+		t.Errorf("HX-Redirect = %q, want /?col=%d", loc, cid)
 	}
 	// New item (3) lands on top; existing order (1, 2) preserved.
 	qs, _ := fs.CollectionQuotes(cid)
@@ -718,21 +726,21 @@ func TestCollectionView(t *testing.T) {
 	if !strings.Contains(body, "Human beings are shady") {
 		t.Error("collection view missing its quotes")
 	}
-	if strings.Contains(body, "+ New") {
-		t.Error("collection view must not show + New")
+	// The collection renders in its own zone, with read-only, draggable blocks.
+	if !strings.Contains(body, `id="collection-list"`) {
+		t.Error("collection zone should render the collection list")
 	}
-	if !strings.Contains(body, "Delete collection") {
-		t.Error("collection view missing delete-collection button")
+	if !strings.Contains(body, `id="col-quote-`) {
+		t.Error("collection blocks should be read-only (col-quote- ids)")
 	}
-	// Read-only for content (no edit/delete/new) but still sortable by drag.
 	if !strings.Contains(body, `draggable="true"`) {
 		t.Error("collection blocks should be draggable to reorder")
 	}
-	if strings.Contains(body, `/edit"`) {
-		t.Error("collection blocks must not be editable")
-	}
 	if !strings.Contains(body, `data-action="copy"`) {
 		t.Error("collection blocks should be copyable")
+	}
+	if !strings.Contains(body, fmt.Sprintf(`hx-delete="/collections/%d"`, cid)) {
+		t.Error("collection zone should expose a delete-collection button")
 	}
 }
 
@@ -811,21 +819,19 @@ func TestCategoryView(t *testing.T) {
 	if !strings.Contains(body, "Human beings are shady") {
 		t.Error("category view missing its quotes")
 	}
+	// The category filters the root column, whose title is "#name".
 	if !strings.Contains(body, "#wisdom") {
 		t.Error("category view missing #name title")
 	}
-	if strings.Contains(body, "+ New") {
-		t.Error("category view must not show + New")
-	}
-	if !strings.Contains(body, "Delete category") {
-		t.Error("category view missing delete-category button")
-	}
-	// Read-only like a collection: copyable, not editable.
-	if strings.Contains(body, `/edit"`) {
-		t.Error("category blocks must not be editable")
-	}
+	// The root column stays editable (copy + edit); the rail exposes delete.
 	if !strings.Contains(body, `data-action="copy"`) {
-		t.Error("category blocks should be copyable")
+		t.Error("root blocks should be copyable")
+	}
+	if !strings.Contains(body, `/quotes/1/edit`) {
+		t.Error("root blocks should be editable")
+	}
+	if !strings.Contains(body, fmt.Sprintf(`hx-delete="/categories/%d"`, cid)) {
+		t.Error("rail should expose a delete-category button")
 	}
 }
 
@@ -837,25 +843,44 @@ func TestCategoryViewNotFound(t *testing.T) {
 	}
 }
 
-func TestSidebarListsCollectionsAndCategories(t *testing.T) {
+func TestRailLeftListsCategories(t *testing.T) {
 	fs := newFake(sampleQuote(1))
 	if _, err := fs.CreateCategory("wisdom"); err != nil {
 		t.Fatal(err)
 	}
 	srv := newServer(t, fs)
-	rec := do(t, srv, "GET", "/sidebar", "")
+	rec := do(t, srv, "GET", "/rail/left", "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d", rec.Code)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, `<aside class="sidebar">`) {
-		t.Error("sidebar fragment missing root element")
+	if !strings.Contains(body, `id="left-rail"`) {
+		t.Error("left rail fragment missing root element")
 	}
-	if !strings.Contains(body, "Collections") || !strings.Contains(body, "Categories") {
-		t.Error("sidebar missing section headings")
+	if !strings.Contains(body, "Categories") {
+		t.Error("left rail missing Categories heading")
 	}
 	if !strings.Contains(body, "wisdom") {
-		t.Error("sidebar missing category link")
+		t.Error("left rail missing category link")
+	}
+}
+
+func TestRailRightListsCollections(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", "/rail/right", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `id="right-rail"`) {
+		t.Error("right rail fragment missing root element")
+	}
+	if !strings.Contains(body, "Collections") {
+		t.Error("right rail missing Collections heading")
+	}
+	if !strings.Contains(body, fmt.Sprintf("Collection %d", cid)) {
+		t.Error("right rail missing collection link")
 	}
 }
 
@@ -1088,19 +1113,144 @@ func TestIndexSidebarAndChips(t *testing.T) {
 		t.Fatalf("status = %d", rec.Code)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, `<aside class="sidebar">`) {
-		t.Error("home should render the sidebar")
+	if !strings.Contains(body, `id="left-rail"`) {
+		t.Error("home should render the left rail")
 	}
 	if !strings.Contains(body, "Categories") {
-		t.Error("sidebar should show the Categories heading")
+		t.Error("left rail should show the Categories heading")
 	}
 	if !strings.Contains(body, "wisdom") {
-		t.Error("sidebar should list the category")
+		t.Error("left rail should list the category")
 	}
 	if !strings.Contains(body, `class="category-chip"`) {
 		t.Error("quote block should render category chips")
 	}
 	if !strings.Contains(body, `/quotes/1/categories/edit`) {
 		t.Error("editable block should expose the category editor trigger")
+	}
+}
+
+func TestRenameCollectionHandler(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/rename", cid), "name=Keepsakes",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "Keepsakes") {
+		t.Error("rename response should show the new name in the rail")
+	}
+	got, _ := fs.GetCollection(cid)
+	if got.Name != "Keepsakes" {
+		t.Errorf("collection name = %q, want Keepsakes", got.Name)
+	}
+}
+
+func TestRenameCollectionUnknown(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "POST", "/collections/999/rename", "name=x",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestInsertCollectionItemsHandler(t *testing.T) {
+	fs, cid := fakeWithCollection(t) // holds quotes 1, 2; quote 3 also exists
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/insert", cid), "id=3&pos=2",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	// Inserting quote 3 at position 2 yields [1, 3, 2].
+	qs, _ := fs.CollectionQuotes(cid)
+	want := []int64{1, 3, 2}
+	if len(qs) != len(want) {
+		t.Fatalf("len = %d, want %d (%+v)", len(qs), len(want), qs)
+	}
+	for i, q := range qs {
+		if q.ID != want[i] {
+			t.Errorf("pos %d = %d, want %d", i, q.ID, want[i])
+		}
+	}
+	if !strings.Contains(rec.Body.String(), `id="collection-zone"`) {
+		t.Error("insert should return the refreshed collection zone")
+	}
+}
+
+func TestInsertCollectionItemsUnknown(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "POST", "/collections/999/insert", "id=1&pos=1",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestCollectionPaneFragment(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", fmt.Sprintf("/pane/collection?col=%d", cid), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `id="collection-zone"`) {
+		t.Error("pane should render the collection zone")
+	}
+	if !strings.Contains(body, "Human beings are shady") {
+		t.Error("collection pane should show the collection's quotes")
+	}
+	if !strings.Contains(body, "insert-gap") {
+		t.Error("collection pane should render insert-gap affordances")
+	}
+}
+
+func TestCollectionPaneEmpty(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "GET", "/pane/collection", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `id="collection-zone"`) {
+		t.Error("empty pane should still render the collection zone")
+	}
+	if !strings.Contains(body, "No collection selected") {
+		t.Error("empty pane should show the placeholder")
+	}
+}
+
+func TestRootPaneCategoryFilter(t *testing.T) {
+	fs, cid := fakeWithCategory(t) // tags quotes 1 and 2
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", fmt.Sprintf("/pane/root?cat=%d", cid), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `id="root-zone"`) {
+		t.Error("pane should render the root zone")
+	}
+	if !strings.Contains(body, "#wisdom") {
+		t.Error("filtered root pane should show the category title")
+	}
+	if !strings.Contains(body, `data-cat="1"`) {
+		t.Error("root zone should carry the active category id")
+	}
+}
+
+func TestRootBlockShowsCollectionChips(t *testing.T) {
+	fs, cid := fakeWithCollection(t) // quotes 1 and 2 are in collection 1
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", "/", "")
+	body := rec.Body.String()
+	if !strings.Contains(body, `class="collection-chip"`) {
+		t.Error("root blocks should show collection-membership chips")
+	}
+	if !strings.Contains(body, fmt.Sprintf(`col=%d`, cid)) {
+		t.Error("collection chip should target the collection pane")
 	}
 }

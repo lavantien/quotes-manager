@@ -4,6 +4,42 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-07-03
+
+### Added
+- **Dual-pane workspace.** The UI is now four zones side by side: a left rail
+  (Home + Categories), the root text column (home or a category filter), the
+  collection column (the active collection), and a right rail (Collections). A
+  thin, two-half header sits atop each text column showing only a name and a
+  count. Selecting a category or collection swaps just that pane in place via
+  htmx (with an out-of-band rail refresh); the URL carries `?cat=` / `?col=` for
+  deep-linking.
+- **Named, renameable collections.** Collections carry a `name` (default empty →
+  rendered as "Collection {id}"); inline ✎ rename in the right rail commits via
+  `POST /collections/{cid}/rename` (`store.RenameCollection`). Names are not
+  unique. Pre-0.6.0 databases are migrated with an idempotent `ALTER TABLE` that
+  adds `collections.name`.
+- **Insert at a precise index.** Checking one or more root quotes reveals
+  insert-gap affordances (a `+` marker) between every pair of collection blocks;
+  clicking one inserts the selection at that 1-based position, shifting later
+  items down (`store.InsertAtCollection`, `POST /collections/{cid}/insert`).
+  Duplicates are skipped.
+- **Collection membership on root blocks.** Each root quote now shows a second
+  chip row for the collections it belongs to (`store.QuoteCollectionMap`),
+  distinct from the category chips; clicking one activates that collection.
+- A fresh database is seeded with one sample collection (the two shortest
+  quotes) so the collection column and membership chips are non-empty out of the
+  box and the README screenshot is illustrative.
+
+### Changed
+- The sidebar is split into two nav rails; the top bar is now a thin split strip
+  (name + count only), with per-column toolbars (root: select-all / +New /
+  bulk-delete / Copy all; collection: Copy all / Delete).
+- Collection creation from a selection now makes the new collection active and
+  swaps the collection zone in place instead of redirecting.
+- `web/static` styles are split into `app.css` (typography/components) and
+  `layout.css` (the four-zone grid, rails, zones, insert gaps).
+
 ## [0.5.0] - 2026-07-01
 
 ### Added
@@ -137,6 +173,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Unattributed quotes (including all header-cited ones) are normalized to
   "the Buddha".
 
+[0.6.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.6.0
 [0.5.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.5.0
 [0.4.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.4.0
 [0.3.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.3.0

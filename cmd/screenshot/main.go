@@ -64,7 +64,9 @@ func run() error {
 	srv := &http.Server{Handler: server.New(st)}
 	go func() { _ = srv.Serve(ln) }()
 	defer func() { _ = srv.Shutdown(context.Background()) }()
-	url := "http://" + ln.Addr().String() + "/"
+	// The seed provisions one sample collection (id 1); capture the page with it
+	// active so the dual-pane screenshot shows a populated collection column.
+	url := "http://" + ln.Addr().String() + "/?col=1"
 
 	allocOpts := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("hide-scrollbars", "true"))
 	if bin := browserPath(); bin != "" {

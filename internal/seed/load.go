@@ -46,6 +46,9 @@ func EnsureSeeded(db *sql.DB) error {
 		if err := seedCategories(db); err != nil {
 			return err
 		}
+		if err := seedSampleCollection(db); err != nil {
+			return err
+		}
 		if err := setMeta(db, "seeded", "1"); err != nil {
 			return err
 		}
@@ -86,6 +89,41 @@ func seedCategories(db *sql.DB) error {
 				cid, qid); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+// seedSampleCollection creates one numbered collection holding the two shortest
+// quotes, so a fresh install (and docs/home.png) shows a populated collection
+// column and membership chips on those root blocks. It is a no-op when the
+// collections tables are absent (raw seed tests) and when any collection already
+// exists, so re-entering the seeding path cannot duplicate it.
+func seedSampleCollection(db *sql.DB) error {
+	has, err := tableExists(db, "collections")
+	if err != nil || !has {
+		return err
+	}
+	var n int
+	if err := db.QueryRow("SELECT COUNT(*) FROM collections").Scan(&n); err != nil {
+		return err
+	}
+	if n > 0 {
+		return nil
+	}
+	res, err := db.Exec("INSERT INTO collections DEFAULT VALUES")
+	if err != nil {
+		return err
+	}
+	cid, err := res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	for i, qid := range []int64{1, 2} {
+		if _, err := db.Exec(
+			`INSERT OR IGNORE INTO collection_items (collection_id, quote_id, position) SELECT ?, id, ? FROM quotes WHERE id = ?`,
+			cid, i+1, qid); err != nil {
+			return err
 		}
 	}
 	return nil

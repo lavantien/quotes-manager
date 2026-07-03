@@ -1,0 +1,5 @@
+{{define "quote_collection_chips"}}
+<div class="quote__collections">
+  {{range .Collections}}<a class="collection-chip" hx-get="/pane/collection?col={{.ID}}" hx-target="#collection-zone" hx-swap="outerHTML" href="/collections/{{.ID}}">{{colLabel .}}</a>{{end}}
+</div>
+{{end}}

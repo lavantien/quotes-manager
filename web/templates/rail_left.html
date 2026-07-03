@@ -1,0 +1,30 @@
+{{define "rail_left"}}
+<nav class="rail rail--left" id="left-rail" aria-label="View and categories">
+  {{template "rail_left_body" .}}
+</nav>
+{{end}}
+
+{{define "rail_left_oob"}}
+<nav class="rail rail--left" id="left-rail" aria-label="View and categories" hx-swap-oob="outerHTML">
+  {{template "rail_left_body" .}}
+</nav>
+{{end}}
+
+{{define "rail_left_body"}}
+<section class="rail__section">
+  <h2 class="rail__heading">View</h2>
+  <a class="rail__link{{if eq .ActiveCatID 0}} is-active{{end}}" hx-get="/pane/root" hx-target="#root-zone" hx-swap="outerHTML" href="/">Home</a>
+</section>
+<section class="rail__section">
+  <h2 class="rail__heading">Categories</h2>
+  {{range .Categories}}<div class="rail__row" data-id="{{.ID}}">
+    <a class="rail__link{{if eq .ID $.ActiveCatID}} is-active{{end}}" hx-get="/pane/root?cat={{.ID}}" hx-target="#root-zone" hx-swap="outerHTML" href="/categories/{{.ID}}">{{.Name}}{{if gt .Count 0}} <span class="rail__count">{{.Count}}</span>{{end}}</a>
+    <button type="button" class="rail__icon" data-action="rename-category" data-id="{{.ID}}" data-name="{{.Name}}" aria-label="Rename category">&#9998;</button>
+    <button type="button" class="rail__icon rail__icon--danger" hx-delete="/categories/{{.ID}}" hx-confirm="Delete this category? The quotes themselves are kept." aria-label="Delete category">&#10005;</button>
+  </div>{{else}}<p class="rail__empty">No categories.</p>{{end}}
+  <form class="rail__new" data-action="new-category">
+    <input class="rail__input" type="text" name="name" placeholder="+ category" required maxlength="100">
+    <button class="btn btn--sm" type="submit">Add</button>
+  </form>
+</section>
+{{end}}

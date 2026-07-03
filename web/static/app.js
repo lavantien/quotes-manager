@@ -1,19 +1,28 @@
 (function () {
   "use strict";
 
-  var list = () => document.getElementById("quote-list");
+  var rootList = () => document.getElementById("quote-list");
 
   function selectedIds() {
-    return Array.from(document.querySelectorAll(".quote__check input.select:checked"))
+    var list = rootList();
+    if (!list) return [];
+    return Array.from(list.querySelectorAll("input.select:checked"))
       .map(function (cb) { return Number(cb.value); });
   }
 
+  function currentCat() { var z = document.getElementById("root-zone"); return z ? (z.dataset.cat || "") : ""; }
+  function currentCol() { var z = document.getElementById("collection-zone"); return z ? (z.dataset.cid || "") : ""; }
+  function ctxQuery() { return "?cat=" + currentCat() + "&col=" + currentCol(); }
+
+  // Toggle the bulk/delete/insert affordances based on whether any root quote
+  // is checked.
   function refreshBulk() {
     var any = selectedIds().length > 0;
-    document.querySelectorAll('[data-action="bulk-delete"], [data-action="add-collection"]')
+    document.querySelectorAll('[data-action="bulk-delete"], [data-action="new-collection"]')
       .forEach(function (b) { b.disabled = !any; });
-    var target = document.getElementById("collection-target");
-    if (target) target.disabled = !any;
+    document.querySelectorAll(".insert-gap").forEach(function (g) {
+      g.classList.toggle("is-ready", any);
+    });
   }
 
   function flash(btn, text) {
@@ -26,7 +35,6 @@
   // copyFromUrl writes url's text to the clipboard. The write is started
   // synchronously (within the user gesture) by handing ClipboardItem a promise
   // for the data, so transient activation is not lost while the text is fetched.
-  // Falls back to fetch-then-writeText where ClipboardItem is unavailable.
   function copyFromUrl(url) {
     var data = fetch(url).then(function (r) { return r.text(); })
       .then(function (t) { return new Blob([t], { type: "text/plain" }); });
@@ -37,21 +45,31 @@
       .then(function (t) { return navigator.clipboard.writeText(t); });
   }
 
-  // swapSidebar replaces the sidebar with fresh HTML fetched from /sidebar, so
-  // category changes anywhere refresh both sections (and the counts).
-  function swapSidebar(html) {
-    var aside = document.querySelector(".sidebar");
-    if (aside) aside.outerHTML = html;
+  // applyFragments parses an HTML response and replaces every element in the
+  // current document whose id matches a top-level element in the response. Used
+  // for mutation responses that bundle a primary target with out-of-band swaps
+  // (e.g. the refreshed zone plus a rail).
+  function applyFragments(html) {
+    var tpl = document.createElement("template");
+    tpl.innerHTML = html.trim();
+    Array.from(tpl.content.children).forEach(function (el) {
+      if (!el.id) return;
+      var existing = document.getElementById(el.id);
+      if (existing) existing.replaceWith(el);
+    });
+    refreshBulk();
   }
-  function refreshSidebar() {
-    fetch("/sidebar")
-      .then(function (r) { return r.ok ? r.text() : ""; })
-      .then(function (html) { if (html) swapSidebar(html); });
+
+  async function postForm(url, body) {
+    var res = await fetch(url, { method: "POST", body: body });
+    if (!res.ok) return "";
+    return await res.text();
   }
 
   document.addEventListener("change", function (e) {
     if (e.target.id === "select-all") {
-      document.querySelectorAll(".quote__check input.select").forEach(function (cb) { cb.checked = e.target.checked; });
+      var list = rootList();
+      if (list) list.querySelectorAll("input.select").forEach(function (cb) { cb.checked = e.target.checked; });
       refreshBulk();
     } else if (e.target.classList.contains("select")) {
       refreshBulk();
@@ -71,33 +89,40 @@
       copyFromUrl(btn.dataset.export || "/export.txt").then(function () { flash(btn, "Copied all"); }).catch(function () {});
     }
 
-    if (action === "add-collection") {
-      var cids = selectedIds();
-      if (cids.length === 0) return;
-      var target = document.getElementById("collection-target");
-      var val = target ? target.value : "new";
+    if (action === "new-collection") {
+      var ids = selectedIds();
+      if (ids.length === 0) return;
       var body = new URLSearchParams();
-      cids.forEach(function (id) { body.append("id", id); });
-      var url = val === "new" ? "/collections" : "/collections/" + val + "/items";
-      var res = await fetch(url, { method: "POST", body: body });
-      var loc = res.headers.get("HX-Redirect");
-      if (res.ok && loc) location.href = loc;
+      ids.forEach(function (id) { body.append("id", id); });
+      var html = await postForm("/collections" + ctxQuery(), body);
+      if (html) applyFragments(html);
+    }
+
+    if (action === "insert-collection") {
+      var cid = currentCol();
+      if (!cid) return;
+      var ins = selectedIds();
+      if (ins.length === 0) return;
+      var ibody = new URLSearchParams();
+      ins.forEach(function (id) { ibody.append("id", id); });
+      ibody.set("pos", btn.dataset.pos);
+      var ihtml = await postForm("/collections/" + cid + "/insert" + ctxQuery(), ibody);
+      if (ihtml) applyFragments(ihtml);
     }
 
     if (action === "bulk-delete") {
-      var ids = selectedIds();
-      if (ids.length === 0) return;
-      if (!confirm("Delete " + ids.length + " quote(s)?")) return;
-      var body = new URLSearchParams();
-      ids.forEach(function (id) { body.append("id", id); });
-      var del = await fetch("/quotes/delete", { method: "POST", body: body });
+      var dels = selectedIds();
+      if (dels.length === 0) return;
+      if (!confirm("Delete " + dels.length + " quote(s)?")) return;
+      var dbody = new URLSearchParams();
+      dels.forEach(function (id) { dbody.append("id", id); });
+      var del = await fetch("/quotes/delete", { method: "POST", body: dbody });
       if (del.ok) location.reload();
     }
 
     if (action === "cancel") {
       var slot = document.getElementById("form-slot");
       if (slot && slot.contains(btn)) { slot.innerHTML = ""; return; }
-      // Inline edit: the block was replaced by the form; reload to restore it.
       location.reload();
     }
 
@@ -105,28 +130,34 @@
       var chipsSlot = document.getElementById("chips-" + btn.dataset.id);
       fetch("/quotes/" + btn.dataset.id + "/categories")
         .then(function (r) { return r.text(); })
-        .then(function (html) { if (chipsSlot) chipsSlot.outerHTML = html; });
+        .then(function (html) {
+          var t = document.createElement("template");
+          t.innerHTML = html.trim();
+          var node = t.content.firstElementChild;
+          if (chipsSlot && node) chipsSlot.replaceWith(node);
+        });
     }
 
-    if (action === "rename-category") {
-      startRename(btn);
-    }
+    if (action === "rename-category") { startRename(btn, "category"); }
+    if (action === "rename-collection") { startRename(btn, "collection"); }
   });
 
-  // Inline category rename: swap the link for an input, commit on Enter/blur.
-  function startRename(btn) {
-    var cat = btn.closest(".sidebar__cat");
-    if (!cat || cat.querySelector(".sidebar__rename")) return;
-    var link = cat.querySelector(".sidebar__link");
+  // Inline rename (category or collection): swap the link for an input, commit
+  // on Enter/blur, then refresh the matching rail (and the collection zone if
+  // the renamed collection is currently active).
+  function startRename(btn, kind) {
+    var row = btn.closest(".rail__row");
+    if (!row || row.querySelector(".rail__rename")) return;
+    var link = row.querySelector(".rail__link");
     if (!link) return;
     var id = btn.dataset.id;
     var name = btn.dataset.name || link.textContent.trim();
     var input = document.createElement("input");
-    input.className = "sidebar__rename";
+    input.className = "rail__rename";
     input.type = "text";
     input.value = name;
     input.maxLength = 100;
-    cat.replaceChild(input, link);
+    row.replaceChild(input, link);
     input.focus();
     input.select();
     var settled = false;
@@ -137,20 +168,41 @@
       if (val && val !== name) {
         var body = new URLSearchParams();
         body.set("name", val);
-        fetch("/categories/" + id + "/rename", { method: "POST", body: body })
-          .then(function (r) { if (r.ok) r.text().then(swapSidebar); else refreshSidebar(); });
+        var url = (kind === "collection" ? "/collections/" : "/categories/") + id + "/rename" + ctxQuery();
+        fetch(url, { method: "POST", body: body })
+          .then(function (r) { return r.ok ? r.text() : ""; })
+          .then(function (html) {
+            if (html) {
+              applyFragments(html);
+              if (kind === "collection" && String(currentCol()) === String(id)) {
+                refreshCollectionPane();
+              }
+            }
+          });
       } else {
-        refreshSidebar();
+        refreshRail(kind);
       }
     }
     input.addEventListener("blur", commit);
     input.addEventListener("keydown", function (ev) {
       if (ev.key === "Enter") { ev.preventDefault(); input.blur(); }
-      else if (ev.key === "Escape") { settled = true; refreshSidebar(); }
+      else if (ev.key === "Escape") { settled = true; refreshRail(kind); }
     });
   }
 
-  // Category mutations that return a fresh sidebar fragment.
+  function refreshRail(kind) {
+    fetch("/rail/" + kind + ctxQuery())
+      .then(function (r) { return r.ok ? r.text() : ""; })
+      .then(function (html) { if (html) applyFragments(html); });
+  }
+
+  function refreshCollectionPane() {
+    fetch("/pane/collection" + ctxQuery())
+      .then(function (r) { return r.ok ? r.text() : ""; })
+      .then(function (html) { if (html) applyFragments(html); });
+  }
+
+  // Form submissions that return a rail (and possibly an OOB chip/zone).
   document.addEventListener("submit", async function (e) {
     var form = e.target.closest && e.target.closest("form[data-action]");
     if (!form) return;
@@ -164,25 +216,17 @@
       var body = new URLSearchParams();
       body.set("name", name);
       var addBtn = form.querySelector('button[type="submit"]');
-      var res = await fetch("/categories", { method: "POST", body: body });
-      if (res.ok) {
-        swapSidebar(await res.text());
-      } else if (addBtn) {
-        flash(addBtn, "Exists");
-      }
+      var res = await fetch("/categories" + ctxQuery(), { method: "POST", body: body });
+      if (res.ok) { applyFragments(await res.text()); form.reset(); }
+      else if (res.status === 409 && addBtn) { flash(addBtn, "Exists"); }
     }
 
     if (action === "save-categories") {
       e.preventDefault();
       var qid = form.dataset.id;
-      var saveBody = new URLSearchParams(new FormData(form));
-      var saveRes = await fetch("/quotes/" + qid + "/categories", { method: "POST", body: saveBody });
-      if (saveRes.ok) {
-        var html = await saveRes.text();
-        var chips = document.getElementById("chips-" + qid);
-        if (chips) chips.outerHTML = html;
-        refreshSidebar();
-      }
+      var body = new URLSearchParams(new FormData(form));
+      var html = await postForm("/quotes/" + qid + "/categories" + ctxQuery(), body);
+      if (html) applyFragments(html);
     }
   });
 
@@ -194,11 +238,14 @@
     }
   });
 
-  // --- drag and drop reorder ---
+  // After any htmx swap (zone/rail selection), re-evaluate selection state.
+  document.body.addEventListener("htmx:afterSwap", refreshBulk);
+
+  // --- drag-and-drop reorder within the active collection ---
   var dragId = null;
 
   document.addEventListener("dragstart", function (e) {
-    var art = e.target.closest && e.target.closest(".quote");
+    var art = e.target.closest && e.target.closest(".quote--ro");
     if (!art) return;
     dragId = art.dataset.id;
     art.classList.add("dragging");
@@ -206,32 +253,34 @@
   });
 
   document.addEventListener("dragend", function (e) {
-    var art = e.target.closest && e.target.closest(".quote");
+    var art = e.target.closest && e.target.closest(".quote--ro");
     if (art) art.classList.remove("dragging");
     dragId = null;
   });
 
   document.addEventListener("dragover", function (e) {
-    if (!e.target.closest || !e.target.closest(".quote")) return;
+    if (!e.target.closest || !e.target.closest("#collection-list .quote--ro")) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
   });
 
   document.addEventListener("drop", async function (e) {
-    var target = e.target.closest && e.target.closest(".quote");
-    var ql = list();
-    if (!target || !ql || dragId === null || !ql.dataset.reorder) return;
+    var target = e.target.closest && e.target.closest("#collection-list .quote--ro");
+    var list = document.getElementById("collection-list");
+    if (!target || !list || dragId === null) return;
     e.preventDefault();
-    var dragged = ql.querySelector('.quote[data-id="' + dragId + '"]');
+    var dragged = list.querySelector('.quote--ro[data-id="' + dragId + '"]');
     if (!dragged || dragged === target) return;
     var rect = target.getBoundingClientRect();
     var after = e.clientY - rect.top > rect.height / 2;
     if (after) target.after(dragged); else target.before(dragged);
-    var ids = Array.from(ql.querySelectorAll(".quote")).map(function (el) { return Number(el.dataset.id); });
-    await fetch(ql.dataset.reorder, {
+    var ids = Array.from(list.querySelectorAll(".quote--ro")).map(function (el) { return Number(el.dataset.id); });
+    await fetch(list.dataset.reorder, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: ids }),
     });
   });
+
+  refreshBulk();
 })();

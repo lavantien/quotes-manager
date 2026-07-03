@@ -3,39 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{.View.Title}}</title>
+<title>quotes-manager</title>
 <link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/layout.css">
 <script src="/static/htmx.min.js" defer></script>
 <script src="/static/app.js" defer></script>
 </head>
 <body>
 <main class="page">
   <div class="layout">
-    {{template "sidebar" .}}
-    <section class="main">
-      <header class="topbar">
-        <div class="topbar__left">
-          <h1 class="topbar__title">{{.View.Title}}</h1>
-          <span class="topbar__count">{{.Count}} blocks</span>
-        </div>
-        <div class="topbar__actions">
-          <button type="button" class="btn" data-action="copy-all" data-export="{{.View.ExportURL}}">Copy all</button>
-          {{if .View.CanNew}}<button type="button" class="btn btn--primary" hx-get="/quotes/new" hx-target="#form-slot" hx-swap="innerHTML">+ New</button>{{else if .View.IsCollection}}<button type="button" class="btn btn--danger" hx-delete="/collections/{{.View.CollectionID}}" hx-confirm="Delete this collection?">Delete collection</button>{{else if .View.IsCategory}}<button type="button" class="btn btn--danger" hx-delete="/categories/{{.View.CategoryID}}" hx-confirm="Delete this category? The quotes themselves are kept.">Delete category</button>{{end}}
-        </div>
-      </header>
-      {{if .View.CanNew}}<div id="form-slot" class="form-slot"></div>{{end}}
-      {{if .View.CanNew}}
-      <div class="toolbar">
-        <label class="select-all"><input type="checkbox" id="select-all"> select all</label>
-        <button type="button" class="btn btn--danger" data-action="bulk-delete" disabled>Delete selected</button>
-        <select id="collection-target" class="collection-target" disabled>
-          <option value="new">+ New collection</option>{{range .Collections}}<option value="{{.ID}}">Collection {{.ID}}{{if gt .Count 0}} ({{.Count}}){{end}}</option>{{end}}
-        </select>
-        <button type="button" class="btn" data-action="add-collection" disabled>Add to collection</button>
-      </div>
-      {{end}}
-      {{template "content" .}}
-    </section>
+    {{template "rail_left" .}}
+    {{template "root_zone" .}}
+    {{template "collection_zone" .}}
+    {{template "rail_right" .}}
   </div>
 </main>
 </body>

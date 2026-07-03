@@ -1,7 +1,7 @@
 # quotes-manager
 
 <!-- coverage:START -->
-![coverage](https://img.shields.io/badge/coverage-15.3%25-red)
+![coverage](https://img.shields.io/badge/coverage-15.2%25-red)
 <!-- coverage:END -->
 
 ![quotes-manager home page](docs/home.png)
@@ -36,8 +36,8 @@ docs/
 exports/
   shortest-first.md            generated export, shortest-first (committed)
 web/
-  templates/                   layout, index, quote_list, quote_block(_ro), quote_form, sidebar, quote_chips, quote_category_editor
-  static/                      app.css (warm-paper theme), app.js, htmx (vendored)
+  templates/                   layout, rail_left, rail_right, root_zone, collection_zone, quote_list, quote_block(_ro), quote_form, quote_chips, quote_collection_chips, quote_category_editor
+  static/                      app.css (typography/components) + layout.css (4-zone grid), app.js, htmx (vendored)
 go.mod
 readme.md
 changelog.md
@@ -55,52 +55,58 @@ CGO_ENABLED=1 go run ./cmd/server -db /tmp/q.db # custom database path
 ```
 
 On first run the server creates `database/quotes.db` and loads the canonical
-seed (109 quotes). From then on your edits persist; the seed is never reapplied
-(so deleting a quote is permanent).
+seed (109 quotes, three sample categories, and one sample collection). From then
+on your edits persist; the seed is never reapplied (so deleting a quote is
+permanent).
 
-The UI is a left **sidebar** (Collections + Categories) beside a list of quote
-blocks. Each block:
+The UI is a **dual-pane workspace**: a left rail (Home + Categories) and a right
+rail (Collections) flank two text columns — the **root** corpus on the left and
+the active **collection** on the right. A thin, two-half header sits atop each
+column showing only a name and a count. Each root block:
 
 - shows the quote in the canonical format — passages in italics, the sutta id
   **bolded** and linked to `https://suttacentral.net/<id-without-spaces>`
   (e.g. `MN 22` → `mn22`), opening in a new tab;
 - shows its **categories** as chips, with an inline ✎ editor to tag it;
+- shows the **collections** it belongs to as a second chip row;
 - has **Copy**, **Edit**, and **Delete** actions;
 - has a checkbox for **bulk delete** (with a select-all control in the toolbar).
 
 Home is kept in **shortest-first (rune-count) order**: a newly added quote
 slots into its sorted place automatically (there is no drag on home — home is
-the canonical corpus). The title bar shows the current block count.
+the canonical corpus).
 
 **+ New** opens a 3-field form (content, attribution, text ID). An empty
 attribution defaults to "the Buddha". **Copy all** copies every quote as one
-text joined by the dot separator.
+text joined by the dot separator. Selecting a category or a collection swaps
+just that pane in place (the URL carries `?cat=` / `?col=` for deep linking).
 
-Every mutation (create / edit / delete / bulk delete) is written to SQLite
-before the UI is updated, so the page is always a faithful view of the database.
+Every mutation is written to SQLite before the UI is updated, so the page is
+always a faithful view of the database.
 
 ### Collections
 
-Select quotes and use the **Add to collection** control (beside Delete
-selected). A dropdown picks the target: an **existing collection** (the selected
-quotes are prepended on top; duplicates are skipped) or **+ New collection** to
-spin up a new numbered one. Collections appear in the sidebar on the left.
+Check one or more root quotes and **insert gaps** (`+` markers) appear between
+every pair of collection blocks; clicking one inserts the selection at that
+exact 1-based position, shifting later items down (duplicates are skipped).
+**+ from selection** in the right rail creates a new collection from the
+selection and makes it active. Collections are **named** — inline ✎ rename in
+the right rail — and default to "Collection {id}" until renamed.
 
-A collection view shows its quotes in the same block layout: **copyable**
-(copy-one, copy-all via `/collections/{id}/export.txt`) and **drag-to-reorder**
-(saved to the collection's own order), but read-only for content — no +New,
-edit, or delete — so home stays the sole source of truth. Each collection has a
-**Delete collection** button.
+A collection's blocks are **copyable** (copy-one, copy-all via
+`/collections/{id}/export.txt`) and **drag-to-reorder** (saved to the
+collection's own order), but read-only for content — no +New, edit, or delete —
+so home stays the sole source of truth. Each collection has a **Delete** button.
 
 ### Categories
 
-**Categories** are named tags managed independently in the sidebar — create,
-rename, or delete them inline (names are unique, case-insensitive). Each quote
+**Categories** are named tags managed independently in the left rail — create,
+rename, or delete them inline (names are unique, case-insensitive). Each root
 block shows its categories as chips; the inline ✎ editor toggles any
-combination and can create a new category on the spot. Clicking a category in
-the sidebar filters the list to its quotes — a read-only **category view**, like
-a collection, with Copy all via `/categories/{id}/export.txt`. Deleting a
-category untaggs its quotes; deleting a quote clears its tags.
+combination and can create a new category on the spot. Clicking a category (in
+the rail or on a chip) filters the root column to its quotes, with Copy all via
+`/categories/{id}/export.txt`. Deleting a category untaggs its quotes; deleting a
+quote clears its tags.
 
 ### SQLite schema (web)
 
@@ -122,17 +128,18 @@ CREATE TABLE quotes (
 `id` and `char_count` carry the canonical shortest-first ranking, which `List`
 orders by. (Collection order is separate — see below.)
 
-Collections are numbered subsets curated from home (deleting a quote on home
-also removes it from every collection):
+Collections are named (or autonumbered) subsets curated from home (deleting a
+quote on home also removes it from every collection):
 
 ```sql
 CREATE TABLE collections (
-    id INTEGER PRIMARY KEY
+    id   INTEGER PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT ''   -- empty renders as "Collection {id}"
 );
 CREATE TABLE collection_items (
     collection_id INTEGER NOT NULL,
     quote_id      INTEGER NOT NULL,
-    position      INTEGER NOT NULL,
+    position      INTEGER NOT NULL,    -- 1-based; insert-at-index shifts this
     PRIMARY KEY (collection_id, quote_id)
 );
 ```

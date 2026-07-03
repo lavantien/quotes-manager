@@ -1,0 +1,31 @@
+{{define "collection_zone"}}
+<section class="zone zone--collection" id="collection-zone" data-cid="{{.ActiveColID}}">
+  {{template "collection_zone_body" .}}
+</section>
+{{end}}
+
+{{define "collection_zone_body"}}
+{{if .Collection.Active}}
+<header class="zone__head">
+  <span class="zone__title">{{.Collection.Name}}</span>
+  <span class="zone__count">{{.Collection.Count}} blocks</span>
+</header>
+<div class="zone__toolbar">
+  <button type="button" class="btn btn--sm" data-action="copy-all" data-export="{{.Collection.ExportURL}}">Copy all</button>
+  <button type="button" class="btn btn--sm btn--danger" hx-delete="/collections/{{.Collection.ID}}" hx-confirm="Delete this collection?">Delete</button>
+</div>
+<div id="collection-list" class="quote-list collection-list" data-reorder="/collections/{{.Collection.ID}}/reorder">
+  {{range $i, $q := .Collection.Quotes}}<button type="button" class="insert-gap" data-action="insert-collection" data-pos="{{add $i 1}}" title="Insert selected root quotes here" aria-label="Insert selected root quotes here"></button>{{template "quote_block_ro" (withView $q $.CatMap $.ColMap)}}{{end}}
+  <button type="button" class="insert-gap" data-action="insert-collection" data-pos="{{add (len .Collection.Quotes) 1}}" title="Insert selected root quotes here" aria-label="Insert selected root quotes here"></button>
+</div>
+{{else}}
+<header class="zone__head">
+  <span class="zone__title">Collection</span>
+  <span class="zone__count zone__count--muted">none</span>
+</header>
+<div class="zone__empty">
+  <p>No collection selected.</p>
+  <p class="zone__hint">Pick one in the right rail, or check root quotes and insert them at a gap.</p>
+</div>
+{{end}}
+{{end}}

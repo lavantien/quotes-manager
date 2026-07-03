@@ -140,6 +140,58 @@ func TestEnsureSeededSeedsSampleCategories(t *testing.T) {
 	}
 }
 
+// TestEnsureSeededSeedsSampleCollection: on a fresh database where the
+// collections tables already exist (as store.Open provisions them before
+// seeding), EnsureSeeded creates one sample collection holding the two shortest
+// quotes, so the collection column and membership chips are non-empty on a fresh
+// install.
+func TestEnsureSeededSeedsSampleCollection(t *testing.T) {
+	db := openDB(t)
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS collections (id INTEGER PRIMARY KEY, name TEXT NOT NULL DEFAULT '');
+		CREATE TABLE IF NOT EXISTS collection_items (collection_id INTEGER NOT NULL, quote_id INTEGER NOT NULL, position INTEGER NOT NULL, PRIMARY KEY (collection_id, quote_id))`); err != nil {
+		t.Fatal(err)
+	}
+	if err := EnsureSeeded(db); err != nil {
+		t.Fatal(err)
+	}
+	var cols, items int
+	if err := db.QueryRow("SELECT COUNT(*) FROM collections").Scan(&cols); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow("SELECT COUNT(*) FROM collection_items").Scan(&items); err != nil {
+		t.Fatal(err)
+	}
+	if cols != 1 || items != 2 {
+		t.Errorf("expected 1 sample collection with 2 items, got cols=%d items=%d", cols, items)
+	}
+}
+
+// TestSeedSampleCollectionIdempotent: re-entering the seeding path must not
+// create a second sample collection.
+func TestSeedSampleCollectionIdempotent(t *testing.T) {
+	db := openDB(t)
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS collections (id INTEGER PRIMARY KEY, name TEXT NOT NULL DEFAULT '');
+		CREATE TABLE IF NOT EXISTS collection_items (collection_id INTEGER NOT NULL, quote_id INTEGER NOT NULL, position INTEGER NOT NULL, PRIMARY KEY (collection_id, quote_id))`); err != nil {
+		t.Fatal(err)
+	}
+	if err := EnsureSeeded(db); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("DELETE FROM app_meta WHERE key = 'seeded'"); err != nil {
+		t.Fatal(err)
+	}
+	if err := EnsureSeeded(db); err != nil {
+		t.Fatal(err)
+	}
+	var cols int
+	if err := db.QueryRow("SELECT COUNT(*) FROM collections").Scan(&cols); err != nil {
+		t.Fatal(err)
+	}
+	if cols != 1 {
+		t.Errorf("re-seed duplicated the sample collection: cols=%d", cols)
+	}
+}
+
 // TestSeedCategoriesIdempotent: re-entering the seeding path (e.g. recovery
 // from a partial failure) must not duplicate category tags.
 func TestSeedCategoriesIdempotent(t *testing.T) {

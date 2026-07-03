@@ -1,0 +1,23 @@
+{{define "rail_right"}}
+<nav class="rail rail--right" id="right-rail" aria-label="Collections">
+  {{template "rail_right_body" .}}
+</nav>
+{{end}}
+
+{{define "rail_right_oob"}}
+<nav class="rail rail--right" id="right-rail" aria-label="Collections" hx-swap-oob="outerHTML">
+  {{template "rail_right_body" .}}
+</nav>
+{{end}}
+
+{{define "rail_right_body"}}
+<section class="rail__section">
+  <h2 class="rail__heading">Collections</h2>
+  {{range .Collections}}<div class="rail__row" data-id="{{.ID}}">
+    <a class="rail__link{{if eq .ID $.ActiveColID}} is-active{{end}}" hx-get="/pane/collection?col={{.ID}}" hx-target="#collection-zone" hx-swap="outerHTML" href="/collections/{{.ID}}">{{colLabel .}}{{if gt .Count 0}} <span class="rail__count">{{.Count}}</span>{{end}}</a>
+    <button type="button" class="rail__icon" data-action="rename-collection" data-id="{{.ID}}" data-name="{{.Name}}" aria-label="Rename collection">&#9998;</button>
+    <button type="button" class="rail__icon rail__icon--danger" hx-delete="/collections/{{.ID}}" hx-confirm="Delete this collection?" aria-label="Delete collection">&#10005;</button>
+  </div>{{else}}<p class="rail__empty">No collections.</p>{{end}}
+  <button type="button" class="btn btn--sm rail__new-btn" data-action="new-collection" disabled>+ from selection</button>
+</section>
+{{end}}

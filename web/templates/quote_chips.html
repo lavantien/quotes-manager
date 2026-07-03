@@ -1,5 +1,5 @@
 {{define "quote_chips"}}
 <div class="quote__chips" id="chips-{{.ID}}">
-  {{range .Categories}}<a class="category-chip" href="/categories/{{.ID}}">{{.Name}}</a>{{end}}
+  {{range .Categories}}<a class="category-chip" hx-get="/pane/root?cat={{.ID}}" hx-target="#root-zone" hx-swap="outerHTML" href="/categories/{{.ID}}">{{.Name}}</a>{{end}}
 </div>
 {{end}}
