@@ -265,3 +265,37 @@ func TestStoreMapScanErrors(t *testing.T) {
 		t.Error("QuoteCollectionMap: expected scan error")
 	}
 }
+
+// TestCollectionMembersScanError drives collectionMembers' scan-error return via
+// a membership row with a non-numeric quote_id.
+func TestCollectionMembersScanError(t *testing.T) {
+	s := newTestStore(t)
+	mustCreate(t, s, quote.New("X", "X", []string{"x"}))
+	for _, stmt := range []string{
+		`INSERT INTO collections (id, name) VALUES (1, 'x')`,
+		`INSERT INTO collection_items (collection_id, quote_id, position) VALUES (1, 'NOTANINT', 1)`,
+	} {
+		if _, err := s.DB().Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.AddToCollection(1, []int64{2}); err == nil {
+		t.Error("AddToCollection: expected collectionMembers scan error")
+	}
+}
+
+// TestStoreCategoryItemsRollback drops only category_items so Delete/DeleteMany
+// get past the collection_items delete and hit the category_items rollback.
+func TestStoreCategoryItemsRollback(t *testing.T) {
+	s := newTestStore(t)
+	q := mustCreate(t, s, quote.New("X", "X", []string{"x"}))
+	if _, err := s.DB().Exec("DROP TABLE category_items"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Delete(q); err == nil {
+		t.Error("Delete: expected category_items rollback error")
+	}
+	if err := s.DeleteMany([]int64{q}); err == nil {
+		t.Error("DeleteMany: expected category_items rollback error")
+	}
+}
