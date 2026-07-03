@@ -18,18 +18,24 @@ func main() {
 	dbPath := flag.String("db", "database/quotes.db", "SQLite database path")
 	flag.Parse()
 
-	st, err := store.Open(*dbPath)
+	if err := serve(*addr, *dbPath); err != nil {
+		log.Fatalf("server: %v", err)
+	}
+}
+
+// serve opens (creating if needed) and seeds the database, then serves the web
+// UI on addr until the process is stopped.
+func serve(addr, dbPath string) error {
+	st, err := store.Open(dbPath)
 	if err != nil {
-		log.Fatalf("open database %s: %v", *dbPath, err)
+		return err
 	}
 	defer st.Close()
 
 	if err := seed.EnsureSeeded(st.DB()); err != nil {
-		log.Fatalf("seed database: %v", err)
+		return err
 	}
 
-	log.Printf("quotes-manager listening on http://localhost%s", *addr)
-	if err := http.ListenAndServe(*addr, server.New(st)); err != nil {
-		log.Fatalf("server: %v", err)
-	}
+	log.Printf("quotes-manager listening on http://localhost%s", addr)
+	return http.ListenAndServe(addr, server.New(st))
 }

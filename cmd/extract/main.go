@@ -15,31 +15,38 @@ import (
 
 func main() {
 	log.SetFlags(0)
-
-	files, err := loadDumps("dumps")
+	count, err := generate("dumps", "database/seed.sql", "exports/shortest-first.md")
 	if err != nil {
-		log.Fatalf("load dumps: %v", err)
+		log.Fatalf("extract: %v", err)
 	}
+	fmt.Printf("extracted %d unique quotes\n", count)
+	fmt.Println("  -> database/seed.sql")
+	fmt.Println("  -> exports/shortest-first.md")
+}
 
+// generate reads the dumps, normalizes and sorts the quotes, and writes the
+// seed SQL and text export. It returns the number of unique quotes written.
+func generate(dumpsDir, seedPath, exportPath string) (int, error) {
+	files, err := loadDumps(dumpsDir)
+	if err != nil {
+		return 0, err
+	}
 	quotes := quote.Parse(files)
 	quotes = quote.Dedup(quotes)
 	quote.SortByCharCount(quotes)
 
-	for _, dir := range []string{"database", "exports"} {
+	for _, dir := range []string{filepath.Dir(seedPath), filepath.Dir(exportPath)} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
-			log.Fatalf("mkdir %s: %v", dir, err)
+			return 0, err
 		}
 	}
-	if err := os.WriteFile("database/seed.sql", []byte(quote.RenderSeedSQL(quotes)), 0o644); err != nil {
-		log.Fatalf("write seed.sql: %v", err)
+	if err := os.WriteFile(seedPath, []byte(quote.RenderSeedSQL(quotes)), 0o644); err != nil {
+		return 0, err
 	}
-	if err := os.WriteFile("exports/shortest-first.md", []byte(quote.RenderExportFile(quotes)), 0o644); err != nil {
-		log.Fatalf("write export: %v", err)
+	if err := os.WriteFile(exportPath, []byte(quote.RenderExportFile(quotes)), 0o644); err != nil {
+		return 0, err
 	}
-
-	fmt.Printf("extracted %d unique quotes\n", len(quotes))
-	fmt.Println("  -> database/seed.sql")
-	fmt.Println("  -> exports/shortest-first.md")
+	return len(quotes), nil
 }
 
 // loadDumps reads dumps/*.txt in filename order as named files.
