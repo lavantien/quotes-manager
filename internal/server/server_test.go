@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -1252,5 +1253,193 @@ func TestRootBlockShowsCollectionChips(t *testing.T) {
 	}
 	if !strings.Contains(body, fmt.Sprintf(`col=%d`, cid)) {
 		t.Error("collection chip should target the collection pane")
+	}
+}
+
+// failingStore returns errStoreFails from every Store method so each handler's
+// error branch (serverError / the handleStoreErr default path) is exercised.
+// Close is the only method that succeeds.
+type failingStore struct{}
+
+var errStoreFails = errors.New("store unavailable")
+
+func (failingStore) List() ([]store.Quote, error)                 { return nil, errStoreFails }
+func (failingStore) Get(int64) (store.Quote, error)               { return store.Quote{}, errStoreFails }
+func (failingStore) Create(*quote.Quote) (int64, error)           { return 0, errStoreFails }
+func (failingStore) Update(int64, *quote.Quote) error             { return errStoreFails }
+func (failingStore) Delete(int64) error                           { return errStoreFails }
+func (failingStore) DeleteMany([]int64) error                     { return errStoreFails }
+func (failingStore) ListCollections() ([]store.Collection, error) { return nil, errStoreFails }
+func (failingStore) CreateCollection([]int64) (int64, error)      { return 0, errStoreFails }
+func (failingStore) AddToCollection(int64, []int64) error         { return errStoreFails }
+func (failingStore) InsertAtCollection(int64, []int64, int) error { return errStoreFails }
+func (failingStore) GetCollection(int64) (store.Collection, error) {
+	return store.Collection{}, errStoreFails
+}
+func (failingStore) RenameCollection(int64, string) error          { return errStoreFails }
+func (failingStore) CollectionQuotes(int64) ([]store.Quote, error) { return nil, errStoreFails }
+func (failingStore) QuoteCollectionMap() (map[int64][]store.Collection, error) {
+	return nil, errStoreFails
+}
+func (failingStore) ReorderCollection(int64, []int64) error    { return errStoreFails }
+func (failingStore) DeleteCollection(int64) error              { return errStoreFails }
+func (failingStore) ListCategories() ([]store.Category, error) { return nil, errStoreFails }
+func (failingStore) CreateCategory(string) (int64, error)      { return 0, errStoreFails }
+func (failingStore) GetCategory(int64) (store.Category, error) {
+	return store.Category{}, errStoreFails
+}
+func (failingStore) RenameCategory(int64, string) error                    { return errStoreFails }
+func (failingStore) DeleteCategory(int64) error                            { return errStoreFails }
+func (failingStore) CategoryQuotes(int64) ([]store.Quote, error)           { return nil, errStoreFails }
+func (failingStore) SetQuoteCategories(int64, []int64) error               { return errStoreFails }
+func (failingStore) QuoteCategoryMap() (map[int64][]store.Category, error) { return nil, errStoreFails }
+func (failingStore) Close() error                                          { return nil }
+
+// TestHandlerStoreErrors drives every mutating/reading handler against a store
+// that always fails, so the serverError / handleStoreErr paths are covered.
+func TestHandlerStoreErrors(t *testing.T) {
+	srv := newServer(t, failingStore{})
+	cases := []struct {
+		method, target, body, ct string
+	}{
+		{"GET", "/", "", ""},
+		{"GET", "/quotes", "", ""},
+		{"POST", "/quotes", "content=x&text_id=MN+1", "application/x-www-form-urlencoded"},
+		{"POST", "/quotes/1", "content=x&text_id=MN+1", "application/x-www-form-urlencoded"},
+		{"DELETE", "/quotes/1", "", ""},
+		{"POST", "/quotes/delete", "id=1", "application/x-www-form-urlencoded"},
+		{"GET", "/quotes/1/copy", "", ""},
+		{"GET", "/quotes/1/edit", "", ""},
+		{"GET", "/quotes/1/categories", "", ""},
+		{"GET", "/quotes/1/categories/edit", "", ""},
+		{"GET", "/export.txt", "", ""},
+		{"GET", "/collections/1", "", ""},
+		{"POST", "/collections", "id=1", "application/x-www-form-urlencoded"},
+		{"POST", "/collections/1/items", "id=2", "application/x-www-form-urlencoded"},
+		{"POST", "/collections/1/insert", "id=2&pos=1", "application/x-www-form-urlencoded"},
+		{"POST", "/collections/1/rename", "name=x", "application/x-www-form-urlencoded"},
+		{"DELETE", "/collections/1", "", ""},
+		{"POST", "/collections/1/reorder", `{"ids":[1]}`, "application/json"},
+		{"GET", "/collections/1/export.txt", "", ""},
+		{"GET", "/categories/1", "", ""},
+		{"GET", "/categories/1/export.txt", "", ""},
+		{"POST", "/categories", "name=x", "application/x-www-form-urlencoded"},
+		{"POST", "/categories/1/rename", "name=x", "application/x-www-form-urlencoded"},
+		{"DELETE", "/categories/1", "", ""},
+		{"POST", "/quotes/1/categories", "id=1", "application/x-www-form-urlencoded"},
+		{"GET", "/rail/left", "", ""},
+		{"GET", "/rail/right", "", ""},
+		{"GET", "/pane/root", "", ""},
+		{"GET", "/pane/collection", "", ""},
+	}
+	for _, c := range cases {
+		rec := do(t, srv, c.method, c.target, c.body, "Content-Type", c.ct)
+		if rec.Code != http.StatusInternalServerError {
+			t.Errorf("%s %s: code = %d, want 500", c.method, c.target, rec.Code)
+		}
+	}
+}
+
+func TestNewForm(t *testing.T) {
+	srv := newServer(t, newFake())
+	rec := do(t, srv, "GET", "/quotes/new", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, `hx-post="/quotes"`) {
+		t.Error("new form should post to /quotes")
+	}
+	if !strings.Contains(body, "Add quote") {
+		t.Error("new form missing submit label")
+	}
+}
+
+func TestListFragment(t *testing.T) {
+	srv := newServer(t, newFake())
+	rec := do(t, srv, "GET", "/quotes", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), `id="quote-list"`) {
+		t.Error("list fragment should render the quote-list container")
+	}
+}
+
+func TestCreateNonHTMXRedirects(t *testing.T) {
+	srv := newServer(t, newFake())
+	rec := do(t, srv, "POST", "/quotes", "content=%22x%22&text_id=MN+1",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusSeeOther {
+		t.Errorf("status = %d, want 303", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != "/" {
+		t.Errorf("Location = %q, want /", loc)
+	}
+}
+
+func TestUpdateNonHTMXRedirects(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "POST", "/quotes/1", "content=%22x%22&text_id=MN+1",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusSeeOther {
+		t.Errorf("status = %d, want 303", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != "/" {
+		t.Errorf("Location = %q, want /", loc)
+	}
+}
+
+func TestCollectionReorderBadJSON(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/reorder", cid),
+		`{not json`, "Content-Type", "application/json")
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestCollectionReorderUnknownCollection(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "POST", "/collections/999/reorder", `{"ids":[1]}`, "Content-Type", "application/json")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestInsertCollectionItemsNonNumericPos(t *testing.T) {
+	fs, cid := fakeWithCollection(t) // holds quotes 1, 2; quote 3 also exists
+	srv := newServer(t, fs)
+	// A non-numeric pos falls back to 1, so quote 3 is prepended.
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/insert", cid), "id=3&pos=abc",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	qs, _ := fs.CollectionQuotes(cid)
+	if len(qs) != 3 || qs[0].ID != 3 {
+		t.Errorf("non-numeric pos should fall back to 1 (prepend): %+v", qs)
+	}
+}
+
+func TestIndexUnknownCollectionClearsCol(t *testing.T) {
+	// A stale ?col= for a missing collection clears ActiveColID instead of 500ing.
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "GET", "/?col=999", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "No collection selected") {
+		t.Error("unknown col should fall back to the placeholder")
+	}
+}
+
+func TestIndexUnknownCategoryEmptyRoot(t *testing.T) {
+	// A stale ?cat= for a missing category renders an empty root pane, not 500.
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "GET", "/?cat=999", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
 	}
 }
