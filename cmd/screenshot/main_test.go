@@ -50,6 +50,22 @@ func TestBrowserPathEmptyWhenAbsent(t *testing.T) {
 	}
 }
 
+// TestBrowserPathWindowsScan exercises the Windows install-path scan. It makes
+// no strict assertion (Chrome/Edge may or may not be installed) but verifies any
+// discovered binary actually exists.
+func TestBrowserPathWindowsScan(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows install-path scan only")
+	}
+	t.Setenv("QUOTES_BROWSER", "")
+	t.Setenv("PATH", "")
+	if got := browserPath(); got != "" {
+		if _, err := os.Stat(got); err != nil {
+			t.Errorf("browserPath returned %q which does not exist: %v", got, err)
+		}
+	}
+}
+
 // TestRunWithFakeCapture drives the full non-browser flow: a temp DB is opened
 // and seeded, the app is served on an ephemeral port, the (faked) capture hits
 // it over HTTP, and the bytes are written to the target file.

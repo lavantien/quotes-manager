@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -19,9 +20,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("extract: %v", err)
 	}
-	fmt.Printf("extracted %d unique quotes\n", count)
-	fmt.Println("  -> database/seed.sql")
-	fmt.Println("  -> exports/shortest-first.md")
+	report(os.Stdout, count)
+}
+
+// report prints a summary of the extraction to out.
+func report(out io.Writer, count int) {
+	fmt.Fprintf(out, "extracted %d unique quotes\n", count)
+	fmt.Fprintln(out, "  -> database/seed.sql")
+	fmt.Fprintln(out, "  -> exports/shortest-first.md")
 }
 
 // generate reads the dumps, normalizes and sorts the quotes, and writes the

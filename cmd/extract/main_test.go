@@ -1,11 +1,23 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestReport(t *testing.T) {
+	var buf bytes.Buffer
+	report(&buf, 7)
+	got := buf.String()
+	for _, want := range []string{"extracted 7 unique quotes", "database/seed.sql", "exports/shortest-first.md"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("report missing %q:\n%s", want, got)
+		}
+	}
+}
 
 func TestLoadDumpsOrdersByName(t *testing.T) {
 	dir := t.TempDir()

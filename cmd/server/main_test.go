@@ -13,3 +13,13 @@ func TestServeOpenFails(t *testing.T) {
 		t.Error("serve should fail when the DB path cannot be opened")
 	}
 }
+
+// TestServeListenFails: a valid (temp) database opens and seeds fine, but an
+// invalid bind address makes ListenAndServe fail immediately — exercising the
+// happy open+seed path and the listen error return without blocking.
+func TestServeListenFails(t *testing.T) {
+	db := filepath.Join(t.TempDir(), "db.sqlite")
+	if err := serve("not a valid:addr", db); err == nil {
+		t.Error("serve should fail to listen on a bad address")
+	}
+}
