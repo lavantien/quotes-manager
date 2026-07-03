@@ -41,6 +41,31 @@ func TestRunUpdatesBadge(t *testing.T) {
 	}
 }
 
+func TestRunBadgeAlreadyCurrentIsIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	profile := filepath.Join(dir, "coverage.out")
+	readme := filepath.Join(dir, "readme.md")
+	if err := os.WriteFile(profile, []byte("mode: set\nfoo.go:1.1,2.2 5 1\nbar.go:3.1,4.2 5 0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(readme, []byte("<!-- coverage:START -->\nold\n<!-- coverage:END -->\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// First run writes the badge at 50%.
+	if _, err := run(profile, readme); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	first, _ := os.ReadFile(readme)
+	// Second run: the badge is already current, so the README must not change.
+	if _, err := run(profile, readme); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	second, _ := os.ReadFile(readme)
+	if string(first) != string(second) {
+		t.Errorf("readme changed on a no-op refresh:\nbefore: %s\nafter:  %s", first, second)
+	}
+}
+
 func TestRunNoMarkersLeavesReadmeUntouched(t *testing.T) {
 	dir := t.TempDir()
 	profile := filepath.Join(dir, "coverage.out")

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/lavantien/quotes-manager/internal/coverbadge"
 )
@@ -46,14 +47,19 @@ func run(profilePath, readmePath string) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
+	hasMarkers := strings.Contains(string(readme), coverbadge.StartMarker) &&
+		strings.Contains(string(readme), coverbadge.EndMarker)
 	updated := coverbadge.RenderBadge(string(readme), pct)
-	if updated == string(readme) {
+	switch {
+	case !hasMarkers:
 		log.Printf("coverage %.1f%% — README has no coverage markers; nothing written", pct)
-		return pct, nil
+	case updated == string(readme):
+		log.Printf("coverage %.1f%% — README badge already current", pct)
+	default:
+		if err := os.WriteFile(readmePath, []byte(updated), 0o644); err != nil {
+			return pct, err
+		}
+		fmt.Printf("coverage %.1f%% — README badge updated\n", pct)
 	}
-	if err := os.WriteFile(readmePath, []byte(updated), 0o644); err != nil {
-		return pct, err
-	}
-	fmt.Printf("coverage %.1f%% — README badge updated\n", pct)
 	return pct, nil
 }
