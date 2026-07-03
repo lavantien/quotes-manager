@@ -1,0 +1,131 @@
+package store
+
+import (
+	"database/sql"
+	"errors"
+	"testing"
+
+	"github.com/mattn/go-sqlite3"
+
+	"github.com/lavantien/quotes-manager/internal/quote"
+)
+
+// TestClosedDBMethodsError drives every SQLiteStore method against a closed
+// connection pool so the top-of-method Query/QueryRow/Exec/Begin error returns
+// (the bulk of sqlite.go's uncovered branches) are exercised.
+func TestClosedDBMethodsError(t *testing.T) {
+	s := newTestStore(t)
+	q := mustCreate(t, s, quote.New("MN 22", "the Buddha, MN 22", []string{`"hi"`}))
+	cid, _ := s.CreateCollection([]int64{q})
+	catID, _ := s.CreateCategory("wisdom")
+
+	if err := s.Close(); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+
+	qp := quote.New("X", "X", []string{"x"})
+	checks := []struct {
+		name string
+		fn   func() error
+	}{
+		{"List", func() error { _, err := s.List(); return err }},
+		{"Get", func() error { _, err := s.Get(q); return err }},
+		{"Create", func() error { _, err := s.Create(qp); return err }},
+		{"Update", func() error { return s.Update(q, qp) }},
+		{"Delete", func() error { return s.Delete(q) }},
+		{"DeleteMany", func() error { return s.DeleteMany([]int64{q}) }},
+		{"ListCollections", func() error { _, err := s.ListCollections(); return err }},
+		{"CreateCollection", func() error { _, err := s.CreateCollection([]int64{q}); return err }},
+		{"AddToCollection", func() error { return s.AddToCollection(cid, []int64{q}) }},
+		{"InsertAtCollection", func() error { return s.InsertAtCollection(cid, []int64{q}, 1) }},
+		{"GetCollection", func() error { _, err := s.GetCollection(cid); return err }},
+		{"CollectionQuotes", func() error { _, err := s.CollectionQuotes(cid); return err }},
+		{"RenameCollection", func() error { return s.RenameCollection(cid, "x") }},
+		{"ReorderCollection", func() error { return s.ReorderCollection(cid, []int64{q}) }},
+		{"DeleteCollection", func() error { return s.DeleteCollection(cid) }},
+		{"ListCategories", func() error { _, err := s.ListCategories(); return err }},
+		{"CreateCategory", func() error { _, err := s.CreateCategory("x"); return err }},
+		{"GetCategory", func() error { _, err := s.GetCategory(catID); return err }},
+		{"RenameCategory", func() error { return s.RenameCategory(catID, "x") }},
+		{"DeleteCategory", func() error { return s.DeleteCategory(catID) }},
+		{"CategoryQuotes", func() error { _, err := s.CategoryQuotes(catID); return err }},
+		{"SetQuoteCategories", func() error { return s.SetQuoteCategories(q, []int64{catID}) }},
+		{"QuoteCategoryMap", func() error { _, err := s.QuoteCategoryMap(); return err }},
+		{"QuoteCollectionMap", func() error { _, err := s.QuoteCollectionMap(); return err }},
+	}
+	for _, c := range checks {
+		if err := c.fn(); err == nil {
+			t.Errorf("%s: expected error after Close, got nil", c.name)
+		}
+	}
+}
+
+func TestDBGetter(t *testing.T) {
+	s := newTestStore(t)
+	if s.DB() == nil {
+		t.Error("DB() = nil, want the underlying *sql.DB")
+	}
+}
+
+func TestSplitSources(t *testing.T) {
+	if got := splitSources(""); got != nil {
+		t.Errorf("splitSources(\"\") = %#v, want nil", got)
+	}
+	got := splitSources("a;b;c")
+	want := []string{"a", "b", "c"}
+	if len(got) != len(want) {
+		t.Fatalf("splitSources = %#v, want %#v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("splitSources[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestIsUniqueViolation(t *testing.T) {
+	if !isUniqueViolation(sqlite3.Error{Code: sqlite3.ErrConstraint, ExtendedCode: sqlite3.ErrConstraintUnique}) {
+		t.Error("ErrConstraintUnique should be a unique violation")
+	}
+	if !isUniqueViolation(sqlite3.Error{Code: sqlite3.ErrConstraint}) {
+		t.Error("ErrConstraint should be treated as a violation")
+	}
+	if isUniqueViolation(errors.New("not a sqlite error")) {
+		t.Error("plain error should not be a unique violation")
+	}
+}
+
+type fakeResult struct {
+	rows int64
+	err  error
+}
+
+func (f fakeResult) LastInsertId() (int64, error) { return 0, f.err }
+func (f fakeResult) RowsAffected() (int64, error) { return f.rows, f.err }
+
+func TestRowsAffected(t *testing.T) {
+	if err := rowsAffected(fakeResult{rows: 0}, 5); !errors.Is(err, ErrNotFound) {
+		t.Errorf("zero rows = %v, want ErrNotFound", err)
+	}
+	if err := rowsAffected(fakeResult{rows: 1}, 5); err != nil {
+		t.Errorf("one row = %v, want nil", err)
+	}
+	boom := errors.New("rows unavailable")
+	if err := rowsAffected(fakeResult{err: boom}, 5); !errors.Is(err, boom) {
+		t.Errorf("driver error = %v, want %v", err, boom)
+	}
+}
+
+type errScanner struct{ err error }
+
+func (e errScanner) Scan(dest ...any) error { return e.err }
+
+func TestScanQuoteError(t *testing.T) {
+	if _, err := scanQuote(errScanner{errors.New("scan failed")}); err == nil {
+		t.Error("scanQuote should surface the scan error")
+	}
+}
+
+// TestSQLDriverTypes compiles a check that the sql package is reachable (keeps
+// the database/sql import meaningful alongside fakeResult).
+var _ sql.Result = fakeResult{}
