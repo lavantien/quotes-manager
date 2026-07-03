@@ -129,3 +129,88 @@ func TestScanQuoteError(t *testing.T) {
 // TestSQLDriverTypes compiles a check that the sql package is reachable (keeps
 // the database/sql import meaningful alongside fakeResult).
 var _ sql.Result = fakeResult{}
+
+// TestStoreMidTransactionErrors drops the membership tables so the mid-tx
+// DELETE/UPDATE/SELECT statements fail, exercising each method's rollback path.
+func TestStoreMidTransactionErrors(t *testing.T) {
+	s := newTestStore(t)
+	q := mustCreate(t, s, quote.New("X", "X", []string{"x"}))
+	cid, _ := s.CreateCollection([]int64{q})
+	catID, _ := s.CreateCategory("wisdom")
+
+	for _, stmt := range []string{"DROP TABLE collection_items", "DROP TABLE category_items"} {
+		if _, err := s.DB().Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	checks := []struct {
+		name string
+		fn   func() error
+	}{
+		{"Delete", func() error { return s.Delete(q) }},
+		{"DeleteMany", func() error { return s.DeleteMany([]int64{q}) }},
+		{"CreateCollection", func() error { _, err := s.CreateCollection([]int64{q}); return err }},
+		{"AddToCollection", func() error { return s.AddToCollection(cid, []int64{q}) }},
+		{"InsertAtCollection", func() error { return s.InsertAtCollection(cid, []int64{q}, 1) }},
+		{"ReorderCollection", func() error { return s.ReorderCollection(cid, []int64{q}) }},
+		{"DeleteCollection", func() error { return s.DeleteCollection(cid) }},
+		{"DeleteCategory", func() error { return s.DeleteCategory(catID) }},
+		{"SetQuoteCategories", func() error { return s.SetQuoteCategories(q, []int64{catID}) }},
+	}
+	for _, c := range checks {
+		if err := c.fn(); err == nil {
+			t.Errorf("%s: expected mid-transaction error, got nil", c.name)
+		}
+	}
+}
+
+// TestStoreExistenceCheckScanErrors drives the non-ErrNoRows branches of the
+// per-method existence checks by dropping the table they query.
+func TestStoreExistenceCheckScanErrors(t *testing.T) {
+	t.Run("collections existence", func(t *testing.T) {
+		s := newTestStore(t)
+		q := mustCreate(t, s, quote.New("X", "X", []string{"x"}))
+		if _, err := s.DB().Exec("DROP TABLE collections"); err != nil {
+			t.Fatal(err)
+		}
+		for _, c := range []struct {
+			name string
+			fn   func() error
+		}{
+			{"AddToCollection", func() error { return s.AddToCollection(1, []int64{q}) }},
+			{"InsertAtCollection", func() error { return s.InsertAtCollection(1, []int64{q}, 1) }},
+			{"ReorderCollection", func() error { return s.ReorderCollection(1, []int64{q}) }},
+			{"RenameCollection", func() error { return s.RenameCollection(1, "x") }},
+			{"GetCollection", func() error { _, err := s.GetCollection(1); return err }},
+			{"ListCollections", func() error { _, err := s.ListCollections(); return err }},
+		} {
+			if err := c.fn(); err == nil {
+				t.Errorf("%s: expected error (collections dropped)", c.name)
+			}
+		}
+	})
+	t.Run("quote existence in SetQuoteCategories", func(t *testing.T) {
+		s := newTestStore(t)
+		if _, err := s.DB().Exec("DROP TABLE quotes"); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.SetQuoteCategories(1, nil); err == nil {
+			t.Error("SetQuoteCategories: expected error (quotes dropped)")
+		}
+	})
+	t.Run("category membership dropped", func(t *testing.T) {
+		s := newTestStore(t)
+		mustCreate(t, s, quote.New("X", "X", []string{"x"}))
+		if _, err := s.DB().Exec("DROP TABLE category_items"); err != nil {
+			t.Fatal(err)
+		}
+		// CategoryQueries joins category_items; with it gone, the query errors.
+		if _, err := s.CategoryQuotes(1); err == nil {
+			t.Error("CategoryQuotes: expected error (category_items dropped)")
+		}
+		if _, err := s.QuoteCategoryMap(); err == nil {
+			t.Error("QuoteCategoryMap: expected error (category_items dropped)")
+		}
+	})
+}

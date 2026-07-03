@@ -164,3 +164,23 @@ func TestHandleStoreErr(t *testing.T) {
 		}
 	}
 }
+
+// TestRenderMissingTemplate covers render's ExecuteTemplate error branch (a
+// template name that is not defined logs and returns without panicking).
+func TestRenderMissingTemplate(t *testing.T) {
+	srv := &Server{tmpl: mustTemplates()}
+	rec := httptest.NewRecorder()
+	srv.render(rec, "nonexistent-template", nil)
+	if rec.Body.Len() != 0 {
+		t.Errorf("render of missing template wrote a body: %q", rec.Body.String())
+	}
+}
+
+func TestExecMissingTemplate(t *testing.T) {
+	srv := &Server{tmpl: mustTemplates()}
+	rec := httptest.NewRecorder()
+	srv.exec(rec, "nonexistent-template", nil)
+	if rec.Body.Len() != 0 {
+		t.Errorf("exec of missing template wrote a body: %q", rec.Body.String())
+	}
+}

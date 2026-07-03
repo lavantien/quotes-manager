@@ -1443,3 +1443,138 @@ func TestIndexUnknownCategoryEmptyRoot(t *testing.T) {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
 }
+
+// Each wrapper embeds a *fakeStore (so the data-backed methods work) and
+// overrides exactly one method to fail, so a handler's deeper error branch —
+// the second or third store call failing after the first succeeds — is reached.
+
+type failList struct{ *fakeStore }
+
+func (failList) List() ([]store.Quote, error) { return nil, errStoreFails }
+
+type failCatMap struct{ *fakeStore }
+
+func (failCatMap) QuoteCategoryMap() (map[int64][]store.Category, error) {
+	return nil, errStoreFails
+}
+
+type failColMap struct{ *fakeStore }
+
+func (failColMap) QuoteCollectionMap() (map[int64][]store.Collection, error) {
+	return nil, errStoreFails
+}
+
+type failListCats struct{ *fakeStore }
+
+func (failListCats) ListCategories() ([]store.Category, error) { return nil, errStoreFails }
+
+type failListCols struct{ *fakeStore }
+
+func (failListCols) ListCollections() ([]store.Collection, error) { return nil, errStoreFails }
+
+type failCatQuotes struct{ *fakeStore }
+
+func (failCatQuotes) CategoryQuotes(int64) ([]store.Quote, error) { return nil, errStoreFails }
+
+func assert500(t *testing.T, srv *server.Server, method, target, body string, hdrs ...string) {
+	t.Helper()
+	if rec := do(t, srv, method, target, body, hdrs...); rec.Code != http.StatusInternalServerError {
+		t.Errorf("%s %s: code = %d, want 500", method, target, rec.Code)
+	}
+}
+
+func TestBuildPageDataDeepErrors(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		store store.Store
+	}{
+		{"ListCollections fails", failListCols{newFake(sampleQuote(1))}},
+		{"QuoteCategoryMap fails", failCatMap{newFake(sampleQuote(1))}},
+		{"QuoteCollectionMap fails", failColMap{newFake(sampleQuote(1))}},
+		{"List fails in buildRootPane", failList{newFake(sampleQuote(1))}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			assert500(t, newServer(t, c.store), "GET", "/", "")
+		})
+	}
+}
+
+func TestRenderQuoteListDeepErrors(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		store store.Store
+	}{
+		{"QuoteCategoryMap fails", failCatMap{newFake(sampleQuote(1))}},
+		{"QuoteCollectionMap fails", failColMap{newFake(sampleQuote(1))}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			assert500(t, newServer(t, c.store), "GET", "/quotes", "")
+		})
+	}
+}
+
+func TestRenderQuoteBlockDeepErrors(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		store store.Store
+	}{
+		{"QuoteCategoryMap fails", failCatMap{newFake(sampleQuote(1))}},
+		{"QuoteCollectionMap fails", failColMap{newFake(sampleQuote(1))}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			assert500(t, newServer(t, c.store), "POST", "/quotes/1", "content=%22x%22&text_id=MN+1",
+				"Content-Type", "application/x-www-form-urlencoded", "HX-Request", "true")
+		})
+	}
+}
+
+func TestBuildRootPaneCategoryQuotesError(t *testing.T) {
+	fs, cid := fakeWithCategory(t)
+	assert500(t, newServer(t, failCatQuotes{fs}), "GET", fmt.Sprintf("/categories/%d", cid), "")
+}
+
+func TestRailDataDeepError(t *testing.T) {
+	assert500(t, newServer(t, failListCols{newFake(sampleQuote(1))}), "GET", "/rail/left", "")
+}
+
+func TestEditQuoteCategoriesDeepErrors(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		store store.Store
+	}{
+		{"ListCategories fails", failListCats{newFake(sampleQuote(1))}},
+		{"QuoteCategoryMap fails", failCatMap{newFake(sampleQuote(1))}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			assert500(t, newServer(t, c.store), "GET", "/quotes/1/categories/edit", "")
+		})
+	}
+}
+
+func TestSetQuoteCategoriesDeepErrors(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		store store.Store
+	}{
+		{"QuoteCategoryMap fails after set", failCatMap{newFake(sampleQuote(1))}},
+		{"railData fails after set", failListCols{newFake(sampleQuote(1))}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			assert500(t, newServer(t, c.store), "POST", "/quotes/1/categories", "id=",
+				"Content-Type", "application/x-www-form-urlencoded")
+		})
+	}
+}
+
+func TestSwapCollectionZoneBuildError(t *testing.T) {
+	// createCollection -> swapCollectionZone -> buildPageData -> QuoteCategoryMap fails.
+	assert500(t, newServer(t, failCatMap{newFake(sampleQuote(1))}), "POST", "/collections", "id=1",
+		"Content-Type", "application/x-www-form-urlencoded")
+}
+
+func TestRenameCollectionRailError(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	assert500(t, newServer(t, failListCols{fs}),
+		"POST", fmt.Sprintf("/collections/%d/rename", cid), "name=x",
+		"Content-Type", "application/x-www-form-urlencoded")
+}
