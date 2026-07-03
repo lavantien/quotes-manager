@@ -4,6 +4,41 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-07-03
+
+### Added
+- **Near-duplicate detection.** `internal/quote` gains word-level Jaccard
+  similarity over cleaned passage text (lowercased, punctuation stripped) plus a
+  standard disjoint set (union-find) that groups quotes whose pairwise
+  similarity exceeds `0.8`, transitively. `quote.GroupDuplicates` returns only
+  clusters of two or more members, so quotes without a near-duplicate are never
+  surfaced. The grouping is by **content**, not by text id. Pure, fully
+  unit-tested (table + property tests), and pinned to the canonical seed's
+  `MN 22` trio via an integration test.
+- **Duplicates rail.** The left rail gains a Duplicates section listing each
+  cluster's representative (shortest) text id with a member-count chip, with a
+  body-excerpt fallback when a quote has no text id.
+- **Jump to duplicate.** Clicking a group switches the root column to Home (when
+  a category filter is active), scrolls the representative into view with a
+  brief highlight, and falls back to a `/#quote-{id}` anchor when JS is off.
+
+### Changed
+- **Independent panel scrolling.** The root and collection text columns are now
+  each their own viewport-height scroll container (the rails already scrolled
+  independently), so the two panes no longer share the document scroll; the
+  single-column mobile layout still scrolls as one page.
+- **Live-refresh on every edit.** Creating, editing, or deleting a quote now
+  appends out-of-band swaps so the left rail (Duplicates + category counts), the
+  right rail (collection counts, on delete), and the root-zone "N blocks" header
+  all stay current without a full reload.
+- Test coverage rises to 90.7% of statements (`make coverage`); the new
+  similarity code, `buildDuplicates`, and `bodyExcerpt` are at 100%.
+
+### Fixed
+- `cmd/coverage` conflated "no coverage markers" with "badge already current":
+  an idempotent `make coverage` run falsely reported the README had no markers.
+  The two cases are now distinguished.
+
 ## [0.6.0] - 2026-07-03
 
 ### Added
@@ -191,6 +226,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Unattributed quotes (including all header-cited ones) are normalized to
   "the Buddha".
 
+[0.7.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.7.0
 [0.6.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.6.0
 [0.5.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.5.0
 [0.4.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.4.0
