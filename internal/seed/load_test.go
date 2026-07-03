@@ -196,8 +196,10 @@ func TestSeedSampleCollectionIdempotent(t *testing.T) {
 // from a partial failure) must not duplicate category tags.
 func TestSeedCategoriesIdempotent(t *testing.T) {
 	db := openDB(t)
-	db.Exec(`CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE);
-		CREATE TABLE IF NOT EXISTS category_items (category_id INTEGER NOT NULL, quote_id INTEGER NOT NULL, PRIMARY KEY (category_id, quote_id))`)
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE);
+		CREATE TABLE IF NOT EXISTS category_items (category_id INTEGER NOT NULL, quote_id INTEGER NOT NULL, PRIMARY KEY (category_id, quote_id))`); err != nil {
+		t.Fatal(err)
+	}
 	if err := EnsureSeeded(db); err != nil {
 		t.Fatal(err)
 	}
