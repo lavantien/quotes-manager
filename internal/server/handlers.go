@@ -312,8 +312,17 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isHTMX(r) {
-		// Re-render the whole list so the new quote is placed in char_count order.
+		// Re-render the whole list so the new quote is placed in char_count order,
+		// then live-refresh the left rail (Duplicates + category counts) and the
+		// root-zone block count via out-of-band swaps.
+		rail, err := s.railData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
+		if err != nil {
+			serverError(w, err)
+			return
+		}
 		s.renderQuoteList(w)
+		s.exec(w, "rail_left_oob", rail)
+		s.exec(w, "root_count", rail.TotalQuotes)
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -338,7 +347,15 @@ func (s *Server) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isHTMX(r) {
+		// Re-render the saved block, then live-refresh the left rail so the
+		// Duplicates section tracks the new body text.
+		rail, err := s.railData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
+		if err != nil {
+			serverError(w, err)
+			return
+		}
 		s.renderQuoteBlock(w, updated)
+		s.exec(w, "rail_left_oob", rail)
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -367,6 +384,28 @@ func (s *Server) delete(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.store.Delete(id); err != nil {
 		handleStoreErr(w, err)
+		return
+	}
+	if isHTMX(r) {
+		// hx-swap="delete" removes the block; the response carries out-of-band
+		// refreshes of both rails (category + collection counts) and the root-zone
+		// block count, all of which can change when a quote is removed.
+		cat, col := parseQueryID(r, "cat"), parseQueryID(r, "col")
+		rail, err := s.railData(cat, col)
+		if err != nil {
+			serverError(w, err)
+			return
+		}
+		displayed := rail.TotalQuotes
+		if cat > 0 {
+			if qs, qerr := s.store.CategoryQuotes(cat); qerr == nil {
+				displayed = len(qs)
+			}
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		s.exec(w, "rail_left_oob", rail)
+		s.exec(w, "rail_right_oob", rail)
+		s.exec(w, "root_count", displayed)
 		return
 	}
 	w.WriteHeader(http.StatusOK)

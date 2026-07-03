@@ -92,3 +92,60 @@ func TestDuplicatesLabelFallsBackToBodyExcerpt(t *testing.T) {
 		t.Errorf("expected the body excerpt as label when SuttaID is empty")
 	}
 }
+
+func TestCreateLiveRefreshesLeftRailAndRootCount(t *testing.T) {
+	fs := newFake()
+	srv := server.New(fs)
+	body := "content=%22Be+your+own+island.%22&attribution=the+Buddha&text_id=MN+44"
+	rec := do(t, srv, "POST", "/quotes", body, "Content-Type", "application/x-www-form-urlencoded", "HX-Request", "true")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	got := rec.Body.String()
+	for _, want := range []string{`id="quote-list"`, `id="left-rail"`, `id="root-count"`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("create response missing %s", want)
+		}
+	}
+	if !strings.Contains(got, `id="root-count" class="zone__count" hx-swap-oob="outerHTML">1 blocks`) {
+		t.Errorf("create response did not live-refresh the root count to 1 blocks")
+	}
+}
+
+func TestUpdateLiveRefreshesLeftRail(t *testing.T) {
+	fs := newFake(sampleQuote(1))
+	srv := server.New(fs)
+	body := "content=%22new+text%22&attribution=the+Buddha&text_id=DN+16"
+	rec := do(t, srv, "POST", "/quotes/1", body, "Content-Type", "application/x-www-form-urlencoded", "HX-Request", "true")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	got := rec.Body.String()
+	if !strings.Contains(got, `id="left-rail"`) {
+		t.Errorf("update response missing the out-of-band left rail")
+	}
+	if !strings.Contains(got, `id="quote-1"`) {
+		t.Errorf("update response missing the saved quote block")
+	}
+}
+
+func TestDeleteLiveRefreshesBothRailsAndRootCount(t *testing.T) {
+	fs := newFake(sampleQuote(1))
+	srv := server.New(fs)
+	rec := do(t, srv, "DELETE", "/quotes/1", "", "HX-Request", "true")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if len(fs.quotes) != 0 {
+		t.Errorf("store still has %d quotes", len(fs.quotes))
+	}
+	got := rec.Body.String()
+	for _, want := range []string{`id="left-rail"`, `id="right-rail"`, `id="root-count"`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("delete response missing %s", want)
+		}
+	}
+	if !strings.Contains(got, `>0 blocks<`) {
+		t.Errorf("delete response did not live-refresh the root count to 0 blocks")
+	}
+}
