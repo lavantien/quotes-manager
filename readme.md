@@ -19,7 +19,7 @@ dumps/                         source essays (input, hand-written)
   discerning-truth-from-deception.txt   (prose only — no sutta quotes)
   sacredness-and-profanity.txt          (sutta quotes, inline-cited)
   stream-entry-for-lay-buddhists.txt    (sutta quotes, inline + header-cited)
-internal/quote/                parser, normalizer, renderer, seed emitter (+ tests)
+internal/quote/                parser, normalizer, renderer, near-duplicate detection, seed emitter (+ tests)
 internal/store/                SQLite store: CRUD + collections + categories, ordered by char_count
 internal/seed/                 EnsureSeeded: canonical seed (+ sample categories) on a fresh database
 internal/server/               HTMX handlers + server-rendered templates (+ tests)
@@ -59,10 +59,12 @@ seed (109 quotes, three sample categories, and one sample collection). From then
 on your edits persist; the seed is never reapplied (so deleting a quote is
 permanent).
 
-The UI is a **dual-pane workspace**: a left rail (Home + Categories) and a right
-rail (Collections) flank two text columns — the **root** corpus on the left and
-the active **collection** on the right. A thin, two-half header sits atop each
-column showing only a name and a count. Each root block:
+The UI is a **dual-pane workspace**: a left rail (Home + Categories + Duplicates)
+and a right rail (Collections) flank two text columns — the **root** corpus on
+the left and the active **collection** on the right. The two text columns scroll
+**independently** (each is its own viewport-height pane), so you can keep a
+different spot open in each. A thin, two-half header sits atop each column
+showing only a name and a count. Each root block:
 
 - shows the quote in the canonical format — passages in italics, the sutta id
   **bolded** and linked to `https://suttacentral.net/<id-without-spaces>`
@@ -81,8 +83,10 @@ attribution defaults to "the Buddha". **Copy all** copies every quote as one
 text joined by the dot separator. Selecting a category or a collection swaps
 just that pane in place (the URL carries `?cat=` / `?col=` for deep linking).
 
-Every mutation is written to SQLite before the UI is updated, so the page is
-always a faithful view of the database.
+Every mutation is written to SQLite before the UI is updated, and the rails and
+column counts refresh **live** via out-of-band swaps — so the Duplicates
+section, the category/collection counts, and the root "N blocks" header all
+stay current without a full reload.
 
 ### Collections
 
@@ -107,6 +111,20 @@ combination and can create a new category on the spot. Clicking a category (in
 the rail or on a chip) filters the root column to its quotes, with Copy all via
 `/categories/{id}/export.txt`. Deleting a category untaggs its quotes; deleting a
 quote clears its tags.
+
+### Duplicates
+
+The left rail's **Duplicates** section surfaces near-duplicate quotes — clusters
+of two or more passages whose word-level Jaccard similarity exceeds **0.8**
+(`quote.GroupDuplicates`, joined transitively through a disjoint set, so a group
+is a connected component rather than a clique). Grouping is by **content**, not
+by text id: only quotes whose bodies are near-identical are listed, and each row
+is labelled with the group's representative (shortest) text id and a member
+count. Clicking a group jumps to the representative in the root column —
+switching to Home first if a category filter is active — and briefly highlights
+it. The canonical seed already contains one such cluster: the `MN 22` trio that
+differs only in "Bhikkhus"/"Mendicants" and "sexual"/"sensual". Adding, editing,
+or deleting a quote refreshes the section live.
 
 ### SQLite schema (web)
 
