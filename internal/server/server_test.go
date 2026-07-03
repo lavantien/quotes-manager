@@ -202,6 +202,62 @@ func (f *fakeStore) AddToCollection(cid int64, quoteIDs []int64) error {
 	return nil
 }
 
+func (f *fakeStore) RenameCollection(id int64, name string) error {
+	for i := range f.collections {
+		if f.collections[i].ID == id {
+			f.collections[i].Name = name
+			return nil
+		}
+	}
+	return store.ErrNotFound
+}
+
+func (f *fakeStore) InsertAtCollection(cid int64, quoteIDs []int64, pos int) error {
+	members, ok := f.items[cid]
+	if !ok {
+		return store.ErrNotFound
+	}
+	belong := make(map[int64]bool, len(members))
+	for _, qid := range members {
+		belong[qid] = true
+	}
+	seen := make(map[int64]bool)
+	var add []int64
+	for _, qid := range quoteIDs {
+		if qid <= 0 || seen[qid] || belong[qid] {
+			continue
+		}
+		seen[qid] = true
+		add = append(add, qid)
+	}
+	if pos < 1 {
+		pos = 1
+	} else if pos > len(members)+1 {
+		pos = len(members) + 1
+	}
+	out := make([]int64, 0, len(members)+len(add))
+	out = append(out, members[:pos-1]...)
+	out = append(out, add...)
+	out = append(out, members[pos-1:]...)
+	f.items[cid] = out
+	for i := range f.collections {
+		if f.collections[i].ID == cid {
+			f.collections[i].Count = len(out)
+		}
+	}
+	return nil
+}
+
+func (f *fakeStore) QuoteCollectionMap() (map[int64][]store.Collection, error) {
+	out := make(map[int64][]store.Collection)
+	for _, c := range f.collections {
+		for _, qid := range f.items[c.ID] {
+			out[qid] = append(out[qid], c)
+		}
+	}
+	return out, nil
+}
+
 func (f *fakeStore) ListCategories() ([]store.Category, error) {
 	out := make([]store.Category, 0, len(f.categories))
 	for _, c := range f.categories {

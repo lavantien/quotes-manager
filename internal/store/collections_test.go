@@ -264,3 +264,200 @@ func TestAddToCollectionUnknownCollection(t *testing.T) {
 		t.Errorf("err = %v, want ErrNotFound", err)
 	}
 }
+
+// collectionIDs is a small helper pulling the ordered id list out of []Quote.
+func collectionIDs(qs []Quote) []int64 {
+	out := make([]int64, len(qs))
+	for i, q := range qs {
+		out[i] = q.ID
+	}
+	return out
+}
+
+func assertOrder(t *testing.T, qs []Quote, want ...int64) {
+	t.Helper()
+	got := collectionIDs(qs)
+	if len(got) != len(want) {
+		t.Fatalf("len = %d, want %d (%v)", len(got), len(want), got)
+	}
+	for i, id := range want {
+		if got[i] != id {
+			t.Errorf("pos %d = %d, want %d", i, got[i], id)
+		}
+	}
+}
+
+func TestRenameCollection(t *testing.T) {
+	s := newTestStore(t)
+	q := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	cid, _ := s.CreateCollection([]int64{q})
+
+	if err := s.RenameCollection(cid, "Favorites"); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.GetCollection(cid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Name != "Favorites" {
+		t.Errorf("name = %q, want Favorites", got.Name)
+	}
+	// Names are not unique: two collections may share a name.
+	cid2, _ := s.CreateCollection(nil)
+	if err := s.RenameCollection(cid2, "Favorites"); err != nil {
+		t.Fatalf("rename to duplicate name: %v", err)
+	}
+	cols, _ := s.ListCollections()
+	if len(cols) != 2 || cols[0].Name != "Favorites" || cols[1].Name != "Favorites" {
+		t.Errorf("collections = %+v", cols)
+	}
+}
+
+func TestRenameCollectionNotFound(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.RenameCollection(999, "x"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestInsertAtCollectionShiftsDown(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	q4 := mustCreate(t, s, quote.New("D", "D", []string{"d"}))
+	cid, _ := s.CreateCollection([]int64{q1, q2, q3})
+
+	if err := s.InsertAtCollection(cid, []int64{q4}, 2); err != nil {
+		t.Fatal(err)
+	}
+	assertOrder(t, mustCollectionQuotes(t, s, cid), q1, q4, q2, q3)
+}
+
+func TestInsertAtCollectionMultiplePreservesOrder(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	q4 := mustCreate(t, s, quote.New("D", "D", []string{"d"}))
+	q5 := mustCreate(t, s, quote.New("E", "E", []string{"e"}))
+	cid, _ := s.CreateCollection([]int64{q1, q2, q3})
+
+	if err := s.InsertAtCollection(cid, []int64{q4, q5}, 2); err != nil {
+		t.Fatal(err)
+	}
+	assertOrder(t, mustCollectionQuotes(t, s, cid), q1, q4, q5, q2, q3)
+}
+
+func TestInsertAtCollectionSkipsDuplicates(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	q4 := mustCreate(t, s, quote.New("D", "D", []string{"d"}))
+	cid, _ := s.CreateCollection([]int64{q1, q2, q3})
+
+	// q2 is already a member -> skipped; q4 is new and lands at pos 1, shifting all.
+	if err := s.InsertAtCollection(cid, []int64{q2, q4, q2}, 1); err != nil {
+		t.Fatal(err)
+	}
+	assertOrder(t, mustCollectionQuotes(t, s, cid), q4, q1, q2, q3)
+}
+
+func TestInsertAtCollectionClampsHighAppends(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	cid, _ := s.CreateCollection([]int64{q1, q2})
+
+	// pos far beyond the end clamps to count+1 -> append.
+	if err := s.InsertAtCollection(cid, []int64{q3}, 99); err != nil {
+		t.Fatal(err)
+	}
+	assertOrder(t, mustCollectionQuotes(t, s, cid), q1, q2, q3)
+}
+
+func TestInsertAtCollectionClampsLowPrepends(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	cid, _ := s.CreateCollection([]int64{q1, q2})
+
+	// pos < 1 clamps to 1 -> prepend.
+	if err := s.InsertAtCollection(cid, []int64{q3}, 0); err != nil {
+		t.Fatal(err)
+	}
+	assertOrder(t, mustCollectionQuotes(t, s, cid), q3, q1, q2)
+}
+
+func TestInsertAtCollectionEmptyCollection(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	cid, _ := s.CreateCollection(nil)
+
+	if err := s.InsertAtCollection(cid, []int64{q1, q2}, 5); err != nil {
+		t.Fatal(err)
+	}
+	assertOrder(t, mustCollectionQuotes(t, s, cid), q1, q2)
+}
+
+func TestInsertAtCollectionNoOpWhenAllMembers(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	cid, _ := s.CreateCollection([]int64{q1, q2})
+
+	if err := s.InsertAtCollection(cid, []int64{q1, q2}, 1); err != nil {
+		t.Fatal(err)
+	}
+	assertOrder(t, mustCollectionQuotes(t, s, cid), q1, q2)
+}
+
+func TestInsertAtCollectionUnknownCollection(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	if err := s.InsertAtCollection(999, []int64{q1}, 1); !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestQuoteCollectionMap(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	c1, _ := s.CreateCollection([]int64{q1, q2})
+	if err := s.RenameCollection(c1, "first"); err != nil {
+		t.Fatal(err)
+	}
+	c2, _ := s.CreateCollection([]int64{q2, q3}) // q2 is in both
+
+	m, err := s.QuoteCollectionMap()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m[q1]) != 1 || m[q1][0].ID != c1 || m[q1][0].Name != "first" {
+		t.Errorf("q1 map = %+v", m[q1])
+	}
+	if len(m[q2]) != 2 {
+		t.Errorf("q2 should be in 2 collections, got %+v", m[q2])
+	}
+	if len(m[q3]) != 1 || m[q3][0].ID != c2 {
+		t.Errorf("q3 map = %+v", m[q3])
+	}
+	if _, ok := m[9999]; ok {
+		t.Error("unrelated quote should be absent from the map")
+	}
+}
+
+func mustCollectionQuotes(t *testing.T, s *SQLiteStore, cid int64) []Quote {
+	t.Helper()
+	qs, err := s.CollectionQuotes(cid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return qs
+}

@@ -25,7 +25,8 @@ const schemaSQL = `CREATE TABLE IF NOT EXISTS quotes (
 );
 CREATE INDEX IF NOT EXISTS idx_quotes_char_count ON quotes(char_count);
 CREATE TABLE IF NOT EXISTS collections (
-    id INTEGER PRIMARY KEY
+    id   INTEGER PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS collection_items (
     collection_id INTEGER NOT NULL,
@@ -68,7 +69,44 @@ func Open(path string) (*SQLiteStore, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	if err := migrateCollectionsName(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	return &SQLiteStore{db: db}, nil
+}
+
+// migrateCollectionsName adds the collections.name column to databases created
+// before it existed. CREATE TABLE IF NOT EXISTS won't alter an existing table,
+// so a one-shot ALTER bridges legacy schemas. Idempotent: no-op once present.
+func migrateCollectionsName(db *sql.DB) error {
+	rows, err := db.Query("PRAGMA table_info(collections)")
+	if err != nil {
+		return err
+	}
+	hasName := false
+	for rows.Next() {
+		var cid, notnull, pk int
+		var name, typ string
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
+			rows.Close()
+			return err
+		}
+		if name == "name" {
+			hasName = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+	if hasName {
+		return nil
+	}
+	_, err = db.Exec("ALTER TABLE collections ADD COLUMN name TEXT NOT NULL DEFAULT ''")
+	return err
 }
 
 // DB exposes the underlying connection so internal/seed can run migrations.
@@ -176,7 +214,7 @@ func (s *SQLiteStore) DeleteMany(ids []int64) error {
 
 func (s *SQLiteStore) ListCollections() ([]Collection, error) {
 	rows, err := s.db.Query(
-		`SELECT c.id, (SELECT COUNT(*) FROM collection_items ci WHERE ci.collection_id = c.id)
+		`SELECT c.id, c.name, (SELECT COUNT(*) FROM collection_items ci WHERE ci.collection_id = c.id)
 		 FROM collections c ORDER BY c.id ASC`)
 	if err != nil {
 		return nil, err
@@ -185,7 +223,7 @@ func (s *SQLiteStore) ListCollections() ([]Collection, error) {
 	var out []Collection
 	for rows.Next() {
 		var c Collection
-		if err := rows.Scan(&c.ID, &c.Count); err != nil {
+		if err := rows.Scan(&c.ID, &c.Name, &c.Count); err != nil {
 			return nil, err
 		}
 		out = append(out, c)
@@ -266,6 +304,64 @@ func (s *SQLiteStore) AddToCollection(cid int64, quoteIDs []int64) error {
 	return tx.Commit()
 }
 
+// InsertAtCollection inserts quoteIDs at the 1-based position pos (clamped to
+// [1, count+1]) inside an existing collection, shifting every member at or below
+// that position down so the new items land contiguously starting at pos. Quotes
+// already in the collection (and repeats within quoteIDs) are skipped — their
+// existing copy stays, in its (shifted) place. ErrNotFound if the collection is
+// unknown. pos is 1-based; values outside [1, count+1] clamp to the ends.
+func (s *SQLiteStore) InsertAtCollection(cid int64, quoteIDs []int64, pos int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	var one int64
+	if err := tx.QueryRow("SELECT 1 FROM collections WHERE id = ?", cid).Scan(&one); err != nil {
+		if err == sql.ErrNoRows {
+			return rollback(tx, fmt.Errorf("%w: collection %d", ErrNotFound, cid))
+		}
+		return rollback(tx, err)
+	}
+	members, err := collectionMembers(tx, cid)
+	if err != nil {
+		return rollback(tx, err)
+	}
+	// De-duplicate the incoming list and drop ids already in the collection,
+	// preserving first-seen order.
+	seen := make(map[int64]bool)
+	var add []int64
+	for _, qid := range quoteIDs {
+		if qid <= 0 || seen[qid] || members[qid] {
+			continue
+		}
+		seen[qid] = true
+		add = append(add, qid)
+	}
+	if len(add) == 0 {
+		return tx.Commit()
+	}
+	// Clamp pos to [1, count+1] (count+1 = append at the end).
+	count := len(members)
+	if pos < 1 {
+		pos = 1
+	} else if pos > count+1 {
+		pos = count + 1
+	}
+	if _, err := tx.Exec(
+		"UPDATE collection_items SET position = position + ? WHERE collection_id = ? AND position >= ?",
+		len(add), cid, pos); err != nil {
+		return rollback(tx, err)
+	}
+	for i, qid := range add {
+		if _, err := tx.Exec(
+			"INSERT INTO collection_items (collection_id, quote_id, position) VALUES (?, ?, ?)",
+			cid, qid, pos+i); err != nil {
+			return rollback(tx, err)
+		}
+	}
+	return tx.Commit()
+}
+
 // collectionMembers returns the set of quote_ids already in a collection.
 func collectionMembers(tx *sql.Tx, cid int64) (map[int64]bool, error) {
 	rows, err := tx.Query("SELECT quote_id FROM collection_items WHERE collection_id = ?", cid)
@@ -287,8 +383,8 @@ func collectionMembers(tx *sql.Tx, cid int64) (map[int64]bool, error) {
 func (s *SQLiteStore) GetCollection(id int64) (Collection, error) {
 	var c Collection
 	err := s.db.QueryRow(
-		`SELECT id, (SELECT COUNT(*) FROM collection_items ci WHERE ci.collection_id = id)
-		 FROM collections WHERE id = ?`, id).Scan(&c.ID, &c.Count)
+		`SELECT id, name, (SELECT COUNT(*) FROM collection_items ci WHERE ci.collection_id = id)
+		 FROM collections WHERE id = ?`, id).Scan(&c.ID, &c.Name, &c.Count)
 	if err == sql.ErrNoRows {
 		return Collection{}, ErrNotFound
 	}
@@ -313,6 +409,16 @@ func (s *SQLiteStore) CollectionQuotes(id int64) ([]Quote, error) {
 		out = append(out, q)
 	}
 	return out, rows.Err()
+}
+
+// RenameCollection sets a collection's name. Collection names are not unique, so
+// this never returns ErrDuplicate. ErrNotFound if the collection is missing.
+func (s *SQLiteStore) RenameCollection(id int64, name string) error {
+	res, err := s.db.Exec("UPDATE collections SET name = ? WHERE id = ?", name, id)
+	if err != nil {
+		return err
+	}
+	return rowsAffected(res, id)
 }
 
 func (s *SQLiteStore) ReorderCollection(id int64, orderedQuoteIDs []int64) error {
@@ -523,6 +629,30 @@ func (s *SQLiteStore) QuoteCategoryMap() (map[int64][]Category, error) {
 	for rows.Next() {
 		var qid int64
 		var c Category
+		if err := rows.Scan(&qid, &c.ID, &c.Name); err != nil {
+			return nil, err
+		}
+		out[qid] = append(out[qid], c)
+	}
+	return out, rows.Err()
+}
+
+// QuoteCollectionMap returns quote_id -> its collections in a single query, for
+// rendering membership chips on a list of root quotes without an N+1 lookup.
+func (s *SQLiteStore) QuoteCollectionMap() (map[int64][]Collection, error) {
+	rows, err := s.db.Query(
+		`SELECT ci.quote_id, c.id, c.name
+		 FROM collection_items ci
+		 JOIN collections c ON c.id = ci.collection_id
+		 ORDER BY ci.quote_id ASC, c.id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make(map[int64][]Collection)
+	for rows.Next() {
+		var qid int64
+		var c Collection
 		if err := rows.Scan(&qid, &c.ID, &c.Name); err != nil {
 			return nil, err
 		}

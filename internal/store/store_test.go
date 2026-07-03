@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -170,5 +171,49 @@ func TestSourcesRoundTrip(t *testing.T) {
 	}
 	if len(got.Sources) != 2 || got.Sources[0] != "a.txt" || got.Sources[1] != "b.txt" {
 		t.Errorf("Sources = %#v", got.Sources)
+	}
+}
+
+// TestOpenMigratesCollectionsName opens a database built with the pre-0.6.0
+// collections schema (id only) and asserts Open adds the name column, preserving
+// existing rows with the empty-string default.
+func TestOpenMigratesCollectionsName(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "quotes.db")
+	db, err := sql.Open("sqlite3", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Legacy schema: collections had only an id column.
+	if _, err := db.Exec("CREATE TABLE collections (id INTEGER PRIMARY KEY)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO collections (id) VALUES (7)"); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Open(path)
+	if err != nil {
+		t.Fatalf("open legacy db: %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+
+	// The name column is now present and defaults to "" for the legacy row.
+	cols, err := s.ListCollections()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cols) != 1 || cols[0].ID != 7 || cols[0].Name != "" {
+		t.Errorf("legacy row after migration = %+v", cols)
+	}
+	// And the migrated column is writable.
+	if err := s.RenameCollection(7, "keepsakes"); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := s.GetCollection(7)
+	if got.Name != "keepsakes" {
+		t.Errorf("name = %q, want keepsakes", got.Name)
 	}
 }
