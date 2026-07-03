@@ -149,3 +149,28 @@ func TestDeleteLiveRefreshesBothRailsAndRootCount(t *testing.T) {
 		t.Errorf("delete response did not live-refresh the root count to 0 blocks")
 	}
 }
+
+// When the post-mutation rail refresh itself fails, the handler must still
+// report a server error rather than write a partial response.
+func TestMutationRailRefreshErrors(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		method string
+		target string
+		body   string
+	}{
+		{"create", "POST", "/quotes", "content=%22x%22&text_id=MN+1"},
+		{"update", "POST", "/quotes/1", "content=%22x%22&text_id=MN+1"},
+		{"delete", "DELETE", "/quotes/1", ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			srv := server.New(failList{newFake(sampleQuote(1))})
+			rec := do(t, srv, c.method, c.target, c.body,
+				"Content-Type", "application/x-www-form-urlencoded", "HX-Request", "true")
+			if rec.Code != http.StatusInternalServerError {
+				t.Errorf("%s %s: code = %d, want 500 (railData should fail via List)",
+					c.method, c.target, rec.Code)
+			}
+		})
+	}
+}
