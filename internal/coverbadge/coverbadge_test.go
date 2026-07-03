@@ -16,6 +16,8 @@ func TestPct(t *testing.T) {
 		{"half covered", "mode: set\nfoo.go:1.1,2.2 4 1\nbar.go:5.3,6.4 4 0\n", 50.0},
 		{"count mode covered when >0", "mode: count\nfoo.go:1.1,2.2 5 3\nfoo.go:3.1,3.9 5 0\n", 50.0},
 		{"ignores blank and mode lines", "\nmode: set\n\nfoo.go:1.1,2.2 2 1\n", 100.0},
+		{"merged profile collapses duplicate blocks", "mode: set\nfoo.go:1.1,2.2 3 1\nfoo.go:1.1,2.2 3 0\nfoo.go:1.1,2.2 3 0\n", 100.0},
+		{"merged profile mixed coverage", "mode: set\nfoo.go:1.1,2.2 4 1\nfoo.go:1.1,2.2 4 0\nbar.go:5.3,6.4 4 0\nbar.go:5.3,6.4 4 0\n", 50.0},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

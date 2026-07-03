@@ -19,9 +19,16 @@ const (
 // Pct computes total statement coverage from a Go cover profile (the text written
 // by `go test -coverprofile=...`). Each non-mode line is
 // `<file>:<start>,<end> <numStmt> <count>`; a block is covered when count > 0.
+//
+// `go test -coverpkg=./... ./...` merges one profile per test binary, so the same
+// block appears once per binary that instruments it (with differing counts). A
+// block is covered if ANY of its lines has count > 0, so duplicate blocks are
+// collapsed by their file:start,end key before summing.
+//
 // Returns an error on an empty/unparseable profile.
 func Pct(profile string) (float64, error) {
-	var total, covered int
+	stmts := make(map[string]int)
+	covered := make(map[string]bool)
 	scanner := bufio.NewScanner(strings.NewReader(profile))
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
@@ -41,18 +48,25 @@ func Pct(profile string) (float64, error) {
 		if err != nil {
 			return 0, fmt.Errorf("parse count %q: %w", fields[len(fields)-1], err)
 		}
-		total += numStmt
+		stmts[fields[0]] = numStmt
 		if count > 0 {
-			covered += numStmt
+			covered[fields[0]] = true
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return 0, err
 	}
+	var total, coveredStmts int
+	for key, n := range stmts {
+		total += n
+		if covered[key] {
+			coveredStmts += n
+		}
+	}
 	if total == 0 {
 		return 0, fmt.Errorf("empty coverage profile")
 	}
-	return float64(covered) / float64(total) * 100, nil
+	return float64(coveredStmts) / float64(total) * 100, nil
 }
 
 // RenderBadge returns readme with the line between the coverage markers replaced
