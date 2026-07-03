@@ -30,6 +30,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A fresh database is seeded with one sample collection (the two shortest
   quotes) so the collection column and membership chips are non-empty out of the
   box and the README screenshot is illustrative.
+- **Test coverage.** The suite now exercises `internal/quote` in full and
+  `internal/store`, `internal/server`, `internal/seed`, `internal/coverbadge`,
+  and the `cmd/*` CLIs to 90%+ of statements (`make coverage` reports 90.1%).
+  Store error paths are driven by closed-DB and broken-schema harnesses; server
+  handlers by a table of failing-store requests; `cmd/screenshot`'s capture step
+  is injectable so the whole non-browser flow runs in-process under test.
 
 ### Changed
 - The sidebar is split into two nav rails; the top bar is now a thin split strip
@@ -39,6 +45,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   swaps the collection zone in place instead of redirecting.
 - `web/static` styles are split into `app.css` (typography/components) and
   `layout.css` (the four-zone grid, rails, zones, insert gaps).
+- The `cmd/*` CLIs had their testable logic extracted from `main`/`run`
+  (`cmd/extract` `generate`/`report`, `cmd/coverage` `run`/`parseFlags`,
+  `cmd/server` `serve`, `cmd/screenshot` `runWith`) and now carry unit tests;
+  behavior is unchanged.
+
+### Fixed
+- **Coverage badge undercounted.** `coverbadge.Pct` summed every line of the
+  merged cover profile, but `go test -coverpkg=./... ./...` writes one profile
+  per test binary, so a block instrumented by N binaries appeared N times with
+  differing counts — the README badge read far below real coverage (15.2% while
+  `go tool cover` reported ~71%). Blocks are now keyed by their `file:start,end`
+  range and OR-ed, matching `go tool cover`; the badge now reads 90.1%.
 
 ## [0.5.0] - 2026-07-01
 
