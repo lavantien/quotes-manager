@@ -1,6 +1,10 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -43,5 +47,46 @@ func TestBrowserPathEmptyWhenAbsent(t *testing.T) {
 	t.Setenv("PATH", "")
 	if got := browserPath(); got != "" {
 		t.Errorf("browserPath = %q, want empty when nothing is installed", got)
+	}
+}
+
+// TestRunWithFakeCapture drives the full non-browser flow: a temp DB is opened
+// and seeded, the app is served on an ephemeral port, the (faked) capture hits
+// it over HTTP, and the bytes are written to the target file.
+func TestRunWithFakeCapture(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "docs", "home.png")
+	var capturedURL string
+	capture := func(url string) ([]byte, error) {
+		capturedURL = url
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("status %d", resp.StatusCode)
+		}
+		return []byte("PNG-FAKE"), nil
+	}
+	if err := runWith(io.Discard, out, capture); err != nil {
+		t.Fatalf("runWith: %v", err)
+	}
+	if !strings.Contains(capturedURL, "/?col=1") {
+		t.Errorf("capture URL = %q, want /?col=1", capturedURL)
+	}
+	got, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("output not written: %v", err)
+	}
+	if string(got) != "PNG-FAKE" {
+		t.Errorf("output = %q, want PNG-FAKE", got)
+	}
+}
+
+func TestRunWithCaptureError(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "docs", "home.png")
+	fail := func(string) ([]byte, error) { return nil, errors.New("no browser") }
+	if err := runWith(io.Discard, out, fail); err == nil {
+		t.Error("runWith should surface the capture error")
 	}
 }

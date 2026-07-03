@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -27,7 +28,6 @@ import (
 const (
 	viewportW = 1440
 	viewportH = 900
-	outDir    = "docs"
 	outFile   = "docs/home.png"
 )
 
@@ -38,8 +38,14 @@ func main() {
 }
 
 func run() error {
-	// Serve the canonical seed in-process so the screenshot is reproducible and
-	// independent of any user edits in database/quotes.db.
+	return runWith(os.Stdout, outFile, captureScreenshot)
+}
+
+// runWith serves the canonical seed in-process so the screenshot is reproducible
+// and independent of any user edits in database/quotes.db, captures the home page
+// via capture, and writes it to outFile. capture is injected so the non-browser
+// flow is testable.
+func runWith(out io.Writer, target string, capture func(url string) ([]byte, error)) error {
 	tmp, err := os.CreateTemp("", "qm-screenshot-*.db")
 	if err != nil {
 		return fmt.Errorf("temp db: %w", err)
@@ -68,6 +74,23 @@ func run() error {
 	// active so the dual-pane screenshot shows a populated collection column.
 	url := "http://" + ln.Addr().String() + "/?col=1"
 
+	buf, err := capture(url)
+	if err != nil {
+		return fmt.Errorf("capture: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", filepath.Dir(target), err)
+	}
+	if err := os.WriteFile(target, buf, 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", target, err)
+	}
+	fmt.Fprintf(out, "wrote %s (%d bytes)\n", filepath.ToSlash(target), len(buf))
+	return nil
+}
+
+// captureScreenshot drives Chromium to capture a viewport screenshot of url.
+func captureScreenshot(url string) ([]byte, error) {
 	allocOpts := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("hide-scrollbars", "true"))
 	if bin := browserPath(); bin != "" {
 		allocOpts = append(allocOpts, chromedp.ExecPath(bin))
@@ -87,17 +110,9 @@ func run() error {
 		chromedp.Sleep(300*time.Millisecond), // let CSS/layout settle
 		chromedp.CaptureScreenshot(&buf),
 	); err != nil {
-		return fmt.Errorf("capture: %w", err)
+		return nil, err
 	}
-
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
-		return fmt.Errorf("mkdir %s: %w", outDir, err)
-	}
-	if err := os.WriteFile(outFile, buf, 0o644); err != nil {
-		return fmt.Errorf("write %s: %w", outFile, err)
-	}
-	fmt.Printf("wrote %s (%d bytes)\n", filepath.ToSlash(outFile), len(buf))
-	return nil
+	return buf, nil
 }
 
 // browserPath resolves a Chromium binary: the QUOTES_BROWSER env var, then
