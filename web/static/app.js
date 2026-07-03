@@ -140,6 +140,30 @@
 
     if (action === "rename-category") { startRename(btn, "category"); }
     if (action === "rename-collection") { startRename(btn, "collection"); }
+
+    if (action === "focus-quote") {
+      // Jump to the first (representative) duplicate of its group. The link's
+      // href ("/#quote-{id}") is the no-JS fallback; with JS we swap in place.
+      e.preventDefault();
+      var focusId = btn.dataset.id;
+      var reveal = function () {
+        var el = document.getElementById("quote-" + focusId);
+        if (!el) return;
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        el.classList.add("is-flash");
+        setTimeout(function () { el.classList.remove("is-flash"); }, 1600);
+      };
+      var zone = document.getElementById("root-zone");
+      if (zone && zone.dataset.cat === "0" && document.getElementById("quote-" + focusId)) {
+        reveal();
+      } else {
+        // Ensure Home (all quotes) is loaded, dropping any category filter so the
+        // representative is guaranteed to be in the DOM.
+        fetch("/pane/root?col=" + currentCol())
+          .then(function (r) { return r.ok ? r.text() : ""; })
+          .then(function (html) { if (html) { applyFragments(html); reveal(); } });
+      }
+    }
   });
 
   // Inline rename (category or collection): swap the link for an input, commit
