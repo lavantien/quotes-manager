@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
+	"github.com/lavantien/quotes-manager/internal/quote"
 	"github.com/lavantien/quotes-manager/internal/store"
 )
 
@@ -19,8 +21,19 @@ type pageData struct {
 	Collections []store.Collection
 	CatMap      map[int64][]store.Category   // quote_id -> its categories
 	ColMap      map[int64][]store.Collection // quote_id -> its collections
+	Duplicates  []duplicateGroup             // near-duplicate groups (>= 2 members each)
+	TotalQuotes int                          // size of the whole library (home count)
 	ActiveCatID int64
 	ActiveColID int64
+}
+
+// duplicateGroup is one cluster of near-duplicate quotes, for the Duplicates
+// section of the left rail. Representative is the first (shortest) member and
+// is the jump target; Label is its text id, falling back to a body excerpt.
+type duplicateGroup struct {
+	Representative int64
+	Label          string
+	Count          int
 }
 
 // rootPane is the editable left column: every quote (home) or a category's quotes.
@@ -125,6 +138,12 @@ func (s *Server) buildPageData(catID, colID int64) (pageData, error) {
 	}
 	data.Root = root
 
+	dups, total, err := s.buildDuplicates()
+	if err != nil {
+		return data, err
+	}
+	data.Duplicates, data.TotalQuotes = dups, total
+
 	if colID > 0 {
 		c, err := s.store.GetCollection(colID)
 		switch {
@@ -192,12 +211,63 @@ func (s *Server) railData(catID, colID int64) (pageData, error) {
 	if err != nil {
 		return pageData{}, err
 	}
+	dups, total, err := s.buildDuplicates()
+	if err != nil {
+		return pageData{}, err
+	}
 	return pageData{
 		Categories:  cats,
 		Collections: cols,
+		Duplicates:  dups,
+		TotalQuotes: total,
 		ActiveCatID: catID,
 		ActiveColID: colID,
 	}, nil
+}
+
+// buildDuplicates loads the whole library and groups near-duplicate quotes by
+// word-level Jaccard similarity. It returns the duplicate groups (each >= 2
+// members) plus the total library size. An empty groups slice means nothing is
+// duplicated.
+func (s *Server) buildDuplicates() ([]duplicateGroup, int, error) {
+	qs, err := s.store.List()
+	if err != nil {
+		return nil, 0, err
+	}
+	items := make([]quote.DupItem, len(qs))
+	byID := make(map[int64]store.Quote, len(qs))
+	for i, q := range qs {
+		items[i] = quote.DupItem{ID: q.ID, Text: q.BodyText}
+		byID[q.ID] = q
+	}
+	groups := quote.GroupDuplicates(items, quote.DefaultDuplicateThreshold)
+	out := make([]duplicateGroup, 0, len(groups))
+	for _, ids := range groups {
+		rep := ids[0]
+		label := byID[rep].SuttaID
+		if label == "" {
+			label = bodyExcerpt(byID[rep].BodyText)
+		}
+		out = append(out, duplicateGroup{Representative: rep, Label: label, Count: len(ids)})
+	}
+	return out, len(qs), nil
+}
+
+// bodyExcerpt returns a short, single-line preview of a quote's body for use as
+// a fallback label when a quote has no text id. It keeps the first runeRunes of
+// the first passage line and trails with an ellipsis when truncated.
+const excerptRunes = 24
+
+func bodyExcerpt(text string) string {
+	if i := strings.IndexByte(text, '\n'); i >= 0 {
+		text = text[:i]
+	}
+	text = strings.TrimSpace(text)
+	r := []rune(text)
+	if len(r) <= excerptRunes {
+		return text
+	}
+	return string(r[:excerptRunes]) + "…"
 }
 
 // exec executes one template into w without touching headers, so a handler can

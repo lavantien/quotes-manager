@@ -10,10 +10,14 @@
 </section>
 {{end}}
 
+{{define "root_count"}}
+<span id="root-count" class="zone__count" hx-swap-oob="outerHTML">{{.}} blocks</span>
+{{end}}
+
 {{define "root_zone_body"}}
 <header class="zone__head">
   <span class="zone__title">{{.Root.Title}}</span>
-  <span class="zone__count">{{.Root.Count}} blocks</span>
+  <span class="zone__count" id="root-count">{{.Root.Count}} blocks</span>
 </header>
 <div class="zone__toolbar">
   <label class="select-all"><input type="checkbox" id="select-all"> <span>all</span></label>

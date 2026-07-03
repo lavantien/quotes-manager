@@ -27,4 +27,10 @@
     <button class="btn btn--sm" type="submit">Add</button>
   </form>
 </section>
+<section class="rail__section">
+  <h2 class="rail__heading">Duplicates</h2>
+  {{range .Duplicates}}<div class="rail__row">
+    <a class="rail__link" data-action="focus-quote" data-id="{{.Representative}}" href="/#quote-{{.Representative}}">{{.Label}} <span class="rail__count">{{.Count}}</span></a>
+  </div>{{else}}<p class="rail__empty">No duplicates.</p>{{end}}
+</section>
 {{end}}
