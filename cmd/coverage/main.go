@@ -14,13 +14,20 @@ import (
 )
 
 func main() {
-	profilePath := flag.String("profile", "coverage.out", "Go cover profile path")
-	readmePath := flag.String("readme", "readme.md", "README path to update")
-	flag.Parse()
-
-	if _, err := run(*profilePath, *readmePath); err != nil {
+	profilePath, readmePath := parseFlags(os.Args[1:])
+	if _, err := run(profilePath, readmePath); err != nil {
 		log.Fatalf("coverage: %v", err)
 	}
+}
+
+// parseFlags parses the profile/readme flags from args, returning the values
+// (defaulting to coverage.out and readme.md).
+func parseFlags(args []string) (profile, readme string) {
+	fs := flag.NewFlagSet("coverage", flag.ContinueOnError)
+	profilePtr := fs.String("profile", "coverage.out", "Go cover profile path")
+	readmePtr := fs.String("readme", "readme.md", "README path to update")
+	_ = fs.Parse(args)
+	return *profilePtr, *readmePtr
 }
 
 // run reads the cover profile, computes the percentage, and refreshes the README

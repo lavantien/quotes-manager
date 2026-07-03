@@ -1605,3 +1605,29 @@ func TestRemainingHandlerDeepErrors(t *testing.T) {
 		assert500(t, newServer(t, failCatMap{fs}), "GET", fmt.Sprintf("/categories/%d", cid), "")
 	})
 }
+
+func TestRenderLeftRailError(t *testing.T) {
+	// createCategory succeeds, then renderLeftRail -> railData -> ListCategories err.
+	assert500(t, newServer(t, failListCats{newFake(sampleQuote(1))}),
+		"POST", "/categories", "name=x", "Content-Type", "application/x-www-form-urlencoded")
+}
+
+func TestRenameCategoryEmptyName(t *testing.T) {
+	fs, cid := fakeWithCategory(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/categories/%d/rename", cid), "name=%20%20",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestRenameCollectionEmptyName(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/rename", cid), "name=%20%20",
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+}

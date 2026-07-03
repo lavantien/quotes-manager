@@ -207,10 +207,61 @@ func TestStoreExistenceCheckScanErrors(t *testing.T) {
 		}
 		// CategoryQueries joins category_items; with it gone, the query errors.
 		if _, err := s.CategoryQuotes(1); err == nil {
-			t.Error("CategoryQuotes: expected error (category_items dropped)")
+			t.Error("CategoryQueries: expected error (category_items dropped)")
 		}
 		if _, err := s.QuoteCategoryMap(); err == nil {
 			t.Error("QuoteCategoryMap: expected error (category_items dropped)")
 		}
 	})
+}
+
+// TestStoreScanErrors inserts a quote with a non-numeric line_count so scanQuote
+// fails mid-iteration, exercising the scan-error return in each reader.
+func TestStoreScanErrors(t *testing.T) {
+	s := newTestStore(t)
+	for _, stmt := range []string{
+		`INSERT INTO quotes (id, sutta_id, citation, body_md, body_text, line_count, char_count, sources)
+		 VALUES (1, 'X', 'X', 'x', 'x', 'NOTANINT', 1, 's')`,
+		`INSERT INTO collection_items (collection_id, quote_id, position) VALUES (1, 1, 1)`,
+		`INSERT INTO category_items (category_id, quote_id) VALUES (1, 1)`,
+	} {
+		if _, err := s.DB().Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, c := range []struct {
+		name string
+		fn   func() error
+	}{
+		{"List", func() error { _, err := s.List(); return err }},
+		{"Get", func() error { _, err := s.Get(1); return err }},
+		{"CollectionQuotes", func() error { _, err := s.CollectionQuotes(1); return err }},
+		{"CategoryQuotes", func() error { _, err := s.CategoryQuotes(1); return err }},
+	} {
+		if err := c.fn(); err == nil {
+			t.Errorf("%s: expected scan error from malformed row", c.name)
+		}
+	}
+}
+
+// TestStoreMapScanErrors inserts membership rows with a non-numeric quote_id so
+// the map scans fail mid-iteration.
+func TestStoreMapScanErrors(t *testing.T) {
+	s := newTestStore(t)
+	for _, stmt := range []string{
+		`INSERT INTO categories (id, name) VALUES (1, 'x')`,
+		`INSERT INTO category_items (category_id, quote_id) VALUES (1, 'NOTANINT')`,
+		`INSERT INTO collections (id, name) VALUES (1, 'x')`,
+		`INSERT INTO collection_items (collection_id, quote_id, position) VALUES (1, 'NOTANINT', 1)`,
+	} {
+		if _, err := s.DB().Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.QuoteCategoryMap(); err == nil {
+		t.Error("QuoteCategoryMap: expected scan error")
+	}
+	if _, err := s.QuoteCollectionMap(); err == nil {
+		t.Error("QuoteCollectionMap: expected scan error")
+	}
 }

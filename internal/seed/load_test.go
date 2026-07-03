@@ -261,3 +261,27 @@ func TestSetMetaMissingTable(t *testing.T) {
 		t.Error("setMeta on a missing app_meta table should error")
 	}
 }
+
+// TestSeedCategoriesMalformedTable: a categories table lacking the name column
+// makes seedCategories' INSERT fail.
+func TestSeedCategoriesMalformedTable(t *testing.T) {
+	db := openDB(t)
+	if _, err := db.Exec("CREATE TABLE categories (id INTEGER PRIMARY KEY)"); err != nil {
+		t.Fatal(err)
+	}
+	if err := seedCategories(db); err == nil {
+		t.Error("seedCategories should error when the name column is missing")
+	}
+}
+
+// TestSeedSampleCollectionMissingItems: collections exists but collection_items
+// does not, so the item INSERT fails.
+func TestSeedSampleCollectionMissingItems(t *testing.T) {
+	db := openDB(t)
+	if _, err := db.Exec("CREATE TABLE collections (id INTEGER PRIMARY KEY)"); err != nil {
+		t.Fatal(err)
+	}
+	if err := seedSampleCollection(db); err == nil {
+		t.Error("seedSampleCollection should error when collection_items is missing")
+	}
+}

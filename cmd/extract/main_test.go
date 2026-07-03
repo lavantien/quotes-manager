@@ -93,3 +93,49 @@ func TestGenerateMissingDumpsDir(t *testing.T) {
 		t.Errorf("generate on missing dumps dir: %v", err)
 	}
 }
+
+func TestGenerateMkdirFails(t *testing.T) {
+	root := t.TempDir()
+	// Make the seed path's parent a regular file, so MkdirAll cannot create it.
+	filePath := filepath.Join(root, "afile")
+	if err := os.WriteFile(filePath, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := generate(t.TempDir(), filepath.Join(filePath, "seed.sql"), filepath.Join(root, "e.md"))
+	if err == nil {
+		t.Error("generate should fail when the output dir cannot be created")
+	}
+}
+
+func TestGenerateWriteFails(t *testing.T) {
+	root := t.TempDir()
+	// The seed path is itself a directory, so WriteFile cannot create it.
+	dirAsFile := filepath.Join(root, "seed.sql")
+	if err := os.MkdirAll(dirAsFile, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, err := generate(t.TempDir(), dirAsFile, filepath.Join(root, "e.md"))
+	if err == nil {
+		t.Error("generate should fail to write seed.sql into a directory")
+	}
+}
+
+func TestGenerateExportWriteFails(t *testing.T) {
+	root := t.TempDir()
+	dumps := filepath.Join(root, "dumps")
+	if err := os.MkdirAll(dumps, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dumps, "a.txt"), []byte("\"A.\" - MN 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// The export path is itself a directory, so WriteFile fails after seed.sql.
+	exportDir := filepath.Join(root, "exports", "shortest-first.md")
+	if err := os.MkdirAll(exportDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, err := generate(dumps, filepath.Join(root, "database", "seed.sql"), exportDir)
+	if err == nil {
+		t.Error("generate should fail to write the export into a directory")
+	}
+}

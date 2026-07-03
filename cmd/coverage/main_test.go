@@ -7,6 +7,17 @@ import (
 	"testing"
 )
 
+func TestParseFlags(t *testing.T) {
+	prof, readme := parseFlags([]string{"-profile", "x.out", "-readme", "y.md"})
+	if prof != "x.out" || readme != "y.md" {
+		t.Errorf("parseFlags = %q, %q; want x.out, y.md", prof, readme)
+	}
+	prof, readme = parseFlags(nil)
+	if prof != "coverage.out" || readme != "readme.md" {
+		t.Errorf("defaults = %q, %q; want coverage.out, readme.md", prof, readme)
+	}
+}
+
 func TestRunUpdatesBadge(t *testing.T) {
 	dir := t.TempDir()
 	profile := filepath.Join(dir, "coverage.out")
