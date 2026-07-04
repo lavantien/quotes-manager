@@ -170,8 +170,25 @@
   font-size: 0.85rem;
   color: var(--ink-soft);
   cursor: pointer;
-  margin-right: auto;
 }
+
+/* Search box at the right edge of a zone toolbar (reuses the rail input pill). */
+.zone__search {
+  margin-left: auto;
+  max-width: 14rem;
+}
+.zone__search:disabled { opacity: 0.5; }
+
+/* Highlighted search match inside a rendered quote. */
+mark {
+  background: var(--accent-soft);
+  color: var(--paper);
+  padding: 0 0.1em;
+  border-radius: 2px;
+}
+
+/* A read-only block that isn't draggable (e.g. a filtered collection view). */
+.quote--ro:not([draggable]) { cursor: default; }
 
 .zone__empty { padding: 2.5rem clamp(1rem, 2vw, 1.4rem); color: var(--ink-soft); }
 .zone__empty p { margin: 0 0 0.5rem; }

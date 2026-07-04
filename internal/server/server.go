@@ -55,6 +55,8 @@ func (s *Server) routes() *http.ServeMux {
 	m.HandleFunc("GET /collections/{cid}/export.txt", s.collectionExport)
 	m.HandleFunc("GET /pane/root", s.rootPaneHandler)
 	m.HandleFunc("GET /pane/collection", s.collectionPaneHandler)
+	m.HandleFunc("GET /search/root", s.searchRoot)
+	m.HandleFunc("GET /search/collection", s.searchCollection)
 	m.HandleFunc("GET /rail/left", s.leftRailHandler)
 	m.HandleFunc("GET /rail/right", s.rightRailHandler)
 	m.HandleFunc("GET /categories/{ctid}", s.category)

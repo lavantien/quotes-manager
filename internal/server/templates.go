@@ -13,11 +13,11 @@ import (
 // the on-screen format (italic passages, bolded suttacentral link).
 func mustTemplates() *template.Template {
 	tmpl := template.New("").Funcs(template.FuncMap{
-		"display": func(q store.Quote) template.HTML {
-			return quote.New(q.SuttaID, q.Citation, splitPassages(q.BodyText)).DisplayHTML()
+		"display": func(q store.Quote, terms []string) template.HTML {
+			return quote.New(q.SuttaID, q.Citation, splitPassages(q.BodyText)).DisplayHTMLWithTerms(terms)
 		},
-		"withView": func(q store.Quote, cm map[int64][]store.Category, colm map[int64][]store.Collection) quoteView {
-			return quoteView{Quote: q, Cats: cm[q.ID], Cols: colm[q.ID]}
+		"withView": func(q store.Quote, cm map[int64][]store.Category, colm map[int64][]store.Collection, terms []string, draggable bool) quoteView {
+			return quoteView{Quote: q, Cats: cm[q.ID], Cols: colm[q.ID], Terms: terms, Draggable: draggable}
 		},
 		"chipsFor": func(id int64, cats []store.Category) chipsData {
 			return chipsData{ID: id, Categories: cats}
@@ -34,6 +34,7 @@ func mustTemplates() *template.Template {
 		"templates/rail_right.html",
 		"templates/root_zone.html",
 		"templates/collection_zone.html",
+		"templates/collection_list.html",
 		"templates/quote_list.html",
 		"templates/quote_block.html",
 		"templates/quote_block_ro.html",

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/lavantien/quotes-manager/internal/quote"
+	"github.com/lavantien/quotes-manager/internal/search"
 	"github.com/lavantien/quotes-manager/internal/store"
 )
 
@@ -44,6 +45,8 @@ type rootPane struct {
 	IsCategory bool
 	CategoryID int64
 	ExportURL  string
+	Query      string   // raw ?rq= search, echoed into the input's value
+	Terms      []string // parsed Query, used by the display func to highlight
 }
 
 // collectionPane is the read-only right column: the active collection's quotes
@@ -55,6 +58,9 @@ type collectionPane struct {
 	Count     int
 	Quotes    []store.Quote
 	ExportURL string
+	Query     string   // raw ?cq= search, echoed into the input's value
+	Terms     []string // parsed Query, used by the display func to highlight
+	Searching bool     // true when Terms is non-empty (disables reorder/gaps)
 }
 
 // formData drives the 3-field quote create/edit form.
@@ -91,11 +97,15 @@ type categoryItem struct {
 }
 
 // quoteView bundles a quote with its categories and collections for block
-// rendering, so both chip rows show without an N+1 lookup per block.
+// rendering, so both chip rows show without an N+1 lookup per block. Terms drives
+// highlight; Drivable switches off the collection block's drag affordance while a
+// collection search is active (reordering a filtered subset is ambiguous).
 type quoteView struct {
-	Quote store.Quote
-	Cats  []store.Category
-	Cols  []store.Collection
+	Quote     store.Quote
+	Cats      []store.Category
+	Cols      []store.Collection
+	Terms     []string
+	Draggable bool
 }
 
 // collectionLabel returns a collection's display name: its stored Name, or the
@@ -108,10 +118,11 @@ func collectionLabel(c store.Collection) string {
 }
 
 // buildPageData loads the rails, both membership maps, and the root/collection
-// panes for the given active category/collection. An unknown active id clears
-// that pane (treated as inactive) rather than erroring, so a stale query param
-// never 404s the whole page.
-func (s *Server) buildPageData(catID, colID int64) (pageData, error) {
+// panes for the given active category/collection and search queries. An unknown
+// active id clears that pane (treated as inactive) rather than erroring, so a
+// stale query param never 404s the whole page. rq/cq filter the root/collection
+// panes respectively; empty queries are no-ops.
+func (s *Server) buildPageData(catID, colID int64, rq, cq string) (pageData, error) {
 	data := pageData{ActiveCatID: catID, ActiveColID: colID}
 
 	cats, err := s.store.ListCategories()
@@ -132,7 +143,7 @@ func (s *Server) buildPageData(catID, colID int64) (pageData, error) {
 	}
 	data.Categories, data.Collections, data.CatMap, data.ColMap = cats, cols, catMap, colMap
 
-	root, err := s.buildRootPane(catID)
+	root, err := s.buildRootPane(catID, rq)
 	if err != nil {
 		return data, err
 	}
@@ -152,13 +163,18 @@ func (s *Server) buildPageData(catID, colID int64) (pageData, error) {
 			if qerr != nil {
 				return data, qerr
 			}
+			cTerms := search.Terms(cq)
+			qs = search.Filter(qs, cTerms)
 			data.Collection = collectionPane{
 				Active:    true,
 				ID:        colID,
 				Name:      collectionLabel(c),
-				Count:     c.Count,
+				Count:     len(qs),
 				Quotes:    qs,
 				ExportURL: fmt.Sprintf("/collections/%d/export.txt", colID),
+				Query:     cq,
+				Terms:     cTerms,
+				Searching: len(cTerms) > 0,
 			}
 		case errors.Is(err, store.ErrNotFound):
 			data.ActiveColID = 0
@@ -170,19 +186,21 @@ func (s *Server) buildPageData(catID, colID int64) (pageData, error) {
 }
 
 // buildRootPane loads the root column quotes for the given category filter (0 =
-// home, ordered by char_count).
-func (s *Server) buildRootPane(catID int64) (rootPane, error) {
+// home, ordered by char_count) narrowed by the root search query rq.
+func (s *Server) buildRootPane(catID int64, rq string) (rootPane, error) {
+	rTerms := search.Terms(rq)
 	if catID <= 0 {
 		qs, err := s.store.List()
 		if err != nil {
 			return rootPane{}, err
 		}
-		return rootPane{Quotes: qs, Count: len(qs), Title: "Quotes", ExportURL: "/export.txt"}, nil
+		qs = search.Filter(qs, rTerms)
+		return rootPane{Quotes: qs, Count: len(qs), Title: "Quotes", ExportURL: "/export.txt", Query: rq, Terms: rTerms}, nil
 	}
 	c, err := s.store.GetCategory(catID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
-			return rootPane{Quotes: nil, Count: 0, Title: "Quotes", ExportURL: "/export.txt"}, nil
+			return rootPane{Quotes: nil, Count: 0, Title: "Quotes", ExportURL: "/export.txt", Query: rq, Terms: rTerms}, nil
 		}
 		return rootPane{}, err
 	}
@@ -190,6 +208,7 @@ func (s *Server) buildRootPane(catID int64) (rootPane, error) {
 	if err != nil {
 		return rootPane{}, err
 	}
+	qs = search.Filter(qs, rTerms)
 	return rootPane{
 		Quotes:     qs,
 		Count:      len(qs),
@@ -197,6 +216,8 @@ func (s *Server) buildRootPane(catID int64) (rootPane, error) {
 		IsCategory: true,
 		CategoryID: catID,
 		ExportURL:  fmt.Sprintf("/categories/%d/export.txt", catID),
+		Query:      rq,
+		Terms:      rTerms,
 	}, nil
 }
 

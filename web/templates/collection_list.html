@@ -1,0 +1,7 @@
+{{define "collection_list"}}
+<div id="collection-list" class="quote-list collection-list"{{if not .Collection.Searching}} data-reorder="/collections/{{.Collection.ID}}/reorder"{{end}}>
+  {{range $i, $q := .Collection.Quotes}}{{if not $.Collection.Searching}}<button type="button" class="insert-gap" data-action="insert-collection" data-pos="{{add $i 1}}" title="Insert selected root quotes here" aria-label="Insert selected root quotes here"></button>{{end}}{{template "quote_block_ro" (withView $q $.CatMap $.ColMap $.Collection.Terms (not $.Collection.Searching))}}{{end}}
+  {{if not .Collection.Searching}}<button type="button" class="insert-gap" data-action="insert-collection" data-pos="{{add (len .Collection.Quotes) 1}}" title="Insert selected root quotes here" aria-label="Insert selected root quotes here"></button>{{end}}
+  {{if not .Collection.Quotes}}{{if .Collection.Searching}}<p class="empty">No matches.</p>{{else}}<p class="empty">No quotes here.</p>{{end}}{{end}}
+</div>
+{{end}}

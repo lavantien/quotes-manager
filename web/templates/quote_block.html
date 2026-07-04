@@ -3,7 +3,7 @@
   <div class="quote__check">
     <input type="checkbox" class="select" name="id" value="{{.Quote.ID}}" aria-label="Select quote">
   </div>
-  <div class="quote__body">{{display .Quote}}</div>
+  <div class="quote__body">{{display .Quote .Terms}}</div>
   {{template "quote_chips" (chipsFor .Quote.ID .Cats)}}
   {{template "quote_collection_chips" (colChipsFor .Quote.ID .Cols)}}
   <div class="quote__actions">

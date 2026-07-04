@@ -21,7 +21,7 @@ func (s *Server) collection(w http.ResponseWriter, r *http.Request) {
 		handleStoreErr(w, err)
 		return
 	}
-	data, err := s.buildPageData(parseQueryID(r, "cat"), cid)
+	data, err := s.buildPageData(parseQueryID(r, "cat"), cid, parseQueryStr(r, "rq"), parseQueryStr(r, "cq"))
 	if err != nil {
 		serverError(w, err)
 		return
@@ -44,7 +44,7 @@ func (s *Server) createCollection(w http.ResponseWriter, r *http.Request) {
 		serverError(w, err)
 		return
 	}
-	s.swapCollectionZone(w, parseQueryID(r, "cat"), cid, true, true)
+	s.swapCollectionZone(w, parseQueryID(r, "cat"), cid, "", "", true, true)
 }
 
 // addCollectionItems prepends quotes to an existing collection (the legacy
@@ -89,13 +89,16 @@ func (s *Server) insertCollectionItems(w http.ResponseWriter, r *http.Request) {
 		handleStoreErr(w, err)
 		return
 	}
-	s.swapCollectionZone(w, parseQueryID(r, "cat"), cid, true, true)
+	// Clear cq so the just-inserted quotes are visible (a filtered view would
+	// hide them). rq is irrelevant to the collection zone but passed through for
+	// consistency; search state does not survive a mutation.
+	s.swapCollectionZone(w, parseQueryID(r, "cat"), cid, "", "", true, true)
 }
 
 // swapCollectionZone renders the collection zone for cid as the primary swap
 // target, optionally with out-of-band refreshes of the right rail and root zone.
-func (s *Server) swapCollectionZone(w http.ResponseWriter, catID, colID int64, oobRail, oobRoot bool) {
-	data, err := s.buildPageData(catID, colID)
+func (s *Server) swapCollectionZone(w http.ResponseWriter, catID, colID int64, rq, cq string, oobRail, oobRoot bool) {
+	data, err := s.buildPageData(catID, colID, rq, cq)
 	if err != nil {
 		serverError(w, err)
 		return
@@ -190,9 +193,11 @@ func (s *Server) collectionExport(w http.ResponseWriter, r *http.Request) {
 // --- pane + rail fragment endpoints (htmx in-place swaps) ---
 
 // rootPaneHandler returns the root zone (home or category-filtered) plus an
-// out-of-band left rail so the active highlight follows the selection.
+// out-of-band left rail so the active highlight follows the selection. A pane
+// swap intentionally drops the search: a freshly selected active set is a new
+// view, not a filtered one.
 func (s *Server) rootPaneHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := s.buildPageData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
+	data, err := s.buildPageData(parseQueryID(r, "cat"), parseQueryID(r, "col"), "", "")
 	if err != nil {
 		serverError(w, err)
 		return
@@ -205,7 +210,7 @@ func (s *Server) rootPaneHandler(w http.ResponseWriter, r *http.Request) {
 // collectionPaneHandler returns the collection zone for ?col= (or the empty
 // placeholder when col is absent/0) plus an out-of-band right rail.
 func (s *Server) collectionPaneHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := s.buildPageData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
+	data, err := s.buildPageData(parseQueryID(r, "cat"), parseQueryID(r, "col"), "", "")
 	if err != nil {
 		serverError(w, err)
 		return

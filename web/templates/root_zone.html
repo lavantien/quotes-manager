@@ -24,6 +24,9 @@
   <button type="button" class="btn btn--sm btn--primary" hx-get="/quotes/new" hx-target="#form-slot" hx-swap="innerHTML">+ New</button>
   <button type="button" class="btn btn--sm btn--danger" data-action="bulk-delete" disabled>Delete</button>
   <button type="button" class="btn btn--sm" data-action="copy-all" data-export="{{.Root.ExportURL}}">Copy all</button>
+  <input type="search" class="zone__search rail__input" name="rq" placeholder="Search" value="{{.Root.Query}}" autocomplete="off"
+         hx-get="/search/root" hx-trigger="input changed delay:200ms, search" hx-target="#quote-list" hx-swap="innerHTML" hx-include="this"
+         hx-vals='{"cat": "{{.ActiveCatID}}"}'>
 </div>
 <div id="form-slot" class="form-slot"></div>
 {{template "quote_list" .}}

@@ -14,7 +14,7 @@ import (
 )
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
-	data, err := s.buildPageData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
+	data, err := s.buildPageData(parseQueryID(r, "cat"), parseQueryID(r, "col"), parseQueryStr(r, "rq"), parseQueryStr(r, "cq"))
 	if err != nil {
 		serverError(w, err)
 		return
@@ -62,6 +62,13 @@ func parseQueryID(r *http.Request, key string) int64 {
 	return id
 }
 
+// parseQueryStr reads an optional trimmed string query parameter (the search
+// box value), returning "" when absent. Lowercasing/splitting happens in
+// search.Terms.
+func parseQueryStr(r *http.Request, key string) string {
+	return strings.TrimSpace(r.URL.Query().Get(key))
+}
+
 // category renders the full dual-pane page with the root column filtered to a
 // category. Kept as a deep-link/refresh-friendly full-page route alongside the
 // in-place htmx pane swaps.
@@ -74,7 +81,7 @@ func (s *Server) category(w http.ResponseWriter, r *http.Request) {
 		handleStoreErr(w, err)
 		return
 	}
-	data, err := s.buildPageData(ctid, parseQueryID(r, "col"))
+	data, err := s.buildPageData(ctid, parseQueryID(r, "col"), parseQueryStr(r, "rq"), parseQueryStr(r, "cq"))
 	if err != nil {
 		serverError(w, err)
 		return

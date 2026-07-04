@@ -4,20 +4,24 @@
 </section>
 {{end}}
 
+{{define "collection_count"}}
+<span id="collection-count" class="zone__count" hx-swap-oob="outerHTML">{{.Collection.Count}} blocks</span>
+{{end}}
+
 {{define "collection_zone_body"}}
 {{if .Collection.Active}}
 <header class="zone__head">
   <span class="zone__title">{{.Collection.Name}}</span>
-  <span class="zone__count">{{.Collection.Count}} blocks</span>
+  <span class="zone__count" id="collection-count">{{.Collection.Count}} blocks</span>
 </header>
 <div class="zone__toolbar">
   <button type="button" class="btn btn--sm" data-action="copy-all" data-export="{{.Collection.ExportURL}}">Copy all</button>
   <button type="button" class="btn btn--sm btn--danger" hx-delete="/collections/{{.Collection.ID}}" hx-confirm="Delete this collection?">Delete</button>
+  <input type="search" class="zone__search rail__input" name="cq" placeholder="Search" value="{{.Collection.Query}}" autocomplete="off"
+         hx-get="/search/collection" hx-trigger="input changed delay:200ms, search" hx-target="#collection-list" hx-swap="innerHTML" hx-include="this"
+         hx-vals='{"col": "{{.Collection.ID}}"}'>
 </div>
-<div id="collection-list" class="quote-list collection-list" data-reorder="/collections/{{.Collection.ID}}/reorder">
-  {{range $i, $q := .Collection.Quotes}}<button type="button" class="insert-gap" data-action="insert-collection" data-pos="{{add $i 1}}" title="Insert selected root quotes here" aria-label="Insert selected root quotes here"></button>{{template "quote_block_ro" (withView $q $.CatMap $.ColMap)}}{{end}}
-  <button type="button" class="insert-gap" data-action="insert-collection" data-pos="{{add (len .Collection.Quotes) 1}}" title="Insert selected root quotes here" aria-label="Insert selected root quotes here"></button>
-</div>
+{{template "collection_list" .}}
 {{else}}
 <header class="zone__head">
   <span class="zone__title">Collection</span>
