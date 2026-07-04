@@ -1,7 +1,7 @@
 # quotes-manager
 
 <!-- coverage:START -->
-![coverage](https://img.shields.io/badge/coverage-90.7%25-brightgreen)
+![coverage](https://img.shields.io/badge/coverage-90.9%25-brightgreen)
 <!-- coverage:END -->
 
 ![quotes-manager home page](docs/home.png)
@@ -19,6 +19,7 @@ dumps/                         source essays (input, hand-written)
   sacredness-and-profanity.txt          sutta quotes, inline-cited
   stream-entry-for-lay-buddhists.txt    sutta quotes, inline + header-cited
 internal/quote/                parser, normalizer, renderer, near-duplicate detection, seed emitter (+ tests)
+internal/search/               pure full-text filter (Terms/Match/Filter) over []store.Quote (+ tests)
 internal/store/                SQLite store: CRUD + collections + categories, ordered by char_count
 internal/seed/                 EnsureSeeded: canonical seed (+ sample categories) on a fresh database
 internal/server/               HTMX handlers + server-rendered templates (+ tests)
@@ -35,7 +36,7 @@ docs/
 exports/
   shortest-first.md            generated export, shortest-first (committed)
 web/
-  templates/                   layout, rail_left, rail_right, root_zone, collection_zone, quote_list, quote_block(_ro), quote_form, quote_chips, quote_collection_chips, quote_category_editor
+  templates/                   layout, rail_left, rail_right, root_zone, collection_zone, collection_list, quote_list, quote_block(_ro), quote_form, quote_chips, quote_collection_chips, quote_category_editor
   static/                      app.css (typography/components) + layout.css (4-zone grid), app.js, htmx (vendored)
 go.mod
 readme.md
@@ -123,6 +124,17 @@ Home first if a category filter is active, and briefly highlights it. The
 canonical seed already contains one such cluster: the `MN 22` trio that differs
 only in "Bhikkhus"/"Mendicants" and "sexual"/"sensual". Adding, editing, or
 deleting a quote refreshes the section live.
+
+### Search
+
+Each text column has a search box in its toolbar, scoped to the column's active
+set: Home or the current category on the left, the active collection on the
+right. Typing filters the column in place over htmx (debounced); matching is
+case-insensitive, any whitespace-separated word (OR) against the quote body and
+citation, with hits wrapped in `<mark>`. `?rq=` and `?cq=` deep-link the two
+columns independently. Switching category or collection clears the search.
+While a collection search is active the insert gaps and drag handles are hidden,
+so a filtered subset cannot be mis-reordered.
 
 ### SQLite schema (web)
 

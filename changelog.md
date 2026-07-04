@@ -6,6 +6,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 | Version | Date | Type | Change |
 |---------|------|------|--------|
+| [0.8.0] | 2026-07-04 | Added | Full-text search in both panels: each text column has a search box in its toolbar scoped to the column's active set (Home or a category on the left, the active collection on the right). Server-side filtering via the new `internal/search` package (`Terms`, `Match`, `Filter`), threaded through `buildPageData` as `?rq=` and `?cq=`. Matching is case-insensitive, any whitespace-separated word (OR) over the quote body and citation. |
+| [0.8.0] | 2026-07-04 | Added | Highlighted matches: `quote.DisplayHTMLWithTerms` wraps every case-insensitive hit in `<mark>` (HTML-safe, original case preserved), used by the `display` template func when a search is active; an empty-state message shows when nothing matches. |
+| [0.8.0] | 2026-07-04 | Added | `GET /search/root` and `GET /search/collection` return just the filtered list fragment plus an out-of-band count swap, so the search input keeps focus between keystrokes; both panes are deep-linkable via `?rq=`/`?cq=` on `GET /`. Switching category or collection clears the search. |
+| [0.8.0] | 2026-07-04 | Changed | While a collection search is active, insert gaps, drag handles, and the `data-reorder` hook are hidden so a filtered subset cannot be mis-reordered. |
+| [0.8.0] | 2026-07-04 | Changed | Test coverage rises to 90.9% of statements; the new `internal/search` package is at 100%. |
 | [0.7.1] | 2026-07-03 | Changed | Streamlined the README (tighter prose, less decorative formatting, no emdashes) and converted the CHANGELOG from nested version headings into a single version table. |
 | [0.7.0] | 2026-07-03 | Added | Near-duplicate detection in `internal/quote`: word-level Jaccard similarity over cleaned passage text plus a disjoint set that groups quotes whose pairwise similarity exceeds `0.8`, transitively. `quote.GroupDuplicates` returns only clusters of two or more, grouped by content, not text id. Fully unit-tested (table + property) and pinned to the seed's `MN 22` trio. |
 | [0.7.0] | 2026-07-03 | Added | Duplicates rail listing each cluster's representative (shortest) text id with a member-count chip, with a body-excerpt fallback when a quote has no text id. |
@@ -58,6 +63,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 | [0.1.0] | 2026-06-29 | Notes | Quotes are drawn from `sacredness-and-profanity.txt` and `stream-entry-for-lay-buddhists.txt`; `discerning-truth-from-deception.txt` is prose only and contributes no quotes. |
 | [0.1.0] | 2026-06-29 | Notes | Unattributed quotes (including all header-cited ones) are normalized to "the Buddha". |
 
+[0.8.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.8.0
 [0.7.1]: https://github.com/lavantien/quotes-manager/releases/tag/v0.7.1
 [0.7.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.7.0
 [0.6.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.6.0
