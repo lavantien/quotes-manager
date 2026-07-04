@@ -50,7 +50,7 @@ body {
 .quote {
   display: grid;
   grid-template-columns: auto 1fr;
-  grid-template-areas: "check body" "check chips" "check actions";
+  grid-template-areas: "check body" "check chips" "check cols" "check actions";
   align-items: start;
   gap: 0.25rem 1rem;
   padding: clamp(1rem, 2vw, 1.5rem) 0;
@@ -177,5 +177,5 @@ body {
 .quote-form__row--actions { justify-content: flex-end; }
 
 @media (max-width: 30rem) {
-  .quote { grid-template-columns: 1fr; grid-template-areas: "check" "body" "chips" "actions"; }
+  .quote { grid-template-columns: 1fr; grid-template-areas: "check" "body" "chips" "cols" "actions"; }
 }

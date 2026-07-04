@@ -234,8 +234,9 @@ mark {
 .insert-gap:hover::before { border-top-color: var(--accent-soft); }
 .insert-gap:hover::after { opacity: 1; }
 
-/* --- collection membership chips on root blocks --- */
-.quote__collections { grid-area: chips; margin-top: 0.1rem; }
+/* --- collection membership chips on root blocks (their own grid row, so they
+   do not overlap the category chips row) --- */
+.quote__collections { grid-area: cols; margin-top: 0.1rem; }
 
 /* Brief highlight on the quote jumped to from the Duplicates rail. */
 .quote.is-flash {

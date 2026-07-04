@@ -6,6 +6,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 | Version | Date | Type | Change |
 |---------|------|------|--------|
+| [0.9.1] | 2026-07-05 | Fixed | Category chips and collection chips on a root block were assigned the same grid area (`chips`), so the two rows overlapped; collections now get their own `cols` row in the `.quote` grid (and in the narrow `@media` variant), so the chip rows stack cleanly. |
 | [0.9.0] | 2026-07-05 | Changed | The workspace fills the viewport: the `96rem` cap and centering on `.page` are gone (and the now-unused `--col` token with it), so the four-zone grid uses the full width; the rails keep their fixed columns and the responsive breakpoints are unchanged. |
 | [0.9.0] | 2026-07-05 | Added | Synced column headers: a small equalizer in `app.js` matches each column's `.zone__head` and `.zone__toolbar` to the taller of the pair (reset, measure, apply as `min-height`), so the divider lines line up across columns regardless of content or htmx swaps; re-runs on `applyFragments`, `htmx:afterSwap`, init, resize, and `document.fonts.ready`. |
 | [0.9.0] | 2026-07-05 | Changed | Unnamed collections now render as "Col {id}" instead of "Collection {id}" (`server.collectionLabel`); tests and docs updated. |
@@ -67,6 +68,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 | [0.1.0] | 2026-06-29 | Notes | Quotes are drawn from `sacredness-and-profanity.txt` and `stream-entry-for-lay-buddhists.txt`; `discerning-truth-from-deception.txt` is prose only and contributes no quotes. |
 | [0.1.0] | 2026-06-29 | Notes | Unattributed quotes (including all header-cited ones) are normalized to "the Buddha". |
 
+[0.9.1]: https://github.com/lavantien/quotes-manager/releases/tag/v0.9.1
 [0.9.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.9.0
 [0.8.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.8.0
 [0.7.1]: https://github.com/lavantien/quotes-manager/releases/tag/v0.7.1
