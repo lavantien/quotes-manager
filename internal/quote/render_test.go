@@ -120,3 +120,97 @@ func TestRenderExportFileEmptyAndSingle(t *testing.T) {
 		t.Errorf("RenderExportFile(single) = %q, want %q", got, want)
 	}
 }
+
+func mustNotContain(t *testing.T, s, sub string) {
+	t.Helper()
+	if strings.Contains(s, sub) {
+		t.Errorf("unexpected %q in:\n%s", sub, s)
+	}
+}
+
+func TestDisplayHTMLWithTermsNilEqualsDisplayHTML(t *testing.T) {
+	q := New("MN 22", "the Buddha, MN 22", []string{`"hi"`, "second passage"})
+	if string(q.DisplayHTMLWithTerms(nil)) != string(q.DisplayHTML()) {
+		t.Errorf("DisplayHTMLWithTerms(nil) must equal DisplayHTML()")
+	}
+	// An empty (but non-nil) terms slice must also be a no-op.
+	if string(q.DisplayHTMLWithTerms([]string{})) != string(q.DisplayHTML()) {
+		t.Errorf("DisplayHTMLWithTerms([]) must equal DisplayHTML()")
+	}
+}
+
+func TestDisplayHTMLWithTermsWrapsBodyMatch(t *testing.T) {
+	q := New("MN 22", "the Buddha, MN 22", []string{"the Buddha spoke"})
+	got := string(q.DisplayHTMLWithTerms([]string{"buddha"}))
+	mustContain(t, got, "<mark>Buddha</mark>") // original case preserved
+	mustNotContain(t, got, "<script>")
+}
+
+func TestDisplayHTMLWithTermsWrapsCitationID(t *testing.T) {
+	q := New("MN 22", "the Buddha, MN 22", []string{`"x"`})
+	got := string(q.DisplayHTMLWithTerms([]string{"mn 22"}))
+	mustContain(t, got, "<strong><mark>MN 22</mark></strong>")
+}
+
+func TestDisplayHTMLWithTermsEscapesNonMatchedScript(t *testing.T) {
+	q := New("MN 22", "the Buddha, MN 22", []string{"<script>alert(1)</script> Buddhadatta"})
+	got := string(q.DisplayHTMLWithTerms([]string{"buddhadatta"}))
+	mustContain(t, got, "&lt;script&gt;alert(1)&lt;/script&gt;")
+	mustContain(t, got, "<mark>Buddhadatta</mark>")
+	mustNotContain(t, got, "<script>")
+}
+
+func TestDisplayHTMLWithTermsEscapesMatchedScript(t *testing.T) {
+	q := New("MN 22", "the Buddha, MN 22", []string{"<script>x</script>"})
+	got := string(q.DisplayHTMLWithTerms([]string{"<script>"}))
+	mustContain(t, got, "<mark>&lt;script&gt;</mark>")
+	mustNotContain(t, got, "<script>")
+}
+
+func TestDisplayHTMLWithTermsNoMatchNoMark(t *testing.T) {
+	q := New("MN 22", "the Buddha, MN 22", []string{`"calm"`})
+	got := string(q.DisplayHTMLWithTerms([]string{"zzz"}))
+	mustNotContain(t, got, "<mark>")
+	if got != string(q.DisplayHTML()) {
+		t.Errorf("no-match highlight must equal DisplayHTML()")
+	}
+}
+
+func TestDisplayHTMLWithTermsMultipleTermsOR(t *testing.T) {
+	q := New("MN 22", "the Buddha, MN 22", []string{"the Buddha spoke"})
+	got := string(q.DisplayHTMLWithTerms([]string{"buddha", "mn 22"}))
+	mustContain(t, got, "<mark>Buddha</mark>")
+	mustContain(t, got, "<strong><mark>MN 22</mark></strong>")
+}
+
+func TestDisplayHTMLWithTermsMultiPassageOnlyMatching(t *testing.T) {
+	q := New("MN 22", "the Buddha, MN 22", []string{"first passage", "the Buddha spoke"})
+	got := string(q.DisplayHTMLWithTerms([]string{"buddha"}))
+	mustContain(t, got, "<em>first passage</em>")
+	mustContain(t, got, "<em>the <mark>Buddha</mark> spoke</em>")
+}
+
+func TestHighlight(t *testing.T) {
+	tests := []struct {
+		name  string
+		in    string
+		terms []string
+		want  string
+	}{
+		{"no terms is plain escape", "a&b<c>", nil, "a&amp;b&lt;c&gt;"},
+		{"empty terms is plain escape", "a&b", []string{}, "a&amp;b"},
+		{"preserves original case", "Buddha", []string{"buddha"}, "<mark>Buddha</mark>"},
+		{"longest term preferred", "buddha", []string{"bud", "buddha"}, "<mark>buddha</mark>"},
+		{"empty term ignored", "abc", []string{"", "a"}, "<mark>a</mark>bc"},
+		{"only empty terms -> no mark", "abc", []string{""}, "abc"},
+		{"marks every occurrence", "a a a", []string{"a"}, "<mark>a</mark> <mark>a</mark> <mark>a</mark>"},
+		{"escaped ampersand in gap", "a & b", []string{"b"}, "a &amp; <mark>b</mark>"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := highlight(tc.in, tc.terms); got != tc.want {
+				t.Errorf("highlight(%q, %v) = %q, want %q", tc.in, tc.terms, got, tc.want)
+			}
+		})
+	}
+}
