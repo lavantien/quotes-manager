@@ -25,6 +25,26 @@
     });
   }
 
+  // Sync the two columns' header rows (.zone__head, .zone__toolbar) to the
+  // taller of the pair so the divider lines stay aligned across columns,
+  // regardless of content or htmx swaps. min-height (not height) so a row may
+  // still grow; the inline value is reset first so the measurement reflects the
+  // natural height. Guarded so the empty-collection state (one toolbar) and any
+  // transient measurement error can never break the rest of the IIFE.
+  function equalizeRow(sel) {
+    var els = Array.prototype.slice.call(document.querySelectorAll(sel));
+    if (els.length < 2) { els.forEach(function (e) { e.style.minHeight = ""; }); return; }
+    try {
+      els.forEach(function (e) { e.style.minHeight = ""; });
+      var max = Math.max.apply(null, els.map(function (e) { return e.offsetHeight; }));
+      els.forEach(function (e) { e.style.minHeight = max + "px"; });
+    } catch (err) { /* never break the caller */ }
+  }
+  function equalizeHeaders() {
+    equalizeRow(".zone__head");
+    equalizeRow(".zone__toolbar");
+  }
+
   function flash(btn, text) {
     var orig = btn.textContent;
     btn.textContent = text;
@@ -58,6 +78,7 @@
       if (existing) existing.replaceWith(el);
     });
     refreshBulk();
+    equalizeHeaders();
   }
 
   async function postForm(url, body) {
@@ -262,8 +283,12 @@
     }
   });
 
-  // After any htmx swap (zone/rail selection), re-evaluate selection state.
-  document.body.addEventListener("htmx:afterSwap", refreshBulk);
+  // After any htmx swap (zone/rail selection), re-evaluate selection state and
+  // re-sync header row heights (a swap may replace a whole .zone section).
+  document.body.addEventListener("htmx:afterSwap", function () {
+    refreshBulk();
+    equalizeHeaders();
+  });
 
   // --- drag-and-drop reorder within the active collection ---
   var dragId = null;
@@ -307,4 +332,7 @@
   });
 
   refreshBulk();
+  equalizeHeaders();
+  window.addEventListener("resize", equalizeHeaders);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(equalizeHeaders);
 })();
