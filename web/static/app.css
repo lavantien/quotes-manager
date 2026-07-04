@@ -9,7 +9,6 @@
   --danger: #9a3b2f;
   --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
-  --col: 96rem;
 }
 
 * { box-sizing: border-box; }

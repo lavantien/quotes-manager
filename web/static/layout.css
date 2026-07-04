@@ -3,11 +3,7 @@
    right rail. Each column owns a thin sticky header (the two headers together
    read as a split top bar), a slim toolbar, and a scrollable quote list. */
 
-.page {
-  max-width: var(--col);
-  margin: 0 auto;
-}
-
+/* .page fills the viewport: no fixed cap, so the workspace uses the full width. */
 .layout {
   display: grid;
   grid-template-columns: 11rem minmax(0, 1fr) minmax(0, 1fr) 11rem;
