@@ -63,7 +63,8 @@ The UI is a dual-pane workspace. A left rail (Home, Categories, Duplicates) and
 a right rail (Collections) flank two text columns: the root corpus on the left
 and the active collection on the right. Each text column scrolls independently,
 so you can keep a different spot open in each. A thin header atop each column
-shows only a name and a count. Each root block:
+shows a name and a count, and the two columns' header rows are kept aligned
+across the workspace. Each root block:
 
 - renders the quote in the canonical format, with passages in italics and the
   sutta id bolded and linked to `https://suttacentral.net/<id-without-spaces>`
@@ -94,7 +95,7 @@ pair of collection blocks. Clicking one inserts the selection at that 1-based
 position, shifting later items down; duplicates are skipped. "+ from selection"
 in the right rail creates a new collection from the selection and makes it
 active. Collections are named (inline rename in the right rail) and default to
-"Collection {id}" until renamed.
+"Col {id}" until renamed.
 
 A collection's blocks are copyable (copy-one, copy-all via
 `/collections/{id}/export.txt`) and drag-to-reorder, saved to the collection's
@@ -163,7 +164,7 @@ quote on home also removes it from every collection:
 ```sql
 CREATE TABLE collections (
     id   INTEGER PRIMARY KEY,
-    name TEXT NOT NULL DEFAULT ''   -- empty renders as "Collection {id}"
+    name TEXT NOT NULL DEFAULT ''   -- empty renders as "Col {id}"
 );
 CREATE TABLE collection_items (
     collection_id INTEGER NOT NULL,
