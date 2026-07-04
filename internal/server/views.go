@@ -109,12 +109,12 @@ type quoteView struct {
 }
 
 // collectionLabel returns a collection's display name: its stored Name, or the
-// autonumbered fallback "Collection {id}" when it has none.
+// autonumbered fallback "Col {id}" when it has none.
 func collectionLabel(c store.Collection) string {
 	if c.Name != "" {
 		return c.Name
 	}
-	return fmt.Sprintf("Collection %d", c.ID)
+	return fmt.Sprintf("Col %d", c.ID)
 }
 
 // buildPageData loads the rails, both membership maps, and the root/collection

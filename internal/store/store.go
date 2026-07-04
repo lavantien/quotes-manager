@@ -21,7 +21,7 @@ type Quote struct {
 
 // Collection is a named (or autonumbered) subset of quotes curated from home.
 // Name is empty for collections created before naming existed or never renamed;
-// render those as "Collection {ID}". Count is populated by ListCollections for
+// render those as "Col {ID}". Count is populated by ListCollections for
 // sidebar/rail rendering and is not stored.
 type Collection struct {
 	ID    int64

@@ -880,7 +880,7 @@ func TestRailRightListsCollections(t *testing.T) {
 	if !strings.Contains(body, "Collections") {
 		t.Error("right rail missing Collections heading")
 	}
-	if !strings.Contains(body, fmt.Sprintf("Collection %d", cid)) {
+	if !strings.Contains(body, fmt.Sprintf("Col %d", cid)) {
 		t.Error("right rail missing collection link")
 	}
 }

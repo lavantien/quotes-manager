@@ -13,8 +13,8 @@ import (
 // White-box unit tests for the unexported pure helpers and error writers.
 
 func TestCollectionLabel(t *testing.T) {
-	if got := collectionLabel(store.Collection{ID: 3, Name: ""}); got != "Collection 3" {
-		t.Errorf("empty name = %q, want %q", got, "Collection 3")
+	if got := collectionLabel(store.Collection{ID: 3, Name: ""}); got != "Col 3" {
+		t.Errorf("empty name = %q, want %q", got, "Col 3")
 	}
 	if got := collectionLabel(store.Collection{ID: 3, Name: "Keepsakes"}); got != "Keepsakes" {
 		t.Errorf("named = %q, want %q", got, "Keepsakes")
