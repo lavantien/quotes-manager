@@ -38,7 +38,7 @@ docs/
 exports/
   shortest-first.md            generated export, shortest-first (committed)
 web/
-  templates/                   layout, rail_left, rail_right, root_zone, collection_zone, check_zone, check_results, collection_list, quote_list, quote_block(_ro), quote_form, quote_chips, quote_collection_chips, quote_category_editor
+  templates/                   layout, rail_left, rail_right, root_zone, collection_zone, check_zone, check_results, collection_list, quote_list, quote_block(_ro), quote_form, quote_import_form, quote_chips, quote_collection_chips, quote_category_editor
   static/                      app.css (typography/components) + layout.css (4-zone grid), app.js, htmx (vendored)
 go.mod
 readme.md
@@ -61,9 +61,10 @@ seed (109 quotes, three sample categories, one sample collection). After that
 your edits persist; the seed is never reapplied, so deleting a quote is
 permanent.
 
-The UI is a dual-pane workspace. A left rail (Home, Categories, Duplicates) and
-a right rail (Collections) flank two text columns: the root corpus on the left
-and the active collection on the right. Each text column scrolls independently,
+The UI is a dual-pane workspace. A left rail (Home, Categories, Duplicates,
+Backup) and a right rail (Collections) flank two text columns: the root corpus
+on the left and the active collection on the right. Each text column scrolls
+independently,
 so you can keep a different spot open in each. A thin header atop each column
 shows a name and a count, and the two columns' header rows are kept aligned
 across the workspace. Each root block:
