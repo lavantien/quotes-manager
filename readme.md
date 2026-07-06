@@ -148,9 +148,10 @@ membership in the corpus (`GET /pane/check` swaps in the workspace, `POST /check
 returns the results fragment). Each input is canonicalized via
 `quote.CanonicalSuttaID` (so "the Buddha, MN 22" matches "MN 22") and matched
 case-insensitively against the lowercased corpus id set; a non-canonical input
-falls back to a literal match. Found ids show the number of matching quotes;
-missing ids show a dash. Clicking the button again (or a collection) leaves the
-workspace. The workspace reuses the `#collection-zone` target but carries no
+falls back to a literal match. Found ids show a check plus the number of
+matching quotes; missing ones show a cross. Clicking the button again (or a
+collection) leaves the workspace. The workspace reuses the `#collection-zone`
+target but carries no
 `data-cid`, so collection-mutation actions stay inert while it is shown.
 
 ### SQLite schema (web)
