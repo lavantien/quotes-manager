@@ -61,3 +61,35 @@ func TestImportQuotesDedupsWithinPaste(t *testing.T) {
 	}
 	containsBody(t, rec.Body.String(), ">110 blocks<") // 109 + 1
 }
+
+func TestImportQuotesStoreError(t *testing.T) {
+	payload := quote.RenderExportFile([]*quote.Quote{
+		quote.New("MN 22", "the Buddha, MN 22", []string{"some body"}),
+	})
+	form := url.Values{"content": {payload}}.Encode()
+	assert500(t, newServer(t, failingStore{}), "POST", "/quotes/import", form,
+		"Content-Type", "application/x-www-form-urlencoded", "HX-Request", "true")
+}
+
+func TestImportQuotesRailDataError(t *testing.T) {
+	// Create succeeds on the fake, but the post-create rail refresh fails.
+	payload := quote.RenderExportFile([]*quote.Quote{
+		quote.New("MN 22", "the Buddha, MN 22", []string{"some body"}),
+	})
+	form := url.Values{"content": {payload}}.Encode()
+	assert500(t, newServer(t, failListCats{newFake()}), "POST", "/quotes/import", form,
+		"Content-Type", "application/x-www-form-urlencoded", "HX-Request", "true")
+}
+
+func TestImportQuotesNonHTMXRedirects(t *testing.T) {
+	srv := server.New(storetest.CloneFixture(t))
+	payload := quote.RenderExportFile([]*quote.Quote{
+		quote.New("MN 22", "the Buddha, MN 22", []string{"redirect body"}),
+	})
+	form := url.Values{"content": {payload}}.Encode()
+	rec := do(t, srv, "POST", "/quotes/import", form,
+		"Content-Type", "application/x-www-form-urlencoded")
+	if rec.Code != http.StatusSeeOther {
+		t.Errorf("status = %d, want 303", rec.Code)
+	}
+}

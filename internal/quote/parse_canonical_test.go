@@ -68,6 +68,29 @@ func TestParseCanonicalPlainTailFallback(t *testing.T) {
 	}
 }
 
+func TestParseCanonicalNoSuttaID(t *testing.T) {
+	// A citation with no recognizable sutta id keeps the whole citation as the id.
+	got := ParseCanonical("*a passage* - **an unknown speaker**")
+	if len(got) != 1 {
+		t.Fatalf("got %d, want 1", len(got))
+	}
+	if got[0].SuttaID != "an unknown speaker" {
+		t.Errorf("SuttaID = %q, want the whole citation", got[0].SuttaID)
+	}
+}
+
+func TestParseCanonicalRejectsEmptyPassages(t *testing.T) {
+	// A citation tail with no passage lines before it is skipped.
+	in := "*real* - **the Buddha, MN 1**\n\n\n.  \n.  \n.\n\n\n - **the Buddha, MN 2**"
+	got := ParseCanonical(in)
+	if len(got) != 1 {
+		t.Fatalf("got %d quotes, want 1 (empty-passage block skipped)", len(got))
+	}
+	if got[0].SuttaID != "MN 1" {
+		t.Errorf("SuttaID = %q, want MN 1", got[0].SuttaID)
+	}
+}
+
 func TestParseCanonicalSeedExport(t *testing.T) {
 	data, err := os.ReadFile("../../exports/shortest-first.md")
 	if err != nil {

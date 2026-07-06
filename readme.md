@@ -1,7 +1,7 @@
 # quotes-manager
 
 <!-- coverage:START -->
-![coverage](https://img.shields.io/badge/coverage-91.1%25-brightgreen)
+![coverage](https://img.shields.io/badge/coverage-90.1%25-brightgreen)
 <!-- coverage:END -->
 
 ![quotes-manager home page](docs/home.png)
@@ -18,9 +18,10 @@ dumps/                         source essays (input, hand-written)
   discerning-truth-from-deception.txt   prose only, no sutta quotes
   sacredness-and-profanity.txt          sutta quotes, inline-cited
   stream-entry-for-lay-buddhists.txt    sutta quotes, inline + header-cited
-internal/quote/                parser, normalizer, renderer, near-duplicate detection, seed emitter (+ tests)
-internal/search/               pure full-text filter (Terms/Match/Filter) over []store.Quote (+ tests)
-internal/store/                SQLite store: CRUD + collections + categories, ordered by char_count
+internal/quote/                parser, normalizer, renderer, near-duplicate detection, canonical-text import, seed emitter (+ tests)
+internal/search/               pure full-text filter (Query/Parse/Match/Filter) over []store.Quote (+ tests)
+internal/store/                SQLite store: CRUD + collections + categories + merge + JSON backup/restore, ordered by char_count
+internal/store/storetest/      CloneFixture: a clone-of-main test database for integration tests
 internal/seed/                 EnsureSeeded: canonical seed (+ sample categories) on a fresh database
 internal/server/               HTMX handlers + server-rendered templates (+ tests)
 internal/coverbadge/           Go-cover parser + README badge renderer (+ tests)
@@ -28,6 +29,7 @@ cmd/extract/                   CLI: reads dumps/ and writes database/ + exports/
 cmd/server/                    web server: opens + seeds the DB, serves the UI
 cmd/coverage/                  CLI: parses a cover profile, refreshes the README badge
 cmd/screenshot/                CLI: serves the seeded app in-process, captures docs/home.png
+cmd/fixture/                   CLI: dumps the main DB into the clone-of-main test fixture
 database/
   seed.sql                     generated schema + inserts (committed, embedded)
   quotes.db                    SQLite database (gitignored, created on run)
@@ -127,7 +129,11 @@ Clicking a group jumps to the representative in the root column, switching to
 Home first if a category filter is active, and briefly highlights it. The
 canonical seed already contains one such cluster: the `MN 22` trio that differs
 only in "Bhikkhus"/"Mendicants" and "sexual"/"sensual". Adding, editing, or
-deleting a quote refreshes the section live.
+deleting a quote refreshes the section live. Each group's `‖` button merges
+every member into the shortest representative in one transaction: the merged
+quotes' collection and category memberships fold onto the keeper, then the
+duplicates are deleted (`store.MergeQuotes`, `POST /duplicates/{rep}/merge`).
+The root column and both rails refresh in place.
 
 ### Search
 
@@ -155,6 +161,31 @@ matching quotes; missing ones show a cross. Clicking the button again (or a
 collection) leaves the workspace. The workspace reuses the `#collection-zone`
 target but carries no
 `data-cid`, so collection-mutation actions stay inert while it is shown.
+
+### Import quotes
+
+The root toolbar's Import button swaps a textarea into the New-form slot. Paste
+quotes in the canonical format (the same one `exports/shortest-first.md` uses —
+italic passage lines and a ` - **citation**` tail, blocks separated by the `. . .`
+divider) and submit; `quote.ParseCanonical` recovers each block and
+`POST /quotes/import` creates them, de-duplicating within the paste. The root
+list re-renders in sorted order with the rails refreshed and the form cleared.
+A block without a citation tail is skipped; a plain ` - citation` tail (no bold
+markers) is accepted as a fallback for lightly edited pastes. Editing a quote
+re-sorts the list (an edit can change its rune count) and briefly flashes the
+saved block at its new position.
+
+### Backup
+
+The left rail's Backup section holds a portable, whole-database snapshot.
+Download JSON (`GET /backup.json`) writes a versioned `store.Dump` (every quote
+plus the named collections and categories with their ordered memberships) as a
+`quotes-backup.json` attachment. Restore uploads one: `POST /restore` accepts the
+same JSON and, after a confirm, replaces all five tables in a single transaction
+(`store.Import`), preserving explicit ids so the canonical ranking, collection
+order, and tags survive the round-trip. An unknown dump version is rejected with
+`store.ErrUnsupportedDump`. Restore is destructive and replaces everything; for
+adding quotes without overwriting, use Import instead.
 
 ### SQLite schema (web)
 
@@ -307,6 +338,7 @@ CGO_ENABLED=1 go vet ./...    # static checks
 go run ./cmd/extract          # writes database/seed.sql + exports/shortest-first.md
 make coverage                 # recomputes Go test coverage, refreshes the README badge
 make screenshot               # serves the seeded app and captures docs/home.png
+make fixture                  # dumps the main DB into the clone-of-main test fixture
 CGO_ENABLED=1 go run ./cmd/server   # run the web app (http://localhost:8080)
 ```
 

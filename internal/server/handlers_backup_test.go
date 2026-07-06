@@ -90,6 +90,16 @@ func TestRestoreRejectsBadVersion(t *testing.T) {
 	}
 }
 
+func TestBackupStoreError(t *testing.T) {
+	assert500(t, newServer(t, failingStore{}), "GET", "/backup.json", "")
+}
+
+func TestRestoreStoreError(t *testing.T) {
+	// A valid-version dump, but the store fails on Import.
+	assert500(t, newServer(t, failingStore{}), "POST", "/restore",
+		`{"version":1}`, "Content-Type", "application/json")
+}
+
 func filterDumpCollections(in []store.CollectionDump, keep map[int64]bool) []store.CollectionDump {
 	var out []store.CollectionDump
 	for _, c := range in {

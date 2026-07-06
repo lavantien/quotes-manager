@@ -63,3 +63,9 @@ func TestMergeDuplicatesUnknownRep(t *testing.T) {
 		t.Errorf("status = %d, want 404", rec.Code)
 	}
 }
+
+// TestMergeDuplicatesStoreError returns 500 when the store fails to load the
+// corpus for group recomputation.
+func TestMergeDuplicatesStoreError(t *testing.T) {
+	assert500(t, newServer(t, failingStore{}), "POST", "/duplicates/1/merge", "")
+}

@@ -52,6 +52,11 @@ func TestClosedDBMethodsError(t *testing.T) {
 		{"SetQuoteCategories", func() error { return s.SetQuoteCategories(q, []int64{catID}) }},
 		{"QuoteCategoryMap", func() error { _, err := s.QuoteCategoryMap(); return err }},
 		{"QuoteCollectionMap", func() error { _, err := s.QuoteCollectionMap(); return err }},
+		{"MergeQuotes", func() error { return s.MergeQuotes(q, []int64{q + 1}) }},
+		{"Export", func() error { _, err := s.Export(); return err }},
+		{"Import", func() error {
+			return s.Import(&Dump{Version: DumpVersion, Quotes: []Quote{{ID: q, SuttaID: "X", Citation: "X", BodyMD: "X", BodyText: "X", LineCount: 1, CharCount: 1}}})
+		}},
 	}
 	for _, c := range checks {
 		if err := c.fn(); err == nil {
