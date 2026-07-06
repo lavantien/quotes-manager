@@ -2,32 +2,21 @@ package server_test
 
 import (
 	"net/http"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/lavantien/quotes-manager/internal/seed"
 	"github.com/lavantien/quotes-manager/internal/server"
-	"github.com/lavantien/quotes-manager/internal/store"
+	"github.com/lavantien/quotes-manager/internal/store/storetest"
 )
 
-// TestDuplicatesFromCanonicalSeed drives the full pipeline against the real
-// SQLite store and the canonical seed: the seed contains the MN 22
+// TestDuplicatesFromCanonicalSeed drives the full pipeline against a clone of
+// the main quotes database: the seed it was built from contains the MN 22
 // sexual/sensual trio (three near-identical passages that differ only in
 // "Bhikkhus"/"Mendicants" and "sexual"/"sensual"), which must surface as one
 // duplicate group of size 3 in the rendered left rail.
 func TestDuplicatesFromCanonicalSeed(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "quotes.db")
-	st, err := store.Open(dbPath)
-	if err != nil {
-		t.Fatalf("open store: %v", err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	if err := seed.EnsureSeeded(st.DB()); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
+	srv := server.New(storetest.CloneFixture(t))
 
-	srv := server.New(st)
 	rec := do(t, srv, "GET", "/", "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)

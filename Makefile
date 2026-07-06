@@ -5,7 +5,7 @@ export CGO_ENABLED := 1
 ADDR ?= :8080
 DB   ?= database/quotes.db
 
-.PHONY: help all test vet fmt run server extract seed tidy clean coverage screenshot
+.PHONY: help all test vet fmt run server extract seed tidy clean coverage screenshot fixture
 
 help: ## show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make <target>\n\nTargets:\n"} \
@@ -45,3 +45,6 @@ coverage: ## recompute Go test coverage and refresh the README coverage badge
 
 screenshot: ## capture the home page into docs/home.png (needs Chrome or Edge)
 	go run ./cmd/screenshot
+
+fixture: ## regenerate the clone-of-main test fixture (internal/store/storetest/testdata)
+	go run ./cmd/fixture
