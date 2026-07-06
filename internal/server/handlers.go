@@ -26,6 +26,13 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 // HTMX fragment. Used after a create so the new quote lands in sorted order
 // instead of being appended/prepended to the DOM.
 func (s *Server) renderQuoteList(w http.ResponseWriter) {
+	s.renderQuoteListFlash(w, 0)
+}
+
+// renderQuoteListFlash re-renders the full root list (so a new or edited quote
+// lands in char_count order) and, when flashID is non-zero, marks that quote to
+// be briefly highlighted after the swap.
+func (s *Server) renderQuoteListFlash(w http.ResponseWriter, flashID int64) {
 	qs, err := s.store.List()
 	if err != nil {
 		serverError(w, err)
@@ -41,7 +48,7 @@ func (s *Server) renderQuoteList(w http.ResponseWriter) {
 		serverError(w, err)
 		return
 	}
-	s.render(w, "quote_list", pageData{Root: rootPane{Quotes: qs}, CatMap: catMap, ColMap: colMap})
+	s.render(w, "quote_list", pageData{Root: rootPane{Quotes: qs, FlashID: flashID}, CatMap: catMap, ColMap: colMap})
 }
 
 func (s *Server) listFragment(w http.ResponseWriter, r *http.Request) {
@@ -348,40 +355,22 @@ func (s *Server) update(w http.ResponseWriter, r *http.Request) {
 		handleStoreErr(w, err)
 		return
 	}
-	updated, err := s.store.Get(id)
-	if err != nil {
-		serverError(w, err)
-		return
-	}
 	if isHTMX(r) {
-		// Re-render the saved block, then live-refresh the left rail so the
-		// Duplicates section tracks the new body text.
+		// Re-render the whole list: an edit can change char_count and thus the
+		// quote's sorted position, so the block may need to move. Mark the saved
+		// quote to flash at its new spot, then live-refresh the left rail and the
+		// root count.
 		rail, err := s.railData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
 		if err != nil {
 			serverError(w, err)
 			return
 		}
-		s.renderQuoteBlock(w, updated)
+		s.renderQuoteListFlash(w, id)
 		s.exec(w, "rail_left_oob", rail)
+		s.exec(w, "root_count", rail.TotalQuotes)
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-// renderQuoteBlock writes a single editable block with its current category and
-// collection chips, used after an inline edit saves.
-func (s *Server) renderQuoteBlock(w http.ResponseWriter, q store.Quote) {
-	catMap, err := s.store.QuoteCategoryMap()
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	colMap, err := s.store.QuoteCollectionMap()
-	if err != nil {
-		serverError(w, err)
-		return
-	}
-	s.render(w, "quote_block", quoteView{Quote: q, Cats: catMap[q.ID], Cols: colMap[q.ID]})
 }
 
 func (s *Server) delete(w http.ResponseWriter, r *http.Request) {

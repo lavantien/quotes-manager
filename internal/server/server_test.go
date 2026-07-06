@@ -1633,10 +1633,6 @@ func TestRenameCollectionRailError(t *testing.T) {
 		"Content-Type", "application/x-www-form-urlencoded")
 }
 
-type failGet struct{ *fakeStore }
-
-func (failGet) Get(int64) (store.Quote, error) { return store.Quote{}, errStoreFails }
-
 // TestRemainingHandlerDeepErrors covers the second-call error branches the
 // all-failing store cannot reach (the first call must succeed).
 func TestRemainingHandlerDeepErrors(t *testing.T) {
@@ -1646,8 +1642,8 @@ func TestRemainingHandlerDeepErrors(t *testing.T) {
 	t.Run("railData ListCategories fails", func(t *testing.T) {
 		assert500(t, newServer(t, failListCats{newFake(sampleQuote(1))}), "GET", "/rail/left", "")
 	})
-	t.Run("update Get fails after Update", func(t *testing.T) {
-		assert500(t, newServer(t, failGet{newFake(sampleQuote(1))}), "POST", "/quotes/1",
+	t.Run("update railData fails after Update", func(t *testing.T) {
+		assert500(t, newServer(t, failListCats{newFake(sampleQuote(1))}), "POST", "/quotes/1",
 			"content=%22x%22&text_id=MN+1", "Content-Type", "application/x-www-form-urlencoded", "HX-Request", "true")
 	})
 	t.Run("collection buildPageData fails", func(t *testing.T) {

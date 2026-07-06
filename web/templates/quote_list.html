@@ -1,5 +1,5 @@
 {{define "quote_list"}}
-<div id="quote-list" class="quote-list">
+<div id="quote-list" class="quote-list"{{if .Root.FlashID}} data-flash-id="{{.Root.FlashID}}"{{end}}>
   {{range .Root.Quotes}}{{template "quote_block" (withView . $.CatMap $.ColMap $.Root.Terms false)}}{{end}}{{if not .Root.Quotes}}{{if .Root.Query}}<p class="empty">No matches.</p>{{else}}<p class="empty">No quotes here.</p>{{end}}{{end}}
 </div>
 {{end}}

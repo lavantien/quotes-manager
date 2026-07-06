@@ -48,6 +48,7 @@ type rootPane struct {
 	ExportURL  string
 	Query      string   // raw ?rq= search, echoed into the input's value
 	Terms      []string // parsed Query, used by the display func to highlight
+	FlashID    int64    // when non-zero, briefly highlight this quote after a re-sorting edit
 }
 
 // collectionPane is the read-only right column: the active collection's quotes

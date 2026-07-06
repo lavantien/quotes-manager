@@ -179,13 +179,7 @@
       // href ("/#quote-{id}") is the no-JS fallback; with JS we swap in place.
       e.preventDefault();
       var focusId = btn.dataset.id;
-      var reveal = function () {
-        var el = document.getElementById("quote-" + focusId);
-        if (!el) return;
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        el.classList.add("is-flash");
-        setTimeout(function () { el.classList.remove("is-flash"); }, 1600);
-      };
+      var reveal = function () { flashQuote(focusId); };
       var zone = document.getElementById("root-zone");
       if (zone && zone.dataset.cat === "0" && document.getElementById("quote-" + focusId)) {
         reveal();
@@ -198,6 +192,28 @@
       }
     }
   });
+
+  // flashQuote scrolls a quote into view and briefly highlights it, used both by
+  // the duplicate "focus" action and after a re-sorting edit.
+  function flashQuote(id) {
+    var el = document.getElementById("quote-" + id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    el.classList.add("is-flash");
+    setTimeout(function () { el.classList.remove("is-flash"); }, 1600);
+  }
+
+  // flashFromList highlights the quote a freshly swapped #quote-list was marked
+  // with (set by an edit that may have re-sorted the block).
+  function flashFromList() {
+    var list = document.getElementById("quote-list");
+    if (!list) return;
+    var fid = list.dataset.flashId;
+    if (fid) {
+      list.removeAttribute("data-flash-id");
+      flashQuote(fid);
+    }
+  }
 
   // Inline rename (category or collection): swap the link for an input, commit
   // on Enter/blur, then refresh the matching rail (and the collection zone if
@@ -311,6 +327,7 @@
   document.body.addEventListener("htmx:afterSwap", function () {
     refreshBulk();
     equalizeHeaders();
+    flashFromList();
   });
 
   // --- drag-and-drop reorder within the active collection ---
