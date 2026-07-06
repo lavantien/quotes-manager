@@ -33,6 +33,16 @@
   color: var(--ink-soft);
   margin: 0 0 0.4rem 0.4rem;
 }
+/* Top-of-rail toolbar for panel-level actions (Copy ids, Check ids). It wraps
+   so the buttons survive the narrow rail at the 72rem breakpoint and reflow
+   inline at the 60rem mobile row layout. */
+.rail__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.4rem;
+}
+.rail__toolbar .btn { flex: 1 1 auto; font-size: 0.78rem; padding: 0.25rem 0.5rem; }
 .rail__row { display: flex; align-items: center; gap: 0.1rem; }
 .rail__link {
   flex: 1;

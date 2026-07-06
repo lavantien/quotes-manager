@@ -11,6 +11,9 @@
 {{end}}
 
 {{define "rail_right_body"}}
+<div class="rail__toolbar">
+  <button type="button" class="btn btn--sm" data-action="copy-all" data-flash="Copied ids"{{if .ActiveColID}} data-export="/collections/{{.ActiveColID}}/ids.txt"{{else}} disabled{{end}}>Copy ids</button>
+</div>
 <section class="rail__section">
   <h2 class="rail__heading">Collections</h2>
   {{range .Collections}}<div class="rail__row" data-id="{{.ID}}">

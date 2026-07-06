@@ -107,7 +107,7 @@
     }
 
     if (action === "copy-all") {
-      copyFromUrl(btn.dataset.export || "/export.txt").then(function () { flash(btn, "Copied all"); }).catch(function () {});
+      copyFromUrl(btn.dataset.export || "/export.txt").then(function () { flash(btn, btn.dataset.flash || "Copied all"); }).catch(function () {});
     }
 
     if (action === "new-collection") {

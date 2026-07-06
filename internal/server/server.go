@@ -53,6 +53,8 @@ func (s *Server) routes() *http.ServeMux {
 	m.HandleFunc("DELETE /collections/{cid}", s.deleteCollection)
 	m.HandleFunc("POST /collections/{cid}/reorder", s.collectionReorder)
 	m.HandleFunc("GET /collections/{cid}/export.txt", s.collectionExport)
+	m.HandleFunc("GET /ids.txt", s.corpusIDs)
+	m.HandleFunc("GET /collections/{cid}/ids.txt", s.collectionIDs)
 	m.HandleFunc("GET /pane/root", s.rootPaneHandler)
 	m.HandleFunc("GET /pane/collection", s.collectionPaneHandler)
 	m.HandleFunc("GET /search/root", s.searchRoot)

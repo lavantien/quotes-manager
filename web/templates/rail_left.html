@@ -11,6 +11,9 @@
 {{end}}
 
 {{define "rail_left_body"}}
+<div class="rail__toolbar">
+  <button type="button" class="btn btn--sm" data-action="copy-all" data-export="/ids.txt" data-flash="Copied ids">Copy ids</button>
+</div>
 <section class="rail__section">
   <h2 class="rail__heading">View</h2>
   <a class="rail__link{{if eq .ActiveCatID 0}} is-active{{end}}" hx-get="/pane/root" hx-target="#root-zone" hx-swap="outerHTML" href="/">Home</a>

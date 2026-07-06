@@ -1321,6 +1321,8 @@ func TestHandlerStoreErrors(t *testing.T) {
 		{"DELETE", "/collections/1", "", ""},
 		{"POST", "/collections/1/reorder", `{"ids":[1]}`, "application/json"},
 		{"GET", "/collections/1/export.txt", "", ""},
+		{"GET", "/ids.txt", "", ""},
+		{"GET", "/collections/1/ids.txt", "", ""},
 		{"GET", "/categories/1", "", ""},
 		{"GET", "/categories/1/export.txt", "", ""},
 		{"POST", "/categories", "name=x", "application/x-www-form-urlencoded"},
