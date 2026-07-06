@@ -22,6 +22,7 @@
 <div class="zone__toolbar">
   <label class="select-all"><input type="checkbox" id="select-all"> <span>all</span></label>
   <button type="button" class="btn btn--sm btn--primary" hx-get="/quotes/new" hx-target="#form-slot" hx-swap="innerHTML">+ New</button>
+  <button type="button" class="btn btn--sm" hx-get="/quotes/import/form" hx-target="#form-slot" hx-swap="innerHTML">Import</button>
   <button type="button" class="btn btn--sm btn--danger" data-action="bulk-delete" disabled>Delete</button>
   <button type="button" class="btn btn--sm" data-action="copy-all" data-export="{{.Root.ExportURL}}">Copy all</button>
   <input type="search" class="zone__search rail__input" name="rq" placeholder="Search" value="{{.Root.Query}}" autocomplete="off"

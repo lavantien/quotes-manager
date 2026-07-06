@@ -35,6 +35,8 @@ func (s *Server) routes() *http.ServeMux {
 	m.HandleFunc("GET /", s.index)
 	m.HandleFunc("GET /quotes", s.listFragment)
 	m.HandleFunc("GET /quotes/new", s.newForm)
+	m.HandleFunc("GET /quotes/import/form", s.importQuotesForm)
+	m.HandleFunc("POST /quotes/import", s.importQuotes)
 	m.HandleFunc("POST /quotes", s.create)
 	m.HandleFunc("GET /quotes/{id}/edit", s.editForm)
 	m.HandleFunc("POST /quotes/{id}", s.update)

@@ -41,6 +41,7 @@ func mustTemplates() *template.Template {
 		"templates/quote_block.html",
 		"templates/quote_block_ro.html",
 		"templates/quote_form.html",
+		"templates/quote_import_form.html",
 		"templates/quote_chips.html",
 		"templates/quote_collection_chips.html",
 		"templates/quote_category_editor.html",

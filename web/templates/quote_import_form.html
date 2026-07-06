@@ -1,0 +1,13 @@
+{{define "quote_import_form"}}
+<form class="quote-form" id="import-form" hx-post="/quotes/import" hx-target="#quote-list" hx-swap="outerHTML">
+  <textarea class="quote-form__content" name="content" rows="8" placeholder="Paste quotes in the canonical format (one per block, separated by the . . . divider)…" required></textarea>
+  <div class="quote-form__row quote-form__row--actions">
+    <button type="submit" class="btn btn--primary">Import</button>
+    <button type="button" class="btn" data-action="cancel">Cancel</button>
+  </div>
+</form>
+{{end}}
+
+{{define "form_slot_clear"}}
+<div id="form-slot" class="form-slot" hx-swap-oob="outerHTML"></div>
+{{end}}
