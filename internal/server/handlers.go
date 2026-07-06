@@ -63,8 +63,8 @@ func parseQueryID(r *http.Request, key string) int64 {
 }
 
 // parseQueryStr reads an optional trimmed string query parameter (the search
-// box value), returning "" when absent. Lowercasing/splitting happens in
-// search.Terms.
+// box value), returning "" when absent. Lowercasing/tokenizing happens in
+// search.Parse.
 func parseQueryStr(r *http.Request, key string) string {
 	return strings.TrimSpace(r.URL.Query().Get(key))
 }

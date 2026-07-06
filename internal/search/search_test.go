@@ -1,215 +1,248 @@
 package search
 
 import (
-	"math/rand"
-	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/lavantien/quotes-manager/internal/store"
 )
 
-func TestTerms(t *testing.T) {
-	tests := []struct {
+func row(sutta, body string) store.Quote {
+	return store.Quote{SuttaID: sutta, BodyText: body, Citation: sutta}
+}
+
+func TestParse(t *testing.T) {
+	cases := []struct {
 		name string
 		in   string
-		want []string
+		want Query
 	}{
-		{"empty", "", nil},
-		{"whitespace only", "   \t\n ", nil},
-		{"single", "buddha", []string{"buddha"}},
-		{"lowercases", "Buddha MN", []string{"buddha", "mn"}},
-		{"trims each field", "  buddha   mn  ", []string{"buddha", "mn"}},
-		{"dedupes case-insensitively (stable order)", "buddha Buddha BUDDHA truth", []string{"buddha", "truth"}},
-		{"keeps repeated distinct terms once", "mn mn an", []string{"mn", "an"}},
+		{"empty", "", Query{}},
+		{"whitespace", "   \t  ", Query{}},
+		{"single word", "buddha", Query{Pos: []string{"buddha"}}},
+		{"lowercased", "BUDDHA", Query{Pos: []string{"buddha"}}},
+		{"and of two words", "buddha suffering", Query{Pos: []string{"buddha", "suffering"}}},
+		{"phrase", `"the buddha"`, Query{Pos: []string{"the buddha"}}},
+		{"phrase and word", `"right view" buddha`, Query{Pos: []string{"right view", "buddha"}}},
+		{"negation word", "-suffering", Query{Neg: []string{"suffering"}}},
+		{"negation phrase", `-"the buddha"`, Query{Neg: []string{"the buddha"}}},
+		{"mixed", `buddha -suffering "right view"`, Query{Pos: []string{"buddha", "right view"}, Neg: []string{"suffering"}}},
+		{"dedupe positives", "buddha buddha", Query{Pos: []string{"buddha"}}},
+		{"dedupe negatives", "-a -a", Query{Neg: []string{"a"}}},
+		{"lone dash", "-", Query{}},
+		{"dash separated by space is a no-op", "- foo", Query{Pos: []string{"foo"}}},
+		{"hyphenated word stays one token", "foo-bar", Query{Pos: []string{"foo-bar"}}},
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got := Terms(tc.in)
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("Terms(%q) = %v, want %v", tc.in, got, tc.want)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := Parse(c.in); !queriesEqual(got, c.want) {
+				t.Errorf("Parse(%q) = %+v, want %+v", c.in, got, c.want)
 			}
 		})
 	}
 }
 
-func TestMatch(t *testing.T) {
-	tests := []struct {
-		name  string
-		text  string
-		terms []string
-		want  bool
-	}{
-		{"nil terms never match", "anything", nil, false},
-		{"empty terms never match", "anything", []string{}, false},
-		{"single term in body", "the buddha spoke", []string{"buddha"}, true},
-		{"multi-word term as substring", "the buddha, mn 22", []string{"mn 22"}, true},
-		{"or any term matches", "alpha omega", []string{"beta", "omega"}, true},
-		{"or none match", "alpha", []string{"beta", "gamma"}, false},
-		{"case insensitive", "The Buddha", []string{"buddha"}, true},
-		{"substring inside punctuation", `"buddha,"`, []string{"buddha"}, true},
-		{"lowercases terms defensively", "the buddha", []string{"Buddha"}, true},
+func TestIsZero(t *testing.T) {
+	if (Query{}).IsZero() == false {
+		t.Error("empty query should be zero")
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := Match(tc.text, tc.terms); got != tc.want {
-				t.Errorf("Match(%q, %v) = %v, want %v", tc.text, tc.terms, got, tc.want)
+	if (Query{Pos: []string{"a"}}).IsZero() {
+		t.Error("pos query should not be zero")
+	}
+	if (Query{Neg: []string{"a"}}).IsZero() {
+		t.Error("neg query should not be zero")
+	}
+}
+
+func TestMatch(t *testing.T) {
+	const hay = "the buddha teaches suffering"
+	cases := []struct {
+		name string
+		q    Query
+		want bool
+	}{
+		{"empty matches all", Query{}, true},
+		{"single present", Query{Pos: []string{"buddha"}}, true},
+		{"single absent", Query{Pos: []string{"xyz"}}, false},
+		{"and both present", Query{Pos: []string{"buddha", "teaches"}}, true},
+		{"and one absent", Query{Pos: []string{"buddha", "xyz"}}, false},
+		{"phrase present", Query{Pos: []string{"the buddha"}}, true},
+		{"phrase absent", Query{Pos: []string{"the xyz"}}, false},
+		{"negation present excludes", Query{Pos: []string{"buddha"}, Neg: []string{"suffering"}}, false},
+		{"negation absent keeps", Query{Pos: []string{"buddha"}, Neg: []string{"xyz"}}, true},
+		{"only negation present excludes", Query{Neg: []string{"suffering"}}, false},
+		{"only negation absent keeps", Query{Neg: []string{"xyz"}}, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := Match(hay, c.q); got != c.want {
+				t.Errorf("Match(%+v) = %v, want %v", c.q, got, c.want)
 			}
 		})
+	}
+}
+
+func TestMatchCaseInsensitive(t *testing.T) {
+	if !Match("The BUDDHA Sat", Query{Pos: []string{"buddha"}}) {
+		t.Error("expected case-insensitive match")
 	}
 }
 
 func TestFilter(t *testing.T) {
 	qs := []store.Quote{
-		{ID: 1, BodyText: "the buddha spoke", Citation: "the Buddha, MN 22"},
-		{ID: 2, BodyText: "a quiet forest", Citation: "a monk, AN 3"},
-		{ID: 3, BodyText: "truth and renewal", Citation: "the Buddha, Iti"},
+		row("MN 1", "the buddha teaches"),
+		row("MN 2", "a quiet forest"),
+		row("MN 3", "the buddha and a forest"),
 	}
-	t.Run("nil terms returns input unchanged", func(t *testing.T) {
-		if got := Filter(qs, nil); !reflect.DeepEqual(got, qs) {
-			t.Errorf("Filter(nil terms) = %v, want %v", got, qs)
+	t.Run("zero query returns input unchanged", func(t *testing.T) {
+		if got := Filter(qs, Query{}); len(got) != len(qs) {
+			t.Errorf("got %d quotes, want %d", len(got), len(qs))
 		}
 	})
-	t.Run("empty terms returns input unchanged", func(t *testing.T) {
-		if got := Filter(qs, []string{}); !reflect.DeepEqual(got, qs) {
-			t.Errorf("Filter(empty terms) = %v, want %v", got, qs)
+	t.Run("and keeps only matches in order", func(t *testing.T) {
+		got := Filter(qs, Query{Pos: []string{"buddha", "forest"}})
+		want := []string{"MN 3"}
+		if !sameOrder(ids(got), want) {
+			t.Errorf("got %v, want %v", ids(got), want)
 		}
 	})
-	t.Run("keeps matches in order", func(t *testing.T) {
-		got := Filter(qs, Terms("buddha"))
-		want := []store.Quote{qs[0], qs[2]}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("Filter(buddha) = %+v, want %+v", got, want)
+	t.Run("negation drops matches", func(t *testing.T) {
+		got := Filter(qs, Query{Pos: []string{"buddha"}, Neg: []string{"forest"}})
+		// MN 1 has buddha, no forest -> kept; MN 3 has both -> dropped.
+		if !sameOrder(ids(got), []string{"MN 1"}) {
+			t.Errorf("got %v, want [MN 1]", ids(got))
 		}
 	})
-	t.Run("or across terms", func(t *testing.T) {
-		got := Filter(qs, Terms("forest truth"))
-		want := []store.Quote{qs[1], qs[2]}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("Filter(forest truth) = %+v, want %+v", got, want)
-		}
-	})
-	t.Run("match in citation only", func(t *testing.T) {
-		got := Filter(qs, Terms("iti"))
-		if len(got) != 1 || got[0].ID != 3 {
-			t.Errorf("Filter(iti) = %+v, want [ID=3] (citation-only match)", got)
-		}
-	})
-	t.Run("no matches returns empty", func(t *testing.T) {
-		if got := Filter(qs, Terms("zzz")); len(got) != 0 {
-			t.Errorf("Filter(zzz) = %+v, want empty", got)
-		}
-	})
-	t.Run("empty input no panic", func(t *testing.T) {
-		if got := Filter(nil, Terms("x")); len(got) != 0 {
-			t.Errorf("Filter(nil, x) = %+v, want empty", got)
-		}
-	})
+}
+
+func TestHighlightTerms(t *testing.T) {
+	got := HighlightTerms(Parse(`buddha -suffering "right view"`))
+	if !sameSet(got, []string{"buddha", "right view"}) {
+		t.Errorf("HighlightTerms = %v, want {buddha, right view}", got)
+	}
+	if HighlightTerms(Query{}) != nil {
+		t.Error("zero query should yield no highlight terms")
+	}
 }
 
 // --- properties ---
 
-func TestTermsIdempotent(t *testing.T) {
-	rng := rand.New(rand.NewSource(1))
-	words := []string{"buddha", "mn", "an", "truth", "forest", "Buddha", "MN", "", "  "}
-	for i := 0; i < 200; i++ {
-		q := randomQuery(rng, words)
-		once := Terms(q)
-		twice := Terms(strings.Join(once, " "))
-		if !reflect.DeepEqual(once, twice) {
-			t.Fatalf("Terms not idempotent for %q:\n once  = %v\n twice = %v", q, once, twice)
+func TestParseStable(t *testing.T) {
+	// Re-parsing a query reconstructed from Parse's output (phrases re-quoted)
+	// yields the same Query.
+	for _, in := range []string{
+		`buddha suffering`, `"the buddha" -suffering`, `alpha -beta "gamma delta"`,
+		`-x y`, `foo-bar baz`,
+	} {
+		q1 := Parse(in)
+		var parts []string
+		for _, p := range q1.Pos {
+			if strings.ContainsAny(p, " \t") {
+				parts = append(parts, `"`+p+`"`)
+			} else {
+				parts = append(parts, p)
+			}
+		}
+		for _, n := range q1.Neg {
+			if strings.ContainsAny(n, " \t") {
+				parts = append(parts, `-"`+n+`"`)
+			} else {
+				parts = append(parts, "-"+n)
+			}
+		}
+		q2 := Parse(strings.Join(parts, " "))
+		if !queriesEqual(q1, q2) {
+			t.Errorf("Parse not stable for %q: %+v vs %+v", in, q1, q2)
 		}
 	}
 }
 
-func TestFilterSupersetWhenTermsGrow(t *testing.T) {
-	rng := rand.New(rand.NewSource(2))
-	qs := []store.Quote{
-		{ID: 1, BodyText: "buddha truth", Citation: ""},
-		{ID: 2, BodyText: "forest monk", Citation: ""},
-		{ID: 3, BodyText: "buddha forest", Citation: ""},
-		{ID: 4, BodyText: "ocean", Citation: ""},
-	}
-	pool := []string{"buddha", "truth", "forest", "monk", "ocean"}
-	for i := 0; i < 400; i++ {
-		a := pickTerms(rng, pool, 1, 3)
-		b := pickTerms(rng, pool, 1, 4)
-		if !subset(toSet(a), toSet(b)) {
-			continue
-		}
-		fa := ids(Filter(qs, a))
-		fb := ids(Filter(qs, b))
-		// more (or equal) terms => OR can only match more, never fewer.
-		if !subsetInt(fa, fb) {
-			t.Fatalf("Filter(%v)=%v not subset of Filter(%v)=%v", a, fa, b, fb)
+func TestAddingPositiveNarrows(t *testing.T) {
+	qs := sampleQuotes()
+	for _, extra := range []string{"forest", "buddha", "xyz"} {
+		base := Query{Pos: []string{"the"}}
+		wider := Filter(qs, base)
+		narrow := Filter(qs, Query{Pos: append(append([]string{}, base.Pos...), extra)})
+		if !subsetIDs(narrow, wider) {
+			t.Errorf("adding positive %q did not narrow: %v not subset of %v", extra, ids(narrow), ids(wider))
 		}
 	}
 }
 
-func TestMatchOrderInvariant(t *testing.T) {
-	rng := rand.New(rand.NewSource(3))
-	terms := []string{"buddha", "truth", "forest"}
-	text := "the buddha in a forest"
-	for i := 0; i < 50; i++ {
-		dup := append([]string(nil), terms...)
-		rng.Shuffle(len(dup), func(i, j int) { dup[i], dup[j] = dup[j], dup[i] })
-		if Match(text, dup) != true {
-			t.Fatalf("Match(%q, %v) = false, want true", text, dup)
+func TestAddingNegativeNarrows(t *testing.T) {
+	qs := sampleQuotes()
+	for _, extra := range []string{"forest", "xyz"} {
+		base := Query{Pos: []string{"the"}}
+		wider := Filter(qs, base)
+		narrow := Filter(qs, Query{Pos: base.Pos, Neg: []string{extra}})
+		if !subsetIDs(narrow, wider) {
+			t.Errorf("adding negative %q did not narrow: %v not subset of %v", extra, ids(narrow), ids(wider))
 		}
 	}
-	if Match("xyz", []string{"alpha", "beta"}) || Match("xyz", []string{"beta", "alpha"}) {
-		t.Fatal("negative match must be order-independent")
+}
+
+func TestFilterOrderInvariant(t *testing.T) {
+	qs := sampleQuotes()
+	a := Filter(qs, Query{Pos: []string{"buddha", "forest"}})
+	b := Filter(qs, Query{Pos: []string{"forest", "buddha"}})
+	if !sameOrder(ids(a), ids(b)) {
+		t.Errorf("positive order changed results: %v vs %v", ids(a), ids(b))
 	}
 }
 
 // --- helpers ---
 
-func randomQuery(rng *rand.Rand, words []string) string {
-	n := 1 + rng.Intn(5)
-	parts := make([]string, n)
-	for i := range parts {
-		parts[i] = words[rng.Intn(len(words))]
+func sampleQuotes() []store.Quote {
+	return []store.Quote{
+		row("MN 1", "the buddha teaches suffering"),
+		row("MN 2", "a quiet forest monastery"),
+		row("MN 3", "the buddha walked to the forest"),
+		row("MN 4", "suffering and the deep forest"),
 	}
-	return strings.Join(parts, " ")
 }
 
-func pickTerms(rng *rand.Rand, from []string, min, max int) []string {
-	n := min + rng.Intn(max-min+1)
-	terms := make([]string, n)
-	for i := range terms {
-		terms[i] = from[rng.Intn(len(from))]
-	}
-	return terms
-}
+func queriesEqual(a, b Query) bool { return sliceEq(a.Pos, b.Pos) && sliceEq(a.Neg, b.Neg) }
 
-func toSet(s []string) map[string]bool {
-	m := make(map[string]bool, len(s))
-	for _, v := range s {
-		m[strings.ToLower(v)] = true
+func sliceEq(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
 	}
-	return m
-}
-
-func subset(a, b map[string]bool) bool {
-	for k := range a {
-		if !b[k] {
+	for i := range a {
+		if a[i] != b[i] {
 			return false
 		}
 	}
 	return true
 }
 
-func ids(qs []store.Quote) map[int64]bool {
-	m := make(map[int64]bool, len(qs))
-	for _, q := range qs {
-		m[q.ID] = true
+func sameSet(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
 	}
-	return m
+	x, y := append([]string{}, a...), append([]string{}, b...)
+	sort.Strings(x)
+	sort.Strings(y)
+	return sliceEq(x, y)
 }
 
-func subsetInt(a, b map[int64]bool) bool {
-	for k := range a {
-		if !b[k] {
+func ids(qs []store.Quote) []string {
+	out := make([]string, len(qs))
+	for i, q := range qs {
+		out[i] = q.SuttaID
+	}
+	return out
+}
+
+func sameOrder(a, b []string) bool { return sliceEq(a, b) }
+
+func subsetIDs(small, big []store.Quote) bool {
+	set := map[string]bool{}
+	for _, q := range big {
+		set[q.SuttaID] = true
+	}
+	for _, q := range small {
+		if !set[q.SuttaID] {
 			return false
 		}
 	}

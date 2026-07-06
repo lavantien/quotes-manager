@@ -57,17 +57,44 @@ func TestSearchRootEmptyShowsAll(t *testing.T) {
 	lacksBody(t, body, "<mark>")
 }
 
-func TestSearchRootORAndCaseInsensitive(t *testing.T) {
+func TestSearchRootAND(t *testing.T) {
 	srv := newServer(t, newFake(
 		quoteRow(1, "MN 1", "MN 1", "alpha"),
 		quoteRow(2, "MN 2", "MN 2", "beta"),
 		quoteRow(3, "MN 3", "MN 3", "Alpha beta gamma"),
 	))
-	// Terms "alpha" and "gamma" (OR), uppercased to prove case-insensitivity.
+	// Bare words are AND-ed (uppercased proves case-insensitivity): only quote 3
+	// has both "alpha" and "gamma".
 	body := do(t, srv, "GET", "/?rq=ALPHA%20gamma", "").Body.String()
-	containsBody(t, body, `id="quote-1"`) // matches "alpha"
-	containsBody(t, body, `id="quote-3"`) // matches both
-	lacksBody(t, body, `id="quote-2"`)    // matches neither
+	containsBody(t, body, `id="quote-3"`)
+	lacksBody(t, body, `id="quote-1"`)
+	lacksBody(t, body, `id="quote-2"`)
+}
+
+func TestSearchRootPhrase(t *testing.T) {
+	srv := newServer(t, newFake(
+		quoteRow(1, "MN 1", "MN 1", "alpha"),
+		quoteRow(2, "MN 2", "MN 2", "beta"),
+		quoteRow(3, "MN 3", "MN 3", "Alpha beta gamma"),
+	))
+	// A quoted phrase needs the words adjacent; only quote 3 has "alpha beta".
+	body := do(t, srv, "GET", "/?rq=%22alpha%20beta%22", "").Body.String()
+	containsBody(t, body, `id="quote-3"`)
+	lacksBody(t, body, `id="quote-1"`)
+	lacksBody(t, body, `id="quote-2"`)
+}
+
+func TestSearchRootNegation(t *testing.T) {
+	srv := newServer(t, newFake(
+		quoteRow(1, "MN 1", "MN 1", "alpha"),
+		quoteRow(2, "MN 2", "MN 2", "beta"),
+		quoteRow(3, "MN 3", "MN 3", "alpha gamma"),
+	))
+	// "alpha -gamma": quote 1 has alpha and no gamma -> kept; quote 3 excluded.
+	body := do(t, srv, "GET", "/?rq=alpha%20-gamma", "").Body.String()
+	containsBody(t, body, `id="quote-1"`)
+	lacksBody(t, body, `id="quote-2"`)
+	lacksBody(t, body, `id="quote-3"`)
 }
 
 func TestSearchRootCategoryScoped(t *testing.T) {

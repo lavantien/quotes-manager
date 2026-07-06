@@ -164,8 +164,8 @@ func (s *Server) buildPageData(catID, colID int64, rq, cq string) (pageData, err
 			if qerr != nil {
 				return data, qerr
 			}
-			cTerms := search.Terms(cq)
-			qs = search.Filter(qs, cTerms)
+			cQuery := search.Parse(cq)
+			qs = search.Filter(qs, cQuery)
 			data.Collection = collectionPane{
 				Active:    true,
 				ID:        colID,
@@ -174,8 +174,8 @@ func (s *Server) buildPageData(catID, colID int64, rq, cq string) (pageData, err
 				Quotes:    qs,
 				ExportURL: fmt.Sprintf("/collections/%d/export.txt", colID),
 				Query:     cq,
-				Terms:     cTerms,
-				Searching: len(cTerms) > 0,
+				Terms:     search.HighlightTerms(cQuery),
+				Searching: !cQuery.IsZero(),
 			}
 		case errors.Is(err, store.ErrNotFound):
 			data.ActiveColID = 0
@@ -189,19 +189,19 @@ func (s *Server) buildPageData(catID, colID int64, rq, cq string) (pageData, err
 // buildRootPane loads the root column quotes for the given category filter (0 =
 // home, ordered by char_count) narrowed by the root search query rq.
 func (s *Server) buildRootPane(catID int64, rq string) (rootPane, error) {
-	rTerms := search.Terms(rq)
+	rQuery := search.Parse(rq)
 	if catID <= 0 {
 		qs, err := s.store.List()
 		if err != nil {
 			return rootPane{}, err
 		}
-		qs = search.Filter(qs, rTerms)
-		return rootPane{Quotes: qs, Count: len(qs), Title: "Quotes", ExportURL: "/export.txt", Query: rq, Terms: rTerms}, nil
+		qs = search.Filter(qs, rQuery)
+		return rootPane{Quotes: qs, Count: len(qs), Title: "Quotes", ExportURL: "/export.txt", Query: rq, Terms: search.HighlightTerms(rQuery)}, nil
 	}
 	c, err := s.store.GetCategory(catID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
-			return rootPane{Quotes: nil, Count: 0, Title: "Quotes", ExportURL: "/export.txt", Query: rq, Terms: rTerms}, nil
+			return rootPane{Quotes: nil, Count: 0, Title: "Quotes", ExportURL: "/export.txt", Query: rq, Terms: search.HighlightTerms(rQuery)}, nil
 		}
 		return rootPane{}, err
 	}
@@ -209,7 +209,7 @@ func (s *Server) buildRootPane(catID int64, rq string) (rootPane, error) {
 	if err != nil {
 		return rootPane{}, err
 	}
-	qs = search.Filter(qs, rTerms)
+	qs = search.Filter(qs, rQuery)
 	return rootPane{
 		Quotes:     qs,
 		Count:      len(qs),
@@ -218,7 +218,7 @@ func (s *Server) buildRootPane(catID int64, rq string) (rootPane, error) {
 		CategoryID: catID,
 		ExportURL:  fmt.Sprintf("/categories/%d/export.txt", catID),
 		Query:      rq,
-		Terms:      rTerms,
+		Terms:      search.HighlightTerms(rQuery),
 	}, nil
 }
 
