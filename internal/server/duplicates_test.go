@@ -50,10 +50,10 @@ func TestDuplicatesRenderedInLeftRail(t *testing.T) {
 		if !strings.Contains(body, `MN 22 <span class="rail__count">2</span>`) {
 			t.Errorf("%s: expected label 'MN 22' with member count 2", target)
 		}
-		// Only duplicated text ids are surfaced: the unique quote (id 3, MN 10) must
-		// not appear as a duplicate link, and there is exactly one group.
-		if strings.Contains(body, `data-id="3"`) && strings.Contains(body, `data-action="focus-quote"`) {
-			// more precise: ensure no focus-quote link targets id 3
+		// Only duplicated text ids are surfaced: the unique quote (id 3, MN 10)
+		// must not appear as a duplicate link.
+		if strings.Contains(body, `data-action="focus-quote" data-id="3"`) {
+			t.Errorf("%s: unique quote id 3 must not be surfaced as a duplicate", target)
 		}
 	}
 }
