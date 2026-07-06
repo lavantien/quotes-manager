@@ -37,4 +37,12 @@
     <button type="button" class="rail__icon" data-action="merge-duplicates" data-id="{{.Representative}}" data-count="{{.Count}}" aria-label="Merge duplicates into the shortest" title="Merge into the shortest">&#10074;&#10074;</button>
   </div>{{else}}<p class="rail__empty">No duplicates.</p>{{end}}
 </section>
+<section class="rail__section">
+  <h2 class="rail__heading">Backup</h2>
+  <div class="rail__row"><a class="rail__link" href="/backup.json" download>Download JSON</a></div>
+  <form class="rail__new" data-action="restore">
+    <input class="rail__input" type="file" name="file" accept=".json,application/json" required>
+    <button class="btn btn--sm btn--danger" type="submit">Restore</button>
+  </form>
+</section>
 {{end}}

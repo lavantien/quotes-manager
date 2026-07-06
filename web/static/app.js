@@ -285,6 +285,17 @@
       var html = await postForm("/quotes/" + qid + "/categories" + ctxQuery(), body);
       if (html) applyFragments(html);
     }
+
+    if (action === "restore") {
+      e.preventDefault();
+      var fileInput = form.querySelector('input[type="file"]');
+      if (!fileInput || !fileInput.files || !fileInput.files[0]) return;
+      if (!confirm("Replace the entire corpus with this backup? This cannot be undone.")) return;
+      var text = await fileInput.files[0].text();
+      var res = await fetch("/restore", { method: "POST", body: text, headers: { "Content-Type": "application/json" } });
+      if (res.ok) location.reload();
+      else flash(form.querySelector('button[type="submit"]'), "Failed");
+    }
   });
 
   // Clear the create form after a successful add, so several can be added quickly.

@@ -47,6 +47,8 @@ func (s *Server) routes() *http.ServeMux {
 	m.HandleFunc("GET /quotes/{id}/categories/edit", s.editQuoteCategories)
 	m.HandleFunc("POST /quotes/{id}/categories", s.setQuoteCategories)
 	m.HandleFunc("GET /export.txt", s.exportAll)
+	m.HandleFunc("GET /backup.json", s.backup)
+	m.HandleFunc("POST /restore", s.restore)
 	m.HandleFunc("GET /collections/{cid}", s.collection)
 	m.HandleFunc("POST /collections", s.createCollection)
 	m.HandleFunc("POST /collections/{cid}/items", s.addCollectionItems)

@@ -9,14 +9,14 @@ import (
 
 // Quote is a persisted quote row.
 type Quote struct {
-	ID        int64
-	SuttaID   string
-	Citation  string
-	BodyMD    string
-	BodyText  string
-	LineCount int
-	CharCount int
-	Sources   []string
+	ID        int64    `json:"id"`
+	SuttaID   string   `json:"sutta_id"`
+	Citation  string   `json:"citation"`
+	BodyMD    string   `json:"body_md"`
+	BodyText  string   `json:"body_text"`
+	LineCount int      `json:"line_count"`
+	CharCount int      `json:"char_count"`
+	Sources   []string `json:"sources"`
 }
 
 // Collection is a named (or autonumbered) subset of quotes curated from home.
@@ -43,6 +43,10 @@ var ErrNotFound = errors.New("quote not found")
 // ErrDuplicate is returned when a uniqueness constraint (e.g. a category name)
 // is violated.
 var ErrDuplicate = errors.New("duplicate")
+
+// ErrUnsupportedDump is returned by Import when the dump's Version is unknown
+// or the dump is nil.
+var ErrUnsupportedDump = errors.New("unsupported dump version")
 
 // Store is the persistence interface for quotes.
 type Store interface {
@@ -71,5 +75,7 @@ type Store interface {
 	CategoryQuotes(id int64) ([]Quote, error)                     // home order (char_count, id)
 	SetQuoteCategories(quoteID int64, categoryIDs []int64) error  // full replace; ErrNotFound on bad quote/category
 	QuoteCategoryMap() (map[int64][]Category, error)              // quote_id -> its categories, one query
+	Export() (*Dump, error)                                       // whole-database snapshot for backup
+	Import(*Dump) error                                           // replace-all restore; ErrUnsupportedDump on a bad version
 	Close() error
 }

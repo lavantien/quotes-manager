@@ -147,6 +147,18 @@ func (f *fakeStore) has(id int64) bool {
 	return false
 }
 
+func (f *fakeStore) Export() (*store.Dump, error) {
+	return &store.Dump{Version: store.DumpVersion, Quotes: append([]store.Quote{}, f.quotes...)}, nil
+}
+
+func (f *fakeStore) Import(d *store.Dump) error {
+	if d == nil || d.Version != store.DumpVersion {
+		return store.ErrUnsupportedDump
+	}
+	f.quotes = append([]store.Quote{}, d.Quotes...)
+	return nil
+}
+
 func (f *fakeStore) ListCollections() ([]store.Collection, error) {
 	return append([]store.Collection{}, f.collections...), nil
 }
@@ -1305,6 +1317,8 @@ func (failingStore) Update(int64, *quote.Quote) error             { return errSt
 func (failingStore) Delete(int64) error                           { return errStoreFails }
 func (failingStore) DeleteMany([]int64) error                     { return errStoreFails }
 func (failingStore) MergeQuotes(int64, []int64) error             { return errStoreFails }
+func (failingStore) Export() (*store.Dump, error)                 { return nil, errStoreFails }
+func (failingStore) Import(*store.Dump) error                     { return errStoreFails }
 func (failingStore) ListCollections() ([]store.Collection, error) { return nil, errStoreFails }
 func (failingStore) CreateCollection([]int64) (int64, error)      { return 0, errStoreFails }
 func (failingStore) AddToCollection(int64, []int64) error         { return errStoreFails }
