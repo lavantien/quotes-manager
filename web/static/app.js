@@ -12,6 +12,7 @@
 
   function currentCat() { var z = document.getElementById("root-zone"); return z ? (z.dataset.cat || "") : ""; }
   function currentCol() { var z = document.getElementById("collection-zone"); return z ? (z.dataset.cid || "") : ""; }
+  function inputValue(name) { var el = document.querySelector('input[name="' + name + '"]'); return el ? el.value : ""; }
   function ctxQuery() { return "?cat=" + currentCat() + "&col=" + currentCol(); }
 
   // Toggle the bulk/delete/insert affordances based on whether any root quote
@@ -139,6 +140,17 @@
       dels.forEach(function (id) { dbody.append("id", id); });
       var del = await fetch("/quotes/delete", { method: "POST", body: dbody });
       if (del.ok) location.reload();
+    }
+
+    if (action === "merge-duplicates") {
+      var rep = btn.dataset.id;
+      var n = btn.dataset.count || "";
+      if (!confirm("Merge " + n + " duplicate(s) into the shortest passage?")) return;
+      var q = "?cat=" + currentCat() + "&col=" + currentCol() +
+        "&rq=" + encodeURIComponent(inputValue("rq")) + "&cq=" + encodeURIComponent(inputValue("cq"));
+      var res = await fetch("/duplicates/" + rep + "/merge" + q, { method: "POST" });
+      var mhtml = res.ok ? await res.text() : "";
+      if (mhtml) applyFragments(mhtml);
     }
 
     if (action === "cancel") {

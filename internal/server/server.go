@@ -63,6 +63,7 @@ func (s *Server) routes() *http.ServeMux {
 	m.HandleFunc("GET /search/collection", s.searchCollection)
 	m.HandleFunc("GET /rail/left", s.leftRailHandler)
 	m.HandleFunc("GET /rail/right", s.rightRailHandler)
+	m.HandleFunc("POST /duplicates/{repID}/merge", s.mergeDuplicates)
 	m.HandleFunc("GET /categories/{ctid}", s.category)
 	m.HandleFunc("GET /categories/{ctid}/export.txt", s.categoryExport)
 	m.HandleFunc("POST /categories", s.createCategory)

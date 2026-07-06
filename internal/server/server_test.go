@@ -112,6 +112,41 @@ func (f *fakeStore) DeleteMany(ids []int64) error {
 	return nil
 }
 
+func (f *fakeStore) MergeQuotes(keep int64, merge []int64) error {
+	if !f.has(keep) {
+		return store.ErrNotFound
+	}
+	for _, id := range merge {
+		if id == keep {
+			continue
+		}
+		if !f.has(id) {
+			return store.ErrNotFound
+		}
+	}
+	drop := make(map[int64]bool, len(merge))
+	for _, id := range merge {
+		drop[id] = true
+	}
+	keepList := f.quotes[:0]
+	for _, q := range f.quotes {
+		if !drop[q.ID] {
+			keepList = append(keepList, q)
+		}
+	}
+	f.quotes = keepList
+	return nil
+}
+
+func (f *fakeStore) has(id int64) bool {
+	for _, q := range f.quotes {
+		if q.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
 func (f *fakeStore) ListCollections() ([]store.Collection, error) {
 	return append([]store.Collection{}, f.collections...), nil
 }
@@ -1269,6 +1304,7 @@ func (failingStore) Create(*quote.Quote) (int64, error)           { return 0, er
 func (failingStore) Update(int64, *quote.Quote) error             { return errStoreFails }
 func (failingStore) Delete(int64) error                           { return errStoreFails }
 func (failingStore) DeleteMany([]int64) error                     { return errStoreFails }
+func (failingStore) MergeQuotes(int64, []int64) error             { return errStoreFails }
 func (failingStore) ListCollections() ([]store.Collection, error) { return nil, errStoreFails }
 func (failingStore) CreateCollection([]int64) (int64, error)      { return 0, errStoreFails }
 func (failingStore) AddToCollection(int64, []int64) error         { return errStoreFails }

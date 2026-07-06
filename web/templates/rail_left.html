@@ -34,6 +34,7 @@
   <h2 class="rail__heading">Duplicates</h2>
   {{range .Duplicates}}<div class="rail__row">
     <a class="rail__link" data-action="focus-quote" data-id="{{.Representative}}" href="/#quote-{{.Representative}}">{{.Label}} <span class="rail__count">{{.Count}}</span></a>
+    <button type="button" class="rail__icon" data-action="merge-duplicates" data-id="{{.Representative}}" data-count="{{.Count}}" aria-label="Merge duplicates into the shortest" title="Merge into the shortest">&#10074;&#10074;</button>
   </div>{{else}}<p class="rail__empty">No duplicates.</p>{{end}}
 </section>
 {{end}}

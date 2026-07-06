@@ -52,6 +52,7 @@ type Store interface {
 	Update(id int64, q *quote.Quote) error                        // re-derives body/count fields
 	Delete(id int64) error                                        // ErrNotFound if missing
 	DeleteMany(ids []int64) error                                 // empty slice is a no-op
+	MergeQuotes(keep int64, merge []int64) error                  // folds merge's memberships onto keep, then deletes them; ErrNotFound on a bad id
 	ListCollections() ([]Collection, error)                       // ordered by id
 	CreateCollection(quoteIDs []int64) (int64, error)             // new numbered collection; returns its id
 	AddToCollection(id int64, quoteIDs []int64) error             // prepends to top; ErrNotFound on unknown cid
