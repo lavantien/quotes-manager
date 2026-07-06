@@ -1,7 +1,7 @@
 # quotes-manager
 
 <!-- coverage:START -->
-![coverage](https://img.shields.io/badge/coverage-90.9%25-brightgreen)
+![coverage](https://img.shields.io/badge/coverage-91.1%25-brightgreen)
 <!-- coverage:END -->
 
 ![quotes-manager home page](docs/home.png)
@@ -36,7 +36,7 @@ docs/
 exports/
   shortest-first.md            generated export, shortest-first (committed)
 web/
-  templates/                   layout, rail_left, rail_right, root_zone, collection_zone, collection_list, quote_list, quote_block(_ro), quote_form, quote_chips, quote_collection_chips, quote_category_editor
+  templates/                   layout, rail_left, rail_right, root_zone, collection_zone, check_zone, check_results, collection_list, quote_list, quote_block(_ro), quote_form, quote_chips, quote_collection_chips, quote_category_editor
   static/                      app.css (typography/components) + layout.css (4-zone grid), app.js, htmx (vendored)
 go.mod
 readme.md
@@ -80,8 +80,11 @@ canonical corpus.
 
 New opens a 3-field form (content, attribution, text ID). An empty attribution
 defaults to "the Buddha". Copy all copies every quote as one text joined by the
-dot separator. Selecting a category or a collection swaps just that pane in
-place, and the URL carries `?cat=` or `?col=` for deep linking.
+dot separator. Each rail also has a Copy ids button: the left rail copies the
+whole corpus's text ids (`/ids.txt`), the right rail copies the active
+collection's (`/collections/{id}/ids.txt`), each deduped and sorted, one per
+line. Selecting a category or a collection swaps just that pane in place, and
+the URL carries `?cat=` or `?col=` for deep linking.
 
 Every mutation is written to SQLite before the UI updates, and the rails and
 column counts refresh live via out-of-band swaps. The Duplicates section, the
@@ -136,6 +139,19 @@ citation, with hits wrapped in `<mark>`. `?rq=` and `?cq=` deep-link the two
 columns independently. Switching category or collection clears the search.
 While a collection search is active the insert gaps and drag handles are hidden,
 so a filtered subset cannot be mis-reordered.
+
+### Check ids
+
+The Check ids button atop the right rail repurposes the right text column as a
+workspace: paste a list of text ids (one per line) and Check reports each one's
+membership in the corpus (`GET /pane/check` swaps in the workspace, `POST /check`
+returns the results fragment). Each input is canonicalized via
+`quote.CanonicalSuttaID` (so "the Buddha, MN 22" matches "MN 22") and matched
+case-insensitively against the lowercased corpus id set; a non-canonical input
+falls back to a literal match. Found ids show the number of matching quotes;
+missing ids show a dash. Clicking the button again (or a collection) leaves the
+workspace. The workspace reuses the `#collection-zone` target but carries no
+`data-cid`, so collection-mutation actions stay inert while it is shown.
 
 ### SQLite schema (web)
 

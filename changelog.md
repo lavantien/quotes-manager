@@ -6,6 +6,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 | Version | Date | Type | Change |
 |---------|------|------|--------|
+| [0.10.0] | 2026-07-06 | Added | Copy ids buttons: each rail gets a Copy ids button that copies text ids (deduped, byte-sorted, one per line) to the clipboard via the existing copy-all action. The left rail copies the whole corpus (`GET /ids.txt`); the right rail copies the active collection (`GET /collections/{id}/ids.txt`) and is disabled until one is active. `flash()` honors an optional `data-flash` override so the button reads "Copied ids". No new store methods; reuses `List()` and `CollectionQuotes()`, mirroring `exportAll`/`collectionExport`. |
+| [0.10.0] | 2026-07-06 | Added | Check ids workspace: the Check ids button atop the right rail swaps the right column into a textarea where pasted text ids (one per line) are checked against the corpus (`GET /pane/check`, `POST /check`); each id is reported found (with the number of matching quotes) or missing. Inputs are canonicalized via `quote.CanonicalSuttaID` (falling back to a literal) and matched case-insensitively; the button toggles back to the collection pane. The workspace reuses the `#collection-zone` target but omits `data-cid` so collection-mutation actions stay inert; the corpus-size header reuses `railData`'s `TotalQuotes`. Pure helpers (`runCheck`, `splitIDLines`, `uniqueSortedIDs`) are table-tested. |
+| [0.10.0] | 2026-07-06 | Notes | Test coverage and `docs/home.png` are refreshed by `make coverage` and `make screenshot`. A corpus mutation after entering check mode drops the Check button's active highlight (the right rail OOB-refreshes with the default view); re-running Check refreshes the results. |
 | [0.9.1] | 2026-07-05 | Fixed | Category chips and collection chips on a root block were assigned the same grid area (`chips`), so the two rows overlapped; collections now get their own `cols` row in the `.quote` grid (and in the narrow `@media` variant), so the chip rows stack cleanly. |
 | [0.9.0] | 2026-07-05 | Changed | The workspace fills the viewport: the `96rem` cap and centering on `.page` are gone (and the now-unused `--col` token with it), so the four-zone grid uses the full width; the rails keep their fixed columns and the responsive breakpoints are unchanged. |
 | [0.9.0] | 2026-07-05 | Added | Synced column headers: a small equalizer in `app.js` matches each column's `.zone__head` and `.zone__toolbar` to the taller of the pair (reset, measure, apply as `min-height`), so the divider lines line up across columns regardless of content or htmx swaps; re-runs on `applyFragments`, `htmx:afterSwap`, init, resize, and `document.fonts.ready`. |
@@ -68,6 +71,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 | [0.1.0] | 2026-06-29 | Notes | Quotes are drawn from `sacredness-and-profanity.txt` and `stream-entry-for-lay-buddhists.txt`; `discerning-truth-from-deception.txt` is prose only and contributes no quotes. |
 | [0.1.0] | 2026-06-29 | Notes | Unattributed quotes (including all header-cited ones) are normalized to "the Buddha". |
 
+[0.10.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.10.0
 [0.9.1]: https://github.com/lavantien/quotes-manager/releases/tag/v0.9.1
 [0.9.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.9.0
 [0.8.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.8.0
