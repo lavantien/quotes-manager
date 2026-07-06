@@ -34,6 +34,8 @@ func mustTemplates() *template.Template {
 		"templates/rail_right.html",
 		"templates/root_zone.html",
 		"templates/collection_zone.html",
+		"templates/check_zone.html",
+		"templates/check_results.html",
 		"templates/collection_list.html",
 		"templates/quote_list.html",
 		"templates/quote_block.html",

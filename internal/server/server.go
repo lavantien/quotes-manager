@@ -57,6 +57,8 @@ func (s *Server) routes() *http.ServeMux {
 	m.HandleFunc("GET /collections/{cid}/ids.txt", s.collectionIDs)
 	m.HandleFunc("GET /pane/root", s.rootPaneHandler)
 	m.HandleFunc("GET /pane/collection", s.collectionPaneHandler)
+	m.HandleFunc("GET /pane/check", s.checkPaneHandler)
+	m.HandleFunc("POST /check", s.checkIdsHandler)
 	m.HandleFunc("GET /search/root", s.searchRoot)
 	m.HandleFunc("GET /search/collection", s.searchCollection)
 	m.HandleFunc("GET /rail/left", s.leftRailHandler)

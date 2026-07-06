@@ -1,0 +1,15 @@
+{{define "check_results"}}
+<div id="check-results" class="check-results">
+  {{if .Submitted}}
+  <p class="check__summary">{{.Found}} of {{.Total}} found.</p>
+  {{if .Results}}<ul class="check__list">
+    {{range .Results}}<li class="check__row{{if .Found}} is-found{{else}} is-missing{{end}}">
+      <span class="check__id">{{.Input}}</span>
+      {{if .Found}}<span class="check__badge check__badge--ok">✓ {{.Count}}</span>{{else}}<span class="check__badge check__badge--no">✗</span>{{end}}
+    </li>{{end}}
+  </ul>{{end}}
+  {{else}}
+  <p class="zone__hint">Paste one text id per line, then Check.</p>
+  {{end}}
+</div>
+{{end}}

@@ -26,6 +26,7 @@ type pageData struct {
 	TotalQuotes int                          // size of the whole library (home count)
 	ActiveCatID int64
 	ActiveColID int64
+	View        string // "" default; "check" when the right column is the check-id workspace
 }
 
 // duplicateGroup is one cluster of near-duplicate quotes, for the Duplicates

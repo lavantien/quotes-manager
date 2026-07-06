@@ -1333,6 +1333,8 @@ func TestHandlerStoreErrors(t *testing.T) {
 		{"GET", "/rail/right", "", ""},
 		{"GET", "/pane/root", "", ""},
 		{"GET", "/pane/collection", "", ""},
+		{"GET", "/pane/check", "", ""},
+		{"POST", "/check", "ids=MN+1", "application/x-www-form-urlencoded"},
 	}
 	for _, c := range cases {
 		rec := do(t, srv, c.method, c.target, c.body, "Content-Type", c.ct)

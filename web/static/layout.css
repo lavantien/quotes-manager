@@ -200,6 +200,52 @@ mark {
 .zone__empty p { margin: 0 0 0.5rem; }
 .zone__hint { font-size: 0.85rem; opacity: 0.85; }
 
+/* --- check-id workspace (replaces #collection-zone when the Check ids button
+   is active) --- */
+.check-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem clamp(1rem, 2vw, 1.4rem);
+  border-bottom: 1px solid var(--rule);
+}
+.check-form__label { font-size: 0.78rem; color: var(--ink-soft); }
+.check-form__input {
+  width: 100%;
+  min-height: 9rem;
+  resize: vertical;
+  font: inherit;
+  font-size: 0.92rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.check-form__input:focus {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 1px;
+  border-color: var(--accent-soft);
+}
+.check-results { padding: 0.75rem clamp(1rem, 2vw, 1.4rem); }
+.check__summary { font-size: 0.85rem; color: var(--ink-soft); margin: 0 0 0.5rem; }
+.check__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.check__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.92rem;
+}
+.check__row.is-found { background: var(--paper-tint); }
+.check__row.is-missing { color: var(--ink-soft); }
+.check__id { font-family: var(--serif); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.check__badge { font-size: 0.75rem; padding: 0.1rem 0.55rem; border-radius: 999px; white-space: nowrap; }
+.check__badge--ok { background: var(--accent-soft); color: var(--paper); }
+.check__badge--no { color: var(--danger); border: 1px solid var(--rule); }
+
 /* quote lists live inside zones and inherit horizontal padding from the zone */
 .zone .quote-list { padding: 0 clamp(1rem, 2vw, 1.4rem); }
 

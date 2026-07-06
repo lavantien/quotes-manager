@@ -12,6 +12,7 @@
 
 {{define "rail_right_body"}}
 <div class="rail__toolbar">
+  <button type="button" class="btn btn--sm{{if eq .View "check"}} btn--primary{{end}}"{{if eq .View "check"}} hx-get="/pane/collection?cat={{.ActiveCatID}}&col={{.ActiveColID}}"{{else}} hx-get="/pane/check?cat={{.ActiveCatID}}&col={{.ActiveColID}}"{{end}} hx-target="#collection-zone" hx-swap="outerHTML" hx-push-url="false">Check ids</button>
   <button type="button" class="btn btn--sm" data-action="copy-all" data-flash="Copied ids"{{if .ActiveColID}} data-export="/collections/{{.ActiveColID}}/ids.txt"{{else}} disabled{{end}}>Copy ids</button>
 </div>
 <section class="rail__section">

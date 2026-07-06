@@ -1,0 +1,17 @@
+{{define "check_zone"}}
+<section class="zone zone--collection zone--check" id="collection-zone">
+  <header class="zone__head">
+    <span class="zone__title">Check ids</span>
+    <span class="zone__count">{{.Corpus}} in corpus</span>
+  </header>
+  <form class="check-form" hx-post="/check" hx-target="#check-results" hx-swap="outerHTML" hx-push-url="false">
+    <label for="check-input" class="check-form__label">Text ids to check, one per line</label>
+    <textarea id="check-input" class="check-form__input" name="ids" rows="8" autofocus
+              placeholder="MN 22&#10;AN 5.34&#10;SN 12.1"></textarea>
+    <button class="btn btn--sm btn--primary" type="submit">Check</button>
+  </form>
+  <div id="check-results" class="check-results">
+    <p class="zone__hint">Paste one text id per line, then Check.</p>
+  </div>
+</section>
+{{end}}
