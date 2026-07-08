@@ -6,6 +6,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 | Version | Date | Type | Change |
 |---------|------|------|--------|
+| [1.1.0] | 2026-07-08 | Notes | **1.1.0:** categories can be assigned when a quote is created, not only through the per-block editor afterward. |
+| [1.1.0] | 2026-07-08 | Added | Categories on the New form: the create form lists every existing category as a checkbox plus a "+ new category" field, mirroring the inline editor. `POST /quotes` captures the new id and tags the quote via `Server.applyCreateCategories` (reusing `parseIDs`, `resolveCategoryID`, and `store.SetQuoteCategories`); a typed name that already exists, case-insensitively, selects it rather than creating a duplicate. The edit form and its inline editor are unchanged. |
+| [1.1.0] | 2026-07-08 | Notes | Test coverage holds at 90.3% of statements (refreshed by `make coverage`); the new create-time tagging and its store-error paths are covered by handler tests, and `docs/home.png` is refreshed by `make screenshot`. |
 | [1.0.0] | 2026-07-06 | Notes | **1.0.0: feature-complete.** The single-user, offline sutta-quote corpus manager is stable: dual-pane editing, collections, categories, near-duplicate detection, full-text search, and now a portable JSON backup/restore, a canonical-text bulk import, a one-click duplicate merge, and a re-sorting edit. Auth/multi-user is a declared non-goal. Go 1.26, single binary, SQLite-backed. |
 | [1.0.0] | 2026-07-06 | Added | Backup & restore: the left rail's Backup section downloads the whole database as a versioned JSON `store.Dump` (`GET /backup.json`, an attachment) and restores one (`POST /restore`, raw JSON, confirmed, reloads on success). `store.Export` snapshots every quote plus the named collections and categories with their ordered memberships; `store.Import` wipes all five tables and reloads them in one transaction, preserving explicit ids so the canonical ranking, collection order, and tags survive the round-trip. Unknown versions are rejected with `store.ErrUnsupportedDump`. |
 | [1.0.0] | 2026-07-06 | Added | Import quotes: the root toolbar's Import button swaps a textarea into the form slot; `quote.ParseCanonical` (the inverse of `BodyMD` + the dot divider) recovers each pasted block and `POST /quotes/import` creates them, de-duplicating within the paste and re-rendering the sorted root list. A plain ` - citation` tail is accepted as a fallback for lightly edited pastes; blocks without a citation are skipped. |
@@ -79,6 +82,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 | [0.1.0] | 2026-06-29 | Notes | Quotes are drawn from `sacredness-and-profanity.txt` and `stream-entry-for-lay-buddhists.txt`; `discerning-truth-from-deception.txt` is prose only and contributes no quotes. |
 | [0.1.0] | 2026-06-29 | Notes | Unattributed quotes (including all header-cited ones) are normalized to "the Buddha". |
 
+[1.1.0]: https://github.com/lavantien/quotes-manager/releases/tag/v1.1.0
 [1.0.0]: https://github.com/lavantien/quotes-manager/releases/tag/v1.0.0
 [0.10.0]: https://github.com/lavantien/quotes-manager/releases/tag/v0.10.0
 [0.9.1]: https://github.com/lavantien/quotes-manager/releases/tag/v0.9.1
