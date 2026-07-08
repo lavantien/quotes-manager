@@ -65,7 +65,8 @@ type collectionPane struct {
 	Searching bool     // true when Terms is non-empty (disables reorder/gaps)
 }
 
-// formData drives the 3-field quote create/edit form.
+// formData drives the 3-field quote create/edit form. Categories lists the
+// existing categories shown as checkboxes on the create form only.
 type formData struct {
 	ID          int64
 	Content     string
@@ -73,6 +74,7 @@ type formData struct {
 	TextID      string
 	Action      string
 	SubmitLabel string
+	Categories  []store.Category
 }
 
 // chipsData drives a quote's category chip row.

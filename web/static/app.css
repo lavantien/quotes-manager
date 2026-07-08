@@ -175,6 +175,16 @@ body {
   color: var(--ink);
 }
 .quote-form__row--actions { justify-content: flex-end; }
+.quote-form__row--categories { gap: 0.4rem 0.75rem; align-items: center; }
+.quote-form__category {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+.quote-form__input--new-category { flex: 1 1 8rem; font-size: 0.88rem; }
 
 @media (max-width: 30rem) {
   .quote { grid-template-columns: 1fr; grid-template-areas: "check" "body" "chips" "cols" "actions"; }

@@ -274,6 +274,25 @@ func (s *Server) setQuoteCategories(w http.ResponseWriter, r *http.Request) {
 	s.exec(w, "rail_left_oob", rail)
 }
 
+// applyCreateCategories tags a freshly created quote with the categories chosen
+// on the create form: checked "category" ids plus an optional "new_category"
+// name resolved create-or-find (mirroring setQuoteCategories). A submission with
+// no categories is a no-op so the common path skips the store round-trip.
+func (s *Server) applyCreateCategories(quoteID int64, f url.Values) error {
+	ids := parseIDs(f["category"])
+	if newName := strings.TrimSpace(f.Get("new_category")); newName != "" {
+		cid, err := s.resolveCategoryID(newName)
+		if err != nil {
+			return err
+		}
+		ids = append(ids, cid)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	return s.store.SetQuoteCategories(quoteID, ids)
+}
+
 // categoryExport renders a category's quotes as the plain-text export format.
 func (s *Server) categoryExport(w http.ResponseWriter, r *http.Request) {
 	ctid, ok := parseID(w, r, "ctid")
@@ -293,7 +312,12 @@ func (s *Server) categoryExport(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) newForm(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "quote_form", formData{Action: "/quotes", SubmitLabel: "Add quote"})
+	cats, err := s.store.ListCategories()
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	s.render(w, "quote_form", formData{Action: "/quotes", SubmitLabel: "Add quote", Categories: cats})
 }
 
 func (s *Server) editForm(w http.ResponseWriter, r *http.Request) {
@@ -321,8 +345,13 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 		badRequest(w)
 		return
 	}
-	if _, err := s.store.Create(buildQuote(r.PostForm)); err != nil {
+	id, err := s.store.Create(buildQuote(r.PostForm))
+	if err != nil {
 		serverError(w, err)
+		return
+	}
+	if err := s.applyCreateCategories(id, r.PostForm); err != nil {
+		handleStoreErr(w, err)
 		return
 	}
 	if isHTMX(r) {

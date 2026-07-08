@@ -5,6 +5,12 @@
     <input class="quote-form__input" type="text" name="attribution" value="{{.Attribution}}" placeholder="Attribution (e.g. the Buddha)">
     <input class="quote-form__input" type="text" name="text_id" value="{{.TextID}}" placeholder="Text ID (e.g. MN 22)" required>
   </div>
+  {{if not .ID}}
+  <div class="quote-form__row quote-form__row--categories">
+    {{range .Categories}}<label class="quote-form__category"><input type="checkbox" name="category" value="{{.ID}}"><span>#{{.Name}}</span></label>{{end}}
+    <input class="quote-form__input quote-form__input--new-category" type="text" name="new_category" placeholder="+ new category" maxlength="100">
+  </div>
+  {{end}}
   <div class="quote-form__row quote-form__row--actions">
     <button type="submit" class="btn btn--primary">{{.SubmitLabel}}</button>
     <button type="button" class="btn" data-action="cancel">Cancel</button>

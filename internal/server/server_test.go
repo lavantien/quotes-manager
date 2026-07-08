@@ -1354,6 +1354,7 @@ func TestHandlerStoreErrors(t *testing.T) {
 	}{
 		{"GET", "/", "", ""},
 		{"GET", "/quotes", "", ""},
+		{"GET", "/quotes/new", "", ""},
 		{"POST", "/quotes", "content=x&text_id=MN+1", "application/x-www-form-urlencoded"},
 		{"POST", "/quotes/1", "content=x&text_id=MN+1", "application/x-www-form-urlencoded"},
 		{"DELETE", "/quotes/1", "", ""},
@@ -1529,6 +1530,14 @@ func (failListCols) ListCollections() ([]store.Collection, error) { return nil, 
 type failCatQuotes struct{ *fakeStore }
 
 func (failCatQuotes) CategoryQuotes(int64) ([]store.Quote, error) { return nil, errStoreFails }
+
+type failCreateCategory struct{ *fakeStore }
+
+func (failCreateCategory) CreateCategory(string) (int64, error) { return 0, errStoreFails }
+
+type failSetQuoteCategories struct{ *fakeStore }
+
+func (failSetQuoteCategories) SetQuoteCategories(int64, []int64) error { return errStoreFails }
 
 func assert500(t *testing.T, srv *server.Server, method, target, body string, hdrs ...string) {
 	t.Helper()
