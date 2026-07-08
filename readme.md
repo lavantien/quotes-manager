@@ -1,7 +1,7 @@
 # quotes-manager
 
 <!-- coverage:START -->
-![coverage](https://img.shields.io/badge/coverage-90.1%25-brightgreen)
+![coverage](https://img.shields.io/badge/coverage-90.3%25-brightgreen)
 <!-- coverage:END -->
 
 ![quotes-manager home page](docs/home.png)
@@ -81,10 +81,12 @@ Home is kept in shortest-first (rune-count) order. A newly added quote slots
 into its sorted place automatically; there is no drag on home, since home is the
 canonical corpus.
 
-New opens a 3-field form (content, attribution, text ID). An empty attribution
-defaults to "the Buddha". Copy all copies every quote as one text joined by the
-dot separator. Each rail also has a Copy ids button: the left rail copies the
-whole corpus's text ids (`/ids.txt`), the right rail copies the active
+New opens a form (content, attribution, text ID) that also tags the quote with
+categories: check any existing categories and/or type a new one, which is
+created case-insensitively unique. An empty attribution defaults to "the
+Buddha". Copy all copies every quote as one text joined by the dot
+separator. Each rail also has a Copy ids button: the left rail copies the whole
+corpus's text ids (`/ids.txt`), the right rail copies the active
 collection's (`/collections/{id}/ids.txt`), each deduped and sorted, one per
 line. Selecting a category or a collection swaps just that pane in place, and
 the URL carries `?cat=` or `?col=` for deep linking.
@@ -113,7 +115,8 @@ stays the sole source of truth. Each collection has a Delete button.
 Categories are named tags managed independently in the left rail. Create,
 rename, or delete them inline; names are unique, case-insensitive. Each root
 block shows its categories as chips, and the inline editor toggles any
-combination and can create a new category on the spot. Clicking a category (in
+combination and can create a new category on the spot; the New form offers the
+same choice when a quote is first added. Clicking a category (in
 the rail or on a chip) filters the root column to its quotes, with Copy all via
 `/categories/{id}/export.txt`. Deleting a category untaggs its quotes; deleting
 a quote clears its tags.
@@ -166,7 +169,7 @@ target but carries no
 ### Import quotes
 
 The root toolbar's Import button swaps a textarea into the New-form slot. Paste
-quotes in the canonical format (the same one `exports/shortest-first.md` uses —
+quotes in the canonical format (the same one `exports/shortest-first.md` uses:
 italic passage lines and a ` - **citation**` tail, blocks separated by the `. . .`
 divider) and submit; `quote.ParseCanonical` recovers each block and
 `POST /quotes/import` creates them, de-duplicating within the paste. The root
