@@ -99,15 +99,20 @@ func (h *hookTracker) wait(timeout time.Duration) {
 	}
 }
 
+func (s *Server) RegisterRoutes(m *http.ServeMux) {
+	s.registerReadRoutes(m)
+	s.registerGraphRoutes(m)
+	s.registerJobsRoutes(m)
+	s.registerAnalyticsRoutes(m)
+	s.registerReportRoutes(m)
+	s.registerPageRoutes(m)
+	m.HandleFunc("/api/", s.apiNotFound)
+}
+
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
-	s.registerReadRoutes(mux)
-	s.registerGraphRoutes(mux)
-	s.registerJobsRoutes(mux)
-	s.registerAnalyticsRoutes(mux)
-	s.registerReportRoutes(mux)
-	s.registerPageRoutes(mux)
-	mux.HandleFunc("/api/", s.apiNotFound)
+	s.RegisterRoutes(mux)
+	mux.HandleFunc("/", s.pageNotFound)
 	var h http.Handler = mux
 	h = s.recoverPanic(h)
 	h = s.securityHeaders(h)

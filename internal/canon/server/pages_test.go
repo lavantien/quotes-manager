@@ -50,7 +50,7 @@ func TestPageDashboard(t *testing.T) {
 	srv, _ := newFixtureServer(t)
 	h := srv.Routes()
 
-	rec := wantHTML(t, getPage(t, h, "/"), http.StatusOK,
+	rec := wantHTML(t, getPage(t, h, "/dashboard"), http.StatusOK,
 		"node:text", ">2<", "mn-div", "run 1", "stats-grid")
 	if strings.Contains(rec.Body.String(), "id=\"job-status\"") {
 		t.Fatal("no job ran; the dashboard must not render a job section")
@@ -60,7 +60,7 @@ func TestPageDashboard(t *testing.T) {
 	if rec := postBody(t, h, "/api/v1/jobs", `{"stage":"sync"}`); rec.Code != http.StatusAccepted {
 		t.Fatalf("start job = %d", rec.Code)
 	}
-	wantHTML(t, getPage(t, h, "/"), http.StatusOK, "id=\"job-status\"", `data-state="`)
+	wantHTML(t, getPage(t, h, "/dashboard"), http.StatusOK, "id=\"job-status\"", `data-state="`)
 }
 
 func TestPageTextsTree(t *testing.T) {
@@ -370,7 +370,7 @@ func TestPagesBeforePublish(t *testing.T) {
 	t.Cleanup(func() { _ = srv.Close() })
 	h := srv.Routes()
 
-	wantHTML(t, getPage(t, h, "/"), http.StatusOK, "no stats")
+	wantHTML(t, getPage(t, h, "/dashboard"), http.StatusOK, "no stats")
 	wantHTML(t, getPage(t, h, "/texts"), http.StatusOK, "no divisions")
 	wantHTML(t, getPage(t, h, "/search"), http.StatusOK, "no results")
 	wantHTML(t, getPage(t, h, "/discrepancies"), http.StatusOK, "no discrepancies")

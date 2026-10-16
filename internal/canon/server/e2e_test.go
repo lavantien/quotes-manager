@@ -559,7 +559,7 @@ func TestE2EServerHermetic(t *testing.T) {
 		t.Errorf("segments window limit 1 offset 1 = %+v, want exactly 1.1", pairs)
 	}
 
-	wantHTML(t, getPage(t, h, "/"), http.StatusOK, "dashboard", "node:segment")
+	wantHTML(t, getPage(t, h, "/dashboard"), http.StatusOK, "dashboard", "node:segment")
 	wantHTML(t, getPage(t, h, "/texts"), http.StatusOK, "texts")
 	wantHTML(t, getPage(t, h, "/search?text="+url.QueryEscape("heard")+"&lang=en"), http.StatusOK, "search")
 	wantHTML(t, getPage(t, h, "/words?form=evam"), http.StatusOK, ">eva</a>", "thus, in this way")
@@ -634,7 +634,7 @@ func TestServerLiveSmoke(t *testing.T) {
 		t.Errorf("live graph word = %+v", word)
 	}
 
-	wantHTML(t, getPage(t, h, "/"), http.StatusOK, "dashboard")
+	wantHTML(t, getPage(t, h, "/dashboard"), http.StatusOK, "dashboard")
 }
 
 func e2eWaitJobLive(t *testing.T, h http.Handler, id int64, stage string) {

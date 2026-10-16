@@ -1,5 +1,3 @@
-// Package server serves the quotes-manager web UI: an HTMX-driven list of
-// draggable quote blocks backed by a store.Store.
 package server
 
 import (
@@ -10,16 +8,12 @@ import (
 	"github.com/lavantien/quotes-manager/internal/store"
 )
 
-// Server is the HTTP server. It renders server-side templates and applies every
-// mutation to the store, returning the freshly rendered HTML fragment so the UI
-// stays a faithful projection of the database.
 type Server struct {
 	store store.Store
 	tmpl  *template.Template
 	mux   *http.ServeMux
 }
 
-// New builds a Server backed by the given store.
 func New(s store.Store) *Server {
 	srv := &Server{store: s, tmpl: mustTemplates()}
 	srv.mux = srv.routes()
@@ -32,6 +26,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) routes() *http.ServeMux {
 	m := http.NewServeMux()
+	s.RegisterRoutes(m)
+	return m
+}
+
+func (s *Server) RegisterRoutes(m *http.ServeMux) {
 	m.HandleFunc("GET /", s.index)
 	m.HandleFunc("GET /quotes", s.listFragment)
 	m.HandleFunc("GET /quotes/new", s.newForm)
@@ -74,7 +73,6 @@ func (s *Server) routes() *http.ServeMux {
 	m.HandleFunc("POST /categories/{ctid}/rename", s.renameCategory)
 	m.HandleFunc("DELETE /categories/{ctid}", s.deleteCategory)
 	m.Handle("GET /static/", cacheStatic(http.StripPrefix("/static/", http.FileServer(http.FS(staticFS())))))
-	return m
 }
 
 func cacheStatic(h http.Handler) http.Handler {
@@ -84,7 +82,6 @@ func cacheStatic(h http.Handler) http.Handler {
 	})
 }
 
-// render writes a template as UTF-8 HTML.
 func (s *Server) render(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := s.tmpl.ExecuteTemplate(w, name, data); err != nil {

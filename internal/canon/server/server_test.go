@@ -399,6 +399,26 @@ func TestMiddlewareRecoverPanic(t *testing.T) {
 	}
 }
 
+func TestRegisterRoutesSharedMux(t *testing.T) {
+	srv, _ := newFixtureServer(t)
+	m := http.NewServeMux()
+	srv.RegisterRoutes(m)
+
+	wantHTML(t, getPage(t, m, "/dashboard"), http.StatusOK, "dashboard")
+	wantHTML(t, getPage(t, m, "/texts"), http.StatusOK, "texts")
+	wantHTML(t, getPage(t, m, "/words"), http.StatusOK, "words")
+	wantHTML(t, getPage(t, m, "/discrepancies"), http.StatusOK, "discrepancies")
+
+	status, body := getError(t, m, "/api/v1/nope")
+	if status != http.StatusNotFound || body.Code != codeNotFound {
+		t.Fatalf("unknown api route = %d/%s", status, body.Code)
+	}
+
+	if rec := getPage(t, m, "/"); rec.Code != http.StatusNotFound {
+		t.Fatalf("root on bare canon registration = %d, want 404", rec.Code)
+	}
+}
+
 func TestMiddlewareOriginCheck(t *testing.T) {
 	srv, cfg := newFixtureServer(t)
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

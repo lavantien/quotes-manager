@@ -15,14 +15,13 @@ import (
 	"github.com/lavantien/quotes-manager/internal/store"
 )
 
-// fakeStore is an in-memory store.Store for handler tests.
 type fakeStore struct {
 	quotes      []store.Quote
 	nextID      int64
 	collections []store.Collection
 	items       map[int64][]int64
 	categories  []store.Category
-	tags        map[int64][]int64 // quote_id -> category_ids
+	tags        map[int64][]int64
 }
 
 func newFake(quotes ...store.Quote) *fakeStore {
@@ -440,7 +439,6 @@ func (f *fakeStore) QuoteCategoryMap() (map[int64][]store.Category, error) {
 	return out, nil
 }
 
-// catCount reports how many quotes are tagged with the category.
 func (f *fakeStore) catCount(cid int64) int {
 	n := 0
 	for _, cids := range f.tags {
@@ -471,8 +469,6 @@ func removeID(xs []int64, x int64) []int64 {
 }
 
 func (f *fakeStore) Close() error { return nil }
-
-// --- helpers ---
 
 func newServer(t *testing.T, s store.Store) *server.Server {
 	t.Helper()
@@ -526,7 +522,7 @@ func TestIndexShowsBlockCount(t *testing.T) {
 }
 
 func TestCollectionViewShowsBlockCount(t *testing.T) {
-	fs, cid := fakeWithCollection(t) // holds quotes 1, 2
+	fs, cid := fakeWithCollection(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "GET", fmt.Sprintf("/collections/%d", cid), "")
 	if !strings.Contains(rec.Body.String(), "2 blocks") {
@@ -628,7 +624,7 @@ func TestCreateRendersSortedList(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
-	// create re-renders the whole list so the new quote lands in char_count order.
+
 	if !strings.Contains(rec.Body.String(), `id="quote-list"`) {
 		t.Error("create should re-render the full quote list, not a single block")
 	}
@@ -643,7 +639,7 @@ func TestExportTxt(t *testing.T) {
 	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/plain") {
 		t.Errorf("Content-Type = %q", ct)
 	}
-	// The dot divider (".  \n.  \n.") joins consecutive quotes in the export.
+
 	if !strings.Contains(rec.Body.String(), ".  \n.  \n.") {
 		t.Error("export missing dot separator")
 	}
@@ -682,8 +678,7 @@ func TestEditFormPrefilled(t *testing.T) {
 	if !strings.Contains(body, `Human beings are shady`) {
 		t.Error("edit form missing content")
 	}
-	// The edit form keeps the block's id so HTMX can target it on submit after
-	// the form replaced the block via outerHTML.
+
 	if !strings.Contains(body, `id="quote-1"`) {
 		t.Error("edit form missing id=quote-1 handle")
 	}
@@ -750,8 +745,7 @@ func TestCreateCollectionFromSelection(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d", rec.Code)
 	}
-	// Creating from the selection makes the new collection active and swaps the
-	// collection zone in place (no full redirect).
+
 	if loc := rec.Header().Get("HX-Redirect"); loc != "" {
 		t.Errorf("create should swap in place, got HX-Redirect = %q", loc)
 	}
@@ -768,7 +762,7 @@ func TestCreateCollectionFromSelection(t *testing.T) {
 }
 
 func TestAddToCollectionItems(t *testing.T) {
-	fs, cid := fakeWithCollection(t) // collection holds quotes 1, 2; quote 3 also exists
+	fs, cid := fakeWithCollection(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/items", cid), "id=3",
 		"Content-Type", "application/x-www-form-urlencoded")
@@ -778,7 +772,7 @@ func TestAddToCollectionItems(t *testing.T) {
 	if loc := rec.Header().Get("HX-Redirect"); loc != fmt.Sprintf("/?col=%d", cid) {
 		t.Errorf("HX-Redirect = %q, want /?col=%d", loc, cid)
 	}
-	// New item (3) lands on top; existing order (1, 2) preserved.
+
 	qs, _ := fs.CollectionQuotes(cid)
 	if len(qs) != 3 || qs[0].ID != 3 || qs[1].ID != 1 || qs[2].ID != 2 {
 		t.Errorf("after add = %+v", qs)
@@ -805,7 +799,7 @@ func TestCollectionView(t *testing.T) {
 	if !strings.Contains(body, "Human beings are shady") {
 		t.Error("collection view missing its quotes")
 	}
-	// The collection renders in its own zone, with read-only, draggable blocks.
+
 	if !strings.Contains(body, `id="collection-list"`) {
 		t.Error("collection zone should render the collection list")
 	}
@@ -824,7 +818,7 @@ func TestCollectionView(t *testing.T) {
 }
 
 func TestCollectionReorder(t *testing.T) {
-	fs, cid := fakeWithCollection(t) // collection holds quotes 1, 2 (in that order)
+	fs, cid := fakeWithCollection(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/reorder", cid),
 		`{"ids":[2,1]}`, "Content-Type", "application/json")
@@ -888,7 +882,7 @@ func fakeWithCategory(t *testing.T) (*fakeStore, int64) {
 }
 
 func TestCategoryView(t *testing.T) {
-	fs, cid := fakeWithCategory(t) // category tags quotes 1 and 2
+	fs, cid := fakeWithCategory(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "GET", fmt.Sprintf("/categories/%d", cid), "")
 	if rec.Code != http.StatusOK {
@@ -898,11 +892,11 @@ func TestCategoryView(t *testing.T) {
 	if !strings.Contains(body, "Human beings are shady") {
 		t.Error("category view missing its quotes")
 	}
-	// The category filters the root column, whose title is "#name".
+
 	if !strings.Contains(body, "#wisdom") {
 		t.Error("category view missing #name title")
 	}
-	// The root column stays editable (copy + edit); the rail exposes delete.
+
 	if !strings.Contains(body, `data-action="copy"`) {
 		t.Error("root blocks should be copyable")
 	}
@@ -1061,7 +1055,7 @@ func TestDeleteCategoryHandler(t *testing.T) {
 }
 
 func TestQuoteChips(t *testing.T) {
-	fs, _ := fakeWithCategory(t) // quote 1 tagged "wisdom"
+	fs, _ := fakeWithCategory(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "GET", "/quotes/1/categories", "")
 	if rec.Code != http.StatusOK {
@@ -1077,7 +1071,7 @@ func TestQuoteChips(t *testing.T) {
 }
 
 func TestEditQuoteCategories(t *testing.T) {
-	fs, _ := fakeWithCategory(t) // quote 1 tagged "wisdom" (category id 1)
+	fs, _ := fakeWithCategory(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "GET", "/quotes/1/categories/edit", "")
 	if rec.Code != http.StatusOK {
@@ -1096,7 +1090,7 @@ func TestEditQuoteCategories(t *testing.T) {
 }
 
 func TestSetQuoteCategories(t *testing.T) {
-	fs, cid := fakeWithCategory(t) // quote 3 exists, untagged
+	fs, cid := fakeWithCategory(t)
 	cid2, err := fs.CreateCategory("joy")
 	if err != nil {
 		t.Fatal(err)
@@ -1136,8 +1130,6 @@ func TestSetQuoteCategoriesWithNewName(t *testing.T) {
 	}
 }
 
-// TestSetQuoteCategoriesWithExistingName: typing an already-existing category
-// name in the editor selects it instead of erroring or duplicating it.
 func TestSetQuoteCategoriesWithExistingName(t *testing.T) {
 	fs := newFake(sampleQuote(1))
 	if _, err := fs.CreateCategory("wisdom"); err != nil {
@@ -1159,7 +1151,7 @@ func TestSetQuoteCategoriesWithExistingName(t *testing.T) {
 }
 
 func TestCategoryExport(t *testing.T) {
-	fs, cid := fakeWithCategory(t) // category tags quotes 1 and 2
+	fs, cid := fakeWithCategory(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "GET", fmt.Sprintf("/categories/%d/export.txt", cid), "")
 	if rec.Code != http.StatusOK {
@@ -1185,7 +1177,7 @@ func TestSetQuoteCategoriesUnknownQuote(t *testing.T) {
 }
 
 func TestIndexSidebarAndChips(t *testing.T) {
-	fs, _ := fakeWithCategory(t) // quote 1 tagged "wisdom"
+	fs, _ := fakeWithCategory(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "GET", "/", "")
 	if rec.Code != http.StatusOK {
@@ -1236,14 +1228,14 @@ func TestRenameCollectionUnknown(t *testing.T) {
 }
 
 func TestInsertCollectionItemsHandler(t *testing.T) {
-	fs, cid := fakeWithCollection(t) // holds quotes 1, 2; quote 3 also exists
+	fs, cid := fakeWithCollection(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/insert", cid), "id=3&pos=2",
 		"Content-Type", "application/x-www-form-urlencoded")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d", rec.Code)
 	}
-	// Inserting quote 3 at position 2 yields [1, 3, 2].
+
 	qs, _ := fs.CollectionQuotes(cid)
 	want := []int64{1, 3, 2}
 	if len(qs) != len(want) {
@@ -1303,7 +1295,7 @@ func TestCollectionPaneEmpty(t *testing.T) {
 }
 
 func TestRootPaneCategoryFilter(t *testing.T) {
-	fs, cid := fakeWithCategory(t) // tags quotes 1 and 2
+	fs, cid := fakeWithCategory(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "GET", fmt.Sprintf("/pane/root?cat=%d", cid), "")
 	if rec.Code != http.StatusOK {
@@ -1322,7 +1314,7 @@ func TestRootPaneCategoryFilter(t *testing.T) {
 }
 
 func TestRootBlockShowsCollectionChips(t *testing.T) {
-	fs, cid := fakeWithCollection(t) // quotes 1 and 2 are in collection 1
+	fs, cid := fakeWithCollection(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "GET", "/", "")
 	body := rec.Body.String()
@@ -1334,9 +1326,6 @@ func TestRootBlockShowsCollectionChips(t *testing.T) {
 	}
 }
 
-// failingStore returns errStoreFails from every Store method so each handler's
-// error branch (serverError / the handleStoreErr default path) is exercised.
-// Close is the only method that succeeds.
 type failingStore struct{}
 
 var errStoreFails = errors.New("store unavailable")
@@ -1376,8 +1365,6 @@ func (failingStore) SetQuoteCategories(int64, []int64) error               { ret
 func (failingStore) QuoteCategoryMap() (map[int64][]store.Category, error) { return nil, errStoreFails }
 func (failingStore) Close() error                                          { return nil }
 
-// TestHandlerStoreErrors drives every mutating/reading handler against a store
-// that always fails, so the serverError / handleStoreErr paths are covered.
 func TestHandlerStoreErrors(t *testing.T) {
 	srv := newServer(t, failingStore{})
 	cases := []struct {
@@ -1495,9 +1482,9 @@ func TestCollectionReorderUnknownCollection(t *testing.T) {
 }
 
 func TestInsertCollectionItemsNonNumericPos(t *testing.T) {
-	fs, cid := fakeWithCollection(t) // holds quotes 1, 2; quote 3 also exists
+	fs, cid := fakeWithCollection(t)
 	srv := newServer(t, fs)
-	// A non-numeric pos falls back to 1, so quote 3 is prepended.
+
 	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/insert", cid), "id=3&pos=abc",
 		"Content-Type", "application/x-www-form-urlencoded")
 	if rec.Code != http.StatusOK {
@@ -1510,7 +1497,6 @@ func TestInsertCollectionItemsNonNumericPos(t *testing.T) {
 }
 
 func TestIndexUnknownCollectionClearsCol(t *testing.T) {
-	// A stale ?col= for a missing collection clears ActiveColID instead of 500ing.
 	srv := newServer(t, newFake(sampleQuote(1)))
 	rec := do(t, srv, "GET", "/?col=999", "")
 	if rec.Code != http.StatusOK {
@@ -1522,17 +1508,12 @@ func TestIndexUnknownCollectionClearsCol(t *testing.T) {
 }
 
 func TestIndexUnknownCategoryEmptyRoot(t *testing.T) {
-	// A stale ?cat= for a missing category renders an empty root pane, not 500.
 	srv := newServer(t, newFake(sampleQuote(1)))
 	rec := do(t, srv, "GET", "/?cat=999", "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
 }
-
-// Each wrapper embeds a *fakeStore (so the data-backed methods work) and
-// overrides exactly one method to fail, so a handler's deeper error branch —
-// the second or third store call failing after the first succeeds — is reached.
 
 type failList struct{ *fakeStore }
 
@@ -1661,7 +1642,6 @@ func TestSetQuoteCategoriesDeepErrors(t *testing.T) {
 }
 
 func TestSwapCollectionZoneBuildError(t *testing.T) {
-	// createCollection -> swapCollectionZone -> buildPageData -> QuoteCategoryMap fails.
 	assert500(t, newServer(t, failCatMap{newFake(sampleQuote(1))}), "POST", "/collections", "id=1",
 		"Content-Type", "application/x-www-form-urlencoded")
 }
@@ -1673,8 +1653,6 @@ func TestRenameCollectionRailError(t *testing.T) {
 		"Content-Type", "application/x-www-form-urlencoded")
 }
 
-// TestRemainingHandlerDeepErrors covers the second-call error branches the
-// all-failing store cannot reach (the first call must succeed).
 func TestRemainingHandlerDeepErrors(t *testing.T) {
 	t.Run("quoteChips QuoteCategoryMap fails", func(t *testing.T) {
 		assert500(t, newServer(t, failCatMap{newFake(sampleQuote(1))}), "GET", "/quotes/1/categories", "")
@@ -1697,7 +1675,6 @@ func TestRemainingHandlerDeepErrors(t *testing.T) {
 }
 
 func TestRenderLeftRailError(t *testing.T) {
-	// createCategory succeeds, then renderLeftRail -> railData -> ListCategories err.
 	assert500(t, newServer(t, failListCats{newFake(sampleQuote(1))}),
 		"POST", "/categories", "name=x", "Content-Type", "application/x-www-form-urlencoded")
 }

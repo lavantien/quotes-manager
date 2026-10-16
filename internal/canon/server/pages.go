@@ -15,7 +15,7 @@ import (
 )
 
 func (s *Server) registerPageRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /{$}", s.pageDashboard)
+	mux.HandleFunc("GET /dashboard", s.pageDashboard)
 	mux.HandleFunc("GET /texts", s.pageTexts)
 	mux.HandleFunc("GET /texts/branch", s.pageTextsBranch)
 	mux.HandleFunc("GET /texts/{muid}", s.pageText)
@@ -29,7 +29,6 @@ func (s *Server) registerPageRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /pipeline", s.pagePipelineStart)
 	mux.HandleFunc("GET /discrepancies", s.pageDiscrepancies)
 	mux.HandleFunc("GET /partials/job/{id}", s.pageJobStatus)
-	mux.HandleFunc("/", s.pageNotFound)
 }
 
 func (s *Server) renderPage(w http.ResponseWriter, status int, name string, data any) {
