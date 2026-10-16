@@ -34,7 +34,7 @@ func serveMerged(ctx context.Context, cfg *config.Config) error {
 		return err
 	}
 	root := http.NewServeMux()
-	server.New(st).RegisterRoutes(root)
+	server.New(st, server.WithLimits(cfg.Server.DefaultLimit, cfg.Server.MaxLimit)).RegisterRoutes(root)
 	canonSrv.RegisterRoutes(root)
 	srv := &http.Server{
 		Addr:         cfg.Server.Addr,

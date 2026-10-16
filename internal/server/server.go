@@ -9,13 +9,19 @@ import (
 )
 
 type Server struct {
-	store store.Store
-	tmpl  *template.Template
-	mux   *http.ServeMux
+	store        store.Store
+	tmpl         *template.Template
+	mux          *http.ServeMux
+	defaultLimit int
+	maxLimit     int
 }
 
-func New(s store.Store) *Server {
-	srv := &Server{store: s, tmpl: mustTemplates()}
+func New(s store.Store, opts ...Option) *Server {
+	def, max := limitsFromConfig()
+	srv := &Server{store: s, tmpl: mustTemplates(), defaultLimit: def, maxLimit: max}
+	for _, o := range opts {
+		o(srv)
+	}
 	srv.mux = srv.routes()
 	return srv
 }
@@ -58,6 +64,8 @@ func (s *Server) RegisterRoutes(m *http.ServeMux) {
 	m.HandleFunc("GET /collections/{cid}/export.txt", s.collectionExport)
 	m.HandleFunc("GET /ids.txt", s.corpusIDs)
 	m.HandleFunc("GET /collections/{cid}/ids.txt", s.collectionIDs)
+	m.HandleFunc("GET /api/v1/quotes", s.apiQuotesListHandler)
+	m.HandleFunc("GET /api/v1/quotes/{id}", s.apiQuoteGetHandler)
 	m.HandleFunc("GET /pane/root", s.rootPaneHandler)
 	m.HandleFunc("GET /pane/collection", s.collectionPaneHandler)
 	m.HandleFunc("GET /pane/check", s.checkPaneHandler)
