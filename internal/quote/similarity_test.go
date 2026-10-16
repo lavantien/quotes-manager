@@ -65,10 +65,10 @@ func TestJaccard(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			got := Jaccard(tc.a, tc.b)
-			if abs(got-tc.want) > 1e-9 {
+			if !(got >= tc.want-1e-9 && got <= tc.want+1e-9) {
 				t.Errorf("Jaccard = %v, want %v", got, tc.want)
 			}
-			if rev := Jaccard(tc.b, tc.a); abs(got-rev) > 1e-12 {
+			if rev := Jaccard(tc.b, tc.a); !(abs(got-rev) <= 1e-12) {
 				t.Errorf("Jaccard not symmetric: %v vs %v", got, rev)
 			}
 		})
@@ -104,7 +104,6 @@ func TestGroupDuplicates(t *testing.T) {
 	})
 
 	t.Run("threshold boundary not grouped", func(t *testing.T) {
-		// Jaccard exactly 0.8 (4 shared / 5 union) must NOT group (> threshold).
 		is := items(mk(1, "a b c d"), mk(2, "a b c d e"))
 		if got := GroupDuplicates(is, DefaultDuplicateThreshold); len(got) != 0 {
 			t.Errorf("expected no group at Jaccard==threshold, got %v", got)
@@ -112,7 +111,6 @@ func TestGroupDuplicates(t *testing.T) {
 	})
 
 	t.Run("above threshold grouped", func(t *testing.T) {
-		// 5 shared / 6 union ~= 0.833 > 0.8.
 		is := items(mk(1, "a b c d e"), mk(2, "a b c d e f"))
 		got := GroupDuplicates(is, DefaultDuplicateThreshold)
 		if len(got) != 1 || len(got[0]) != 2 {
@@ -121,7 +119,6 @@ func TestGroupDuplicates(t *testing.T) {
 	})
 
 	t.Run("transitive chaining via a bridge", func(t *testing.T) {
-		// A~B and B~C are > 0.8; A~C is ~0.667. Union-find chains all three.
 		is := items(
 			mk(1, "w1 w2 w3 w4 w5 w6 w7 w8 w9 a"), // A
 			mk(2, "w1 w2 w3 w4 w5 w6 w7 w8 w9 b"), // B (bridge)
@@ -148,6 +145,20 @@ func TestGroupDuplicates(t *testing.T) {
 		}
 		if !reflect.DeepEqual(got[0], []int64{1, 2, 3}) {
 			t.Errorf("expected [1 2 3], got %v", got[0])
+		}
+	})
+
+	t.Run("groups in representative order", func(t *testing.T) {
+		is := items(
+			mk(10, "one two three four five"),
+			mk(20, "alpha beta gamma delta epsilon"),
+			mk(30, "one two three four five"),
+			mk(40, "alpha beta gamma delta epsilon"),
+		)
+		got := GroupDuplicates(is, DefaultDuplicateThreshold)
+		want := [][]int64{{10, 30}, {20, 40}}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, want %v", got, want)
 		}
 	})
 
@@ -185,7 +196,7 @@ func TestJaccardProperty(t *testing.T) {
 	for i := 0; i < 2000; i++ {
 		a, b := randSet(), randSet()
 		j := Jaccard(a, b)
-		if j < 0 || j > 1 {
+		if !(j >= 0 && j <= 1) {
 			t.Fatalf("Jaccard %v out of [0,1]", j)
 		}
 		if abs(Jaccard(b, a)-j) > 1e-12 {

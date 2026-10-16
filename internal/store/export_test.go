@@ -158,3 +158,40 @@ func equalInts(a, b []int64) bool {
 	}
 	return true
 }
+
+func TestImportPositionsKeepInsertAtBoundary(t *testing.T) {
+	src := newTestStore(t)
+	var ids []int64
+	for _, body := range []string{"a", "b", "c"} {
+		ids = append(ids, mustCreate(t, src, quote.New(body, body, []string{body})))
+	}
+	cid, err := src.CreateCollection(ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dump, err := src.Export()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dst := newTestStore(t)
+	if err := dst.Import(dump); err != nil {
+		t.Fatal(err)
+	}
+	q4 := mustCreate(t, dst, quote.New("d", "d", []string{"d"}))
+	if err := dst.InsertAtCollection(cid, []int64{q4}, 1); err != nil {
+		t.Fatal(err)
+	}
+	qs, err := dst.CollectionQuotes(cid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := append([]int64{q4}, ids...)
+	if len(qs) != len(want) {
+		t.Fatalf("collection = %v, want %v", ids, want)
+	}
+	for i, q := range qs {
+		if q.ID != want[i] {
+			t.Errorf("pos %d = %d, want %d", i, q.ID, want[i])
+		}
+	}
+}

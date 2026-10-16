@@ -58,7 +58,6 @@ func TestParseCanonicalEmpty(t *testing.T) {
 }
 
 func TestParseCanonicalPlainTailFallback(t *testing.T) {
-	// A lightly edited paste without the bold markers still imports.
 	got := ParseCanonical("*a passage* - the Buddha, MN 9")
 	if len(got) != 1 {
 		t.Fatalf("got %d, want 1", len(got))
@@ -69,7 +68,6 @@ func TestParseCanonicalPlainTailFallback(t *testing.T) {
 }
 
 func TestParseCanonicalNoSuttaID(t *testing.T) {
-	// A citation with no recognizable sutta id keeps the whole citation as the id.
 	got := ParseCanonical("*a passage* - **an unknown speaker**")
 	if len(got) != 1 {
 		t.Fatalf("got %d, want 1", len(got))
@@ -80,7 +78,6 @@ func TestParseCanonicalNoSuttaID(t *testing.T) {
 }
 
 func TestParseCanonicalRejectsEmptyPassages(t *testing.T) {
-	// A citation tail with no passage lines before it is skipped.
 	in := "*real* - **the Buddha, MN 1**\n\n\n.  \n.  \n.\n\n\n - **the Buddha, MN 2**"
 	got := ParseCanonical(in)
 	if len(got) != 1 {
@@ -99,6 +96,12 @@ func TestParseCanonicalSeedExport(t *testing.T) {
 	got := ParseCanonical(string(data))
 	if len(got) != 109 {
 		t.Errorf("got %d quotes from the seed export, want 109", len(got))
+	}
+}
+
+func TestParseCanonicalRejectsBlankCitation(t *testing.T) {
+	if got := ParseCanonical("*p* - ** **"); len(got) != 0 {
+		t.Errorf("got %d quotes, want 0 (blank citation)", len(got))
 	}
 }
 

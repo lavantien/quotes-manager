@@ -6,19 +6,13 @@ import (
 	"unicode"
 )
 
-// DefaultDuplicateThreshold is the word-level Jaccard score above which two
-// quotes are treated as near-duplicates.
 const DefaultDuplicateThreshold = 0.8
 
-// DupItem pairs a stable identifier with the text used to judge near-duplicates.
 type DupItem struct {
 	ID   int64
 	Text string
 }
 
-// CleanText lowercases s and drops every rune that is not a letter, digit, or
-// whitespace, leaving text ready for word-level comparison. Whitespace is
-// preserved (not collapsed) so callers can tokenize with strings.Fields.
 func CleanText(s string) string {
 	s = strings.ToLower(s)
 	var b strings.Builder
@@ -31,8 +25,6 @@ func CleanText(s string) string {
 	return b.String()
 }
 
-// Words returns the set of unique words in s after cleaning (lowercase, no
-// punctuation). The result has no duplicates and no ordering.
 func Words(s string) map[string]struct{} {
 	set := make(map[string]struct{})
 	for _, w := range strings.Fields(CleanText(s)) {
@@ -41,15 +33,9 @@ func Words(s string) map[string]struct{} {
 	return set
 }
 
-// Jaccard returns the word-level Jaccard similarity |a∩b| / |a∪b| of two word
-// sets. It returns 0 when both sets are empty (so empty input never pairs).
 func Jaccard(a, b map[string]struct{}) float64 {
-	if len(a) == 0 && len(b) == 0 {
+	if len(a)+len(b) == 0 {
 		return 0
-	}
-	// Iterate the smaller set to count the intersection.
-	if len(b) < len(a) {
-		a, b = b, a
 	}
 	inter := 0
 	for w := range a {
@@ -61,13 +47,6 @@ func Jaccard(a, b map[string]struct{}) float64 {
 	return float64(inter) / float64(union)
 }
 
-// GroupDuplicates returns groups of item IDs whose text is near-duplicate:
-// two items are joined when their word-level Jaccard similarity is strictly
-// greater than threshold, and groups grow transitively via a disjoint set
-// (union-find). Only groups with at least two members are returned; a quote
-// with no near-duplicate is never surfaced. Each group is sorted by input
-// order (so the first id is the representative), and groups are returned in
-// representative order.
 func GroupDuplicates(items []DupItem, threshold float64) [][]int64 {
 	n := len(items)
 	sets := make([]map[string]struct{}, n)
@@ -112,8 +91,6 @@ func GroupDuplicates(items []DupItem, threshold float64) [][]int64 {
 	return out
 }
 
-// unionFind is a standard disjoint set with path compression and union by
-// arbitrary parent assignment, used only by GroupDuplicates.
 type unionFind struct {
 	parent []int
 }
@@ -128,7 +105,7 @@ func newUnionFind(n int) *unionFind {
 
 func (u *unionFind) find(x int) int {
 	for u.parent[x] != x {
-		u.parent[x] = u.parent[u.parent[x]] // path compression
+		u.parent[x] = u.parent[u.parent[x]]
 		x = u.parent[x]
 	}
 	return x

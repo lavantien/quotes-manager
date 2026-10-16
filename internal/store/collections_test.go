@@ -101,7 +101,6 @@ func TestDeleteCollection(t *testing.T) {
 	if len(cols) != 0 {
 		t.Errorf("collection not deleted: %+v", cols)
 	}
-	// Deleting a quote that was in the (now deleted) collection still works.
 	if err := s.Delete(q); err != nil {
 		t.Errorf("delete quote after collection delete: %v", err)
 	}
@@ -185,7 +184,6 @@ func TestReorderCollectionUnknownQuote(t *testing.T) {
 	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("err = %v, want ErrNotFound", err)
 	}
-	// Failed reorder must not leave partial state: q1 still first.
 	qs, _ := s.CollectionQuotes(cid)
 	if len(qs) != 1 || qs[0].ID != q1 {
 		t.Errorf("partial reorder changed state: %+v", qs)
@@ -241,7 +239,6 @@ func TestAddToCollectionSkipsDuplicates(t *testing.T) {
 	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
 	cid, _ := s.CreateCollection([]int64{q1, q2})
 
-	// q1 is already a member; q3 is new. q3 lands on top; q1 is not duplicated.
 	if err := s.AddToCollection(cid, []int64{q1, q3, q1}); err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +262,6 @@ func TestAddToCollectionUnknownCollection(t *testing.T) {
 	}
 }
 
-// collectionIDs is a small helper pulling the ordered id list out of []Quote.
 func collectionIDs(qs []Quote) []int64 {
 	out := make([]int64, len(qs))
 	for i, q := range qs {
@@ -302,7 +298,6 @@ func TestRenameCollection(t *testing.T) {
 	if got.Name != "Favorites" {
 		t.Errorf("name = %q, want Favorites", got.Name)
 	}
-	// Names are not unique: two collections may share a name.
 	cid2, _ := s.CreateCollection(nil)
 	if err := s.RenameCollection(cid2, "Favorites"); err != nil {
 		t.Fatalf("rename to duplicate name: %v", err)
@@ -357,7 +352,6 @@ func TestInsertAtCollectionSkipsDuplicates(t *testing.T) {
 	q4 := mustCreate(t, s, quote.New("D", "D", []string{"d"}))
 	cid, _ := s.CreateCollection([]int64{q1, q2, q3})
 
-	// q2 is already a member -> skipped; q4 is new and lands at pos 1, shifting all.
 	if err := s.InsertAtCollection(cid, []int64{q2, q4, q2}, 1); err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +365,6 @@ func TestInsertAtCollectionClampsHighAppends(t *testing.T) {
 	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
 	cid, _ := s.CreateCollection([]int64{q1, q2})
 
-	// pos far beyond the end clamps to count+1 -> append.
 	if err := s.InsertAtCollection(cid, []int64{q3}, 99); err != nil {
 		t.Fatal(err)
 	}
@@ -385,7 +378,6 @@ func TestInsertAtCollectionClampsLowPrepends(t *testing.T) {
 	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
 	cid, _ := s.CreateCollection([]int64{q1, q2})
 
-	// pos < 1 clamps to 1 -> prepend.
 	if err := s.InsertAtCollection(cid, []int64{q3}, 0); err != nil {
 		t.Fatal(err)
 	}
@@ -460,4 +452,114 @@ func mustCollectionQuotes(t *testing.T, s *SQLiteStore, cid int64) []Quote {
 		t.Fatal(err)
 	}
 	return qs
+}
+
+func assertCollectionOrder(t *testing.T, s *SQLiteStore, cid int64, want []int64) {
+	t.Helper()
+	qs, err := s.CollectionQuotes(cid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(qs) != len(want) {
+		t.Fatalf("collection = %v, want %v", quoteIDs(qs), want)
+	}
+	for i, q := range qs {
+		if q.ID != want[i] {
+			t.Errorf("pos %d = %d, want %d", i, q.ID, want[i])
+		}
+	}
+}
+
+func quoteIDs(qs []Quote) []int64 {
+	out := make([]int64, len(qs))
+	for i, q := range qs {
+		out[i] = q.ID
+	}
+	return out
+}
+
+func TestAddToCollectionDedupsInput(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	cid, err := s.CreateCollection([]int64{q1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AddToCollection(cid, []int64{q2, q2}); err != nil {
+		t.Fatal(err)
+	}
+	assertCollectionOrder(t, s, cid, []int64{q2, q1})
+}
+
+func TestAddToCollectionThenInsertAtFront(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	q4 := mustCreate(t, s, quote.New("D", "D", []string{"d"}))
+	q5 := mustCreate(t, s, quote.New("E", "E", []string{"e"}))
+	q6 := mustCreate(t, s, quote.New("F", "F", []string{"f"}))
+	cid, err := s.CreateCollection([]int64{q1, q2, q3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AddToCollection(cid, []int64{q4, q5}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.InsertAtCollection(cid, []int64{q6}, 1); err != nil {
+		t.Fatal(err)
+	}
+	assertCollectionOrder(t, s, cid, []int64{q6, q4, q5, q1, q2, q3})
+}
+
+func TestInsertAtCollectionDedupsInput(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	q4 := mustCreate(t, s, quote.New("D", "D", []string{"d"}))
+	cid, err := s.CreateCollection([]int64{q1, q2, q3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.InsertAtCollection(cid, []int64{q4, q4}, 1); err != nil {
+		t.Fatal(err)
+	}
+	assertCollectionOrder(t, s, cid, []int64{q4, q1, q2, q3})
+}
+
+func TestInsertAtCollectionBeforeLast(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	q4 := mustCreate(t, s, quote.New("D", "D", []string{"d"}))
+	cid, err := s.CreateCollection([]int64{q1, q2, q3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.InsertAtCollection(cid, []int64{q4}, 3); err != nil {
+		t.Fatal(err)
+	}
+	assertCollectionOrder(t, s, cid, []int64{q1, q2, q4, q3})
+}
+
+func TestReorderThenInsertAtFront(t *testing.T) {
+	s := newTestStore(t)
+	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
+	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
+	q3 := mustCreate(t, s, quote.New("C", "C", []string{"c"}))
+	q4 := mustCreate(t, s, quote.New("D", "D", []string{"d"}))
+	cid, err := s.CreateCollection([]int64{q1, q2, q3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ReorderCollection(cid, []int64{q3, q2, q1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.InsertAtCollection(cid, []int64{q4}, 1); err != nil {
+		t.Fatal(err)
+	}
+	assertCollectionOrder(t, s, cid, []int64{q4, q3, q2, q1})
 }

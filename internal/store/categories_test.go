@@ -8,8 +8,6 @@ import (
 	"github.com/lavantien/quotes-manager/internal/quote"
 )
 
-// TestCategorySchemaCreatesTables confirms Open provisions the categories and
-// category_items tables alongside the existing quotes/collections tables.
 func TestCategorySchemaCreatesTables(t *testing.T) {
 	s := newTestStore(t)
 	rows, err := s.db.Query(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('categories', 'category_items')`)
@@ -50,9 +48,6 @@ func TestCreateCategoryAndList(t *testing.T) {
 	}
 }
 
-// TestListCategoriesOrderedByNameNOCASE verifies the sidebar order is
-// alphabetical, case-insensitive (so "Joy" lands between "impermanence" and
-// "wisdom"), with id as a stable tiebreaker.
 func TestListCategoriesOrderedByNameNOCASE(t *testing.T) {
 	s := newTestStore(t)
 	for _, name := range []string{"wisdom", "Joy", "impermanence"} {
@@ -81,11 +76,9 @@ func TestCreateCategoryDuplicate(t *testing.T) {
 	if _, err := s.CreateCategory("wisdom"); !errors.Is(err, ErrDuplicate) {
 		t.Errorf("err = %v, want ErrDuplicate", err)
 	}
-	// COLLATE NOCASE makes the unique constraint case-insensitive.
 	if _, err := s.CreateCategory("WISDOM"); !errors.Is(err, ErrDuplicate) {
 		t.Errorf("err = %v, want ErrDuplicate (case-insensitive)", err)
 	}
-	// A failed create must not change the list.
 	cats, _ := s.ListCategories()
 	if len(cats) != 1 {
 		t.Errorf("after duplicate create, categories = %+v", cats)
@@ -128,7 +121,6 @@ func TestRenameCategoryDuplicate(t *testing.T) {
 	if err := s.RenameCategory(id, "joy"); !errors.Is(err, ErrDuplicate) {
 		t.Errorf("err = %v, want ErrDuplicate", err)
 	}
-	// A failed rename must leave the original name intact.
 	c, _ := s.GetCategory(id)
 	if c.Name != "wisdom" {
 		t.Errorf("name changed on failed rename: %q", c.Name)
@@ -147,7 +139,6 @@ func TestDeleteCategoryCascadesItems(t *testing.T) {
 	q1 := mustCreate(t, s, quote.New("A", "A", []string{"a"}))
 	q2 := mustCreate(t, s, quote.New("B", "B", []string{"b"}))
 	cid, _ := s.CreateCategory("wisdom")
-	// SetQuoteCategories arrives in the next step; tag the quotes directly.
 	if _, err := s.db.Exec("INSERT INTO category_items (category_id, quote_id) VALUES (?,?), (?,?)", cid, q1, cid, q2); err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +155,6 @@ func TestDeleteCategoryCascadesItems(t *testing.T) {
 	if n != 0 {
 		t.Errorf("%d category_items rows survived the cascade", n)
 	}
-	// The quotes themselves are untouched.
 	if qs, _ := s.List(); len(qs) != 2 {
 		t.Errorf("quotes lost: %+v", qs)
 	}
@@ -250,7 +240,6 @@ func TestSetQuoteCategoriesUnknownCategory(t *testing.T) {
 	if err := s.SetQuoteCategories(q, []int64{cid, 999}); !errors.Is(err, ErrNotFound) {
 		t.Errorf("err = %v, want ErrNotFound", err)
 	}
-	// All-or-nothing: the valid membership was not written.
 	if got := mustMap(t, s)[q]; len(got) != 0 {
 		t.Errorf("partial state written: %+v", got)
 	}
@@ -275,13 +264,11 @@ func TestQuoteCategoryMap(t *testing.T) {
 	if got := catNames(m[q2]); len(got) != 1 || got[0] != "wisdom" {
 		t.Errorf("q2 = %v, want [wisdom]", got)
 	}
-	// Quotes without categories are simply absent from the map.
 	if _, ok := m[999]; ok {
 		t.Error("absent quote should not appear in the map")
 	}
 }
 
-// mustMap returns the quote->categories map or fails the test.
 func mustMap(t *testing.T, s *SQLiteStore) map[int64][]Category {
 	t.Helper()
 	m, err := s.QuoteCategoryMap()
@@ -291,7 +278,6 @@ func mustMap(t *testing.T, s *SQLiteStore) map[int64][]Category {
 	return m
 }
 
-// catNames returns just the names of a category slice (order preserved).
 func catNames(cs []Category) []string {
 	out := make([]string, len(cs))
 	for i, c := range cs {
@@ -345,5 +331,19 @@ func TestDeleteManyRemovesCategoryMembership(t *testing.T) {
 	cats, _ := s.ListCategories()
 	if cats[0].Count != 1 {
 		t.Errorf("count = %d, want 1", cats[0].Count)
+	}
+}
+
+func TestCreateCategoryNonConstraintErrorNotDuplicate(t *testing.T) {
+	s := newTestStore(t)
+	if _, err := s.db.Exec("DROP TABLE categories"); err != nil {
+		t.Fatal(err)
+	}
+	_, err := s.CreateCategory("wisdom")
+	if err == nil {
+		t.Fatal("expected an error after dropping the categories table")
+	}
+	if errors.Is(err, ErrDuplicate) {
+		t.Fatalf("non-constraint failure mapped to ErrDuplicate: %v", err)
 	}
 }

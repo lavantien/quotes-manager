@@ -110,12 +110,7 @@ func termsRegexp(terms []string) *regexp.Regexp {
 	if len(parts) == 0 {
 		return nil
 	}
-	sort.Slice(parts, func(i, j int) bool {
-		if len(parts[i]) != len(parts[j]) {
-			return len(parts[i]) > len(parts[j])
-		}
-		return parts[i] < parts[j]
-	})
+	sort.Slice(parts, func(i, j int) bool { return len(parts[i]) > len(parts[j]) })
 	return regexp.MustCompile("(?i)(?:" + strings.Join(parts, "|") + ")")
 }
 
