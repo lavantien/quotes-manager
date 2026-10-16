@@ -4,7 +4,7 @@ CGO_ENV := CGO_ENABLED=1
 TAGS := -tags sqlite_fts5
 GO := $(CGO_ENV) go
 
-ADDR ?= :8080
+ADDR ?= 127.0.0.1:8080
 DB   ?= database/quotes.db
 
 # Combined working-set ceiling the memory monitor enforces over every
@@ -42,8 +42,8 @@ help: ## show this help
 
 all: test ## run the full test suite (default)
 
-build: ## build the server binary into dist/
-	$(GO) build $(TAGS) -o $(BIN) ./cmd/server
+build: ## build the qm binary into dist/
+	$(GO) build $(TAGS) -o $(BIN) ./cmd/qm
 
 test: ## run the full test suite
 	$(GO) test $(TAGS) ./...
@@ -67,11 +67,11 @@ typecheck: ## compile every package, then go vet
 	$(GO) build $(TAGS) ./...
 	$(GO) vet $(TAGS) ./...
 
-run server: ## run the web server (http://localhost$(ADDR))
-	$(GO) run $(TAGS) ./cmd/server -addr $(ADDR) -db $(DB)
+run server: ## run the web server (http://$(ADDR))
+	$(GO) run $(TAGS) ./cmd/qm serve --addr $(ADDR) --db $(DB)
 
 extract: ## regenerate database/seed.sql + exports/shortest-first.md from dumps/
-	$(GO) run $(TAGS) ./cmd/extract
+	$(GO) run $(TAGS) ./cmd/qm extract
 
 seed: ## delete the database so the next 'make run' re-seeds it from seed.sql
 	rm -f $(DB)
@@ -86,14 +86,14 @@ clean: ## remove generated artifacts (database, binaries)
 
 coverage: ## recompute Go test coverage and refresh the README coverage badge
 	$(GO) test $(TAGS) -coverpkg=./... -coverprofile=coverage.out ./...
-	$(GO) run $(TAGS) ./cmd/coverage -profile=coverage.out -readme=readme.md
+	$(GO) run $(TAGS) ./cmd/qm coverage -profile=coverage.out -readme=readme.md
 	rm -f coverage.out
 
 screenshot: ## capture the home page into docs/home.png (needs Chrome or Edge)
-	$(GO) run $(TAGS) ./cmd/screenshot
+	$(GO) run $(TAGS) ./cmd/qm screenshot
 
 fixture: ## regenerate the clone-of-main test fixture (internal/store/storetest/testdata)
-	$(GO) run $(TAGS) ./cmd/fixture
+	$(GO) run $(TAGS) ./cmd/qm fixture
 
 monitor: ## memory guard over project processes (make monitor MONITOR_FOR=5s)
 	$(CGO_ENV) go run ./tools/memcapmon -cap $(MEMCAP) -poll 2s -for $(MONITOR_FOR)
