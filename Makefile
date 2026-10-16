@@ -7,6 +7,41 @@ GO := $(CGO_ENV) go
 ADDR ?= 127.0.0.1:8080
 DB   ?= database/quotes.db
 
+# Fuzz workers are pinned to 4: the default worker per core (20 here)
+# provokes worker deaths during input minimization on this machine, the
+# same hazard FuzzDpdExtract already documents.
+FUZZ_PARALLEL ?= 4
+FUZZ_TIME ?= 20s
+
+# Mutation scope: the canon pipeline packages plus the merged-app core.
+MUTATE_PKGS ?= internal/canon/norm,internal/canon/source/bilara,internal/canon/source/editions,internal/canon/source/dpd,internal/canon/triangulate,internal/canon/server,internal/canon/jobs,internal/canon/analytics,internal/canon/export,internal/quote,internal/search,internal/store,internal/server,internal/cli
+MUTATE_PARALLEL ?= 8
+
+E2E_TIMEOUT ?= 30m
+
+# Soft per-process ceiling for every spawned test process; the mutator adds
+# a hard 4 GiB job-object cap on top for its whole process tree.
+MEMSOFT ?= 4GiB
+
+# Hard Go runtime ceiling for memtest's bounded-memory run, so runaway
+# allocation fails the build instead of overflowing the machine.
+GOMEMLIMIT ?= 512MiB
+
+# Kill-on-close supervisor for every target that spawns a process tree:
+# Windows does not reparent-kill, so an externally stopped make task would
+# otherwise strand its go test binaries and compilers as orphans. The
+# mutator supervises itself through the same primitive.
+WRAP := go run ./tools/jobwrap
+
+# Race detector scope: the merged-app core. The full tree stays on the
+# plain test target.
+RACE_PKGS ?= ./internal/quote ./internal/search ./internal/store ./internal/server ./internal/cli ./internal/e2e
+
+# Pipeline stage driven through the built binary: sync, prune, parse,
+# load, triangulate, export, report, or all. No default: a bare
+# `make stage` must not kick off the full live pipeline by accident.
+STAGE ?=
+
 # Combined working-set ceiling the memory monitor enforces over every
 # project process (compilers, test binaries, mutation) while it runs;
 # MONITOR_FOR bounds its runtime for smoke runs, 0 means until killed.
@@ -16,15 +51,18 @@ MONITOR_FOR ?= 0
 # Vendored frontend assets, fetched by `make vendor-assets` into web/static
 # and served from there; nothing loads from a CDN at runtime. npm's latest
 # dist-tag still resolves htmx to 2.x, so the 4.x line rides the next tag
-# and the pins are mandatory: latest-first, when any dist-tag publishes
-# above the pin the target fetches it and moves file and pin together.
+# and the pins are mandatory: latest-first, when a stable dist-tag release
+# publishes above the pin (prerelease tags are ignored) the target fetches
+# it and moves file and pin together; offline it falls back to verifying
+# the pinned bytes.
 NPM_REGISTRY ?= https://registry.npmjs.org
+UNPKG ?= https://unpkg.com
 HTMX_VERSION ?= 4.0.0
 HTMX_SHA256 ?= e484d9171a9db30a39c8f16e3d709d4137f3211c659f8e6125816635033d593f
 CYTOSCAPE_VERSION ?= 3.34.4
 CYTOSCAPE_SHA256 ?= 081591ab735b2b6a3b31a3c60f8f3a3e2fee8c92939e0c7820ad1208571b6cd8
-HTMX_URL ?= https://unpkg.com/htmx.org@$(HTMX_VERSION)/dist/htmx.min.js
-CYTOSCAPE_URL ?= https://unpkg.com/cytoscape@$(CYTOSCAPE_VERSION)/dist/cytoscape.min.js
+HTMX_URL ?= $(UNPKG)/htmx.org@$(HTMX_VERSION)/dist/htmx.min.js
+CYTOSCAPE_URL ?= $(UNPKG)/cytoscape@$(CYTOSCAPE_VERSION)/dist/cytoscape.min.js
 
 # duckdb-go's prebuilt Windows static libs link against UCRT; the default
 # msvcrt-flavored mingw cannot. go-sqlite3 builds under either. Override
@@ -47,37 +85,15 @@ EXE := .exe
 endif
 BIN := dist/qm$(EXE)
 
-.PHONY: help all build test test-pkg vet fmt lint lint-pkg typecheck vendor-assets run server extract seed tidy clean coverage screenshot fixture monitor
+FZ := $(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS)
+
+.PHONY: help all build test test-pkg race vet fmt lint lint-pkg typecheck sloc fuzz fuzz-one mutate memtest e2e-hermetic e2e verify vendor-assets stage run server extract seed tidy clean coverage screenshot fixture monitor
 
 help: ## show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make <target>\n\nTargets:\n"} \
 	      /^[a-zA-Z_-]+:.*##/ { printf "  %-10s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 all: test ## run the full test suite (default)
-
-vendor-assets: ## verify or refresh the vendored htmx/cytoscape pins in web/static
-	@set -e; \
-	vendor_one() { \
-	  pkg=$$1; pinned=$$2; sha=$$3; file=$$4; ver_name=$$5; sha_name=$$6; \
-	  tags=$$(curl -fsSL $(NPM_REGISTRY)/-/package/$$pkg/dist-tags); \
-	  newest=$$(printf '%s\n' "$$tags" | sed 's/[^:]*:"\([^"]*\)"/\1\n/g' | grep -E '^[0-9]' | sort -V | tail -1); \
-	  if [ "$$newest" != "$$pinned" ] && [ "$$(printf '%s\n%s\n' "$$pinned" "$$newest" | sort -V | tail -1)" = "$$newest" ]; then \
-	    curl -fsSL "https://unpkg.com/$$pkg@$$newest/dist/$$file" -o web/static/$$file.tmp; \
-	    mv web/static/$$file.tmp web/static/$$file; \
-	    sum=$$(sha256sum web/static/$$file | cut -d' ' -f1); \
-	    sed -i "s/^$$ver_name ?=.*/$$ver_name ?= $$newest/" Makefile; \
-	    sed -i "s/^$$sha_name ?=.*/$$sha_name ?= $$sum/" Makefile; \
-	    echo "$$pkg: pin moved $$pinned -> $$newest (sha256 $$sum)"; \
-	  else \
-	    if ! echo "$$sha  web/static/$$file" | sha256sum -c --status -; then \
-	      curl -fsSL "https://unpkg.com/$$pkg@$$pinned/dist/$$file" -o web/static/$$file.tmp; \
-	      mv web/static/$$file.tmp web/static/$$file; \
-	    fi; \
-	    echo "$$sha  web/static/$$file" | sha256sum -c -; \
-	  fi; \
-	}; \
-	vendor_one htmx.org '$(HTMX_VERSION)' '$(HTMX_SHA256)' htmx.min.js HTMX_VERSION HTMX_SHA256; \
-	vendor_one cytoscape '$(CYTOSCAPE_VERSION)' '$(CYTOSCAPE_SHA256)' cytoscape.min.js CYTOSCAPE_VERSION CYTOSCAPE_SHA256
 
 build: ## build the qm binary into dist/
 	$(GO) build $(TAGS) -o $(BIN) ./cmd/qm
@@ -87,6 +103,9 @@ test: ## run the full test suite
 
 test-pkg: ## run one package's tests: make test-pkg PKG=./internal/config
 	$(GO) test $(TAGS) $(PKG)
+
+race: ## go test -race over the merged-app core (RACE_PKGS)
+	$(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS) -race -count=1 $(RACE_PKGS)
 
 vet: ## go vet
 	$(GO) vet $(TAGS) ./...
@@ -103,6 +122,97 @@ lint-pkg: ## lint one package: make lint-pkg PKG=./internal/config
 typecheck: ## compile every package, then go vet
 	$(GO) build $(TAGS) ./...
 	$(GO) vet $(TAGS) ./...
+
+sloc: ## enforce the 1000-line ceiling on every Go file
+	$(CGO_ENV) go run ./tools/sloc
+
+fuzz: ## fuzz every target in the repo for FUZZ_TIME each
+	$(FZ) -run '^$$' -fuzz FuzzAnalyticsSQLGate -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/analytics
+	$(FZ) -run '^$$' -fuzz FuzzEnsureNode -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/graph
+	$(FZ) -run '^$$' -fuzz FuzzPublishPointer -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/graph
+	$(FZ) -run '^$$' -fuzz FuzzSearchFTSText -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/graph
+	$(FZ) -run '^$$' -fuzz FuzzSegmentsMuid -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/graph
+	$(FZ) -run '^$$' -fuzz FuzzTreeDivisionKey -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/graph
+	$(FZ) -run '^$$' -fuzz FuzzPaliTokenizer -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/norm
+	$(FZ) -run '^$$' -fuzz FuzzRenderJSONRoundTrip -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/report
+	$(FZ) -run '^$$' -fuzz FuzzServerGraphCaps -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/server
+	$(FZ) -run '^$$' -fuzz FuzzServerLimits -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/server
+	$(FZ) -run '^$$' -fuzz FuzzServerReportPath -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/server
+	$(FZ) -run '^$$' -fuzz FuzzServerSearch -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/server
+	$(FZ) -run '^$$' -fuzz FuzzJobsStage -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/server
+	$(FZ) -run '^$$' -fuzz FuzzBilaraSegmentJSON -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/source/bilara
+	$(FZ) -run '^$$' -fuzz FuzzSegmentKey -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/source/bilara
+	$(FZ) -run '^$$' -fuzz FuzzDpdExtract -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/source/dpd
+	$(FZ) -run '^$$' -fuzz FuzzDpdInflections -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/source/dpd
+	$(FZ) -run '^$$' -fuzz FuzzHTMLSegments -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/source/editions
+	$(FZ) -run '^$$' -fuzz FuzzDpdKnownForms -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/triangulate
+	$(FZ) -run '^$$' -fuzz FuzzCapJoin -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/triangulate
+	$(FZ) -run '^$$' -fuzz FuzzParseDateTolerant -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/triangulate
+	$(FZ) -run '^$$' -fuzz FuzzSplitEnKey -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/triangulate
+	$(FZ) -run '^$$' -fuzz FuzzWebEscape -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/web
+	$(FZ) -run '^$$' -fuzz FuzzParseCanonical -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/quote
+	$(FZ) -run '^$$' -fuzz FuzzSearchParse -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/search
+
+fuzz-one: ## fuzz one target: make fuzz-one PKG=./internal/quote FUZZ_TARGET=FuzzParseCanonical
+	$(FZ) -run '^$$' -fuzz $(FUZZ_TARGET) -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) $(PKG)
+
+mutate: ## mutation-test MUTATE_PKGS, every surviving mutant fails the build
+	$(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) go run ./tools/mutator -packages $(MUTATE_PKGS) -tags sqlite_fts5 -parallel $(MUTATE_PARALLEL)
+
+memtest: ## hermetic pipeline + merged e2e under a hard GOMEMLIMIT
+	$(CGO_ENV) GOMEMLIMIT=$(GOMEMLIMIT) $(WRAP) go test $(TAGS) -count=1 -run 'TestPipelineMemoryBounded|TestE2EHermetic|TestMergedHermeticE2E' ./internal/cli ./internal/e2e -v -timeout 15m
+
+e2e-hermetic: ## merged-app hermetic e2e (internal/e2e + the cli hermetic pass)
+	$(CGO_ENV) $(WRAP) go test $(TAGS) -count=1 ./internal/e2e -v -timeout 15m
+	$(CGO_ENV) $(WRAP) go test $(TAGS) -count=1 ./internal/cli -run 'TestE2EHermetic' -v -timeout 10m
+
+e2e: ## live end-to-end pipeline (network, QM_E2E_LIVE gate)
+	QM_E2E_LIVE=1 $(CGO_ENV) $(WRAP) go test $(TAGS) -count=1 ./internal/cli -run 'TestE2ELive' -v -timeout $(E2E_TIMEOUT)
+
+verify: test memtest fmt lint typecheck sloc fuzz mutate e2e-hermetic ## run the full quality chain, fail-fast
+
+vendor-assets: ## verify or refresh the vendored htmx/cytoscape pins in web/static
+	@set -e; \
+	trap 'rm -f web/static/*.tmp' EXIT; \
+	vendor_one() { \
+	  pkg=$$1; pinned=$$2; sha=$$3; file=$$4; ver_name=$$5; sha_name=$$6; pinned_url=$$7; \
+	  if tags=$$(curl -fsSL $(NPM_REGISTRY)/-/package/$$pkg/dist-tags 2>/dev/null); then \
+	    newest=$$(printf '%s\n' "$$tags" | sed 's/[^:]*:"\([^"]*\)"/\1\n/g' | grep -E '^[0-9]' | grep -v -- '-' | sort -V | tail -1); \
+	  else \
+	    echo "$$pkg: registry unreachable, verifying the local pin only"; \
+	    newest=; \
+	  fi; \
+	  if [ -n "$$newest" ] && [ "$$newest" != "$$pinned" ] && [ "$$(printf '%s\n%s\n' "$$pinned" "$$newest" | sort -V | tail -1)" = "$$newest" ]; then \
+	    curl -fsSL "$(UNPKG)/$$pkg@$$newest/dist/$$file" -o web/static/$$file.tmp; \
+	    if head -c 1 web/static/$$file.tmp | grep -q '<'; then \
+	      echo "$$pkg: $(UNPKG)/$$pkg@$$newest/dist/$$file returned HTML, refusing to move the pin"; \
+	      exit 1; \
+	    fi; \
+	    mv web/static/$$file.tmp web/static/$$file; \
+	    sum=$$(sha256sum web/static/$$file | cut -d' ' -f1); \
+	    sed -i "s/^$$ver_name ?=.*/$$ver_name ?= $$newest/" Makefile; \
+	    sed -i "s/^$$sha_name ?=.*/$$sha_name ?= $$sum/" Makefile; \
+	    grep -q "^$$ver_name ?= $$newest\$$" Makefile || { echo "$$pkg: pin rewrite failed"; exit 1; }; \
+	    grep -q "^$$sha_name ?= $$sum\$$" Makefile || { echo "$$pkg: sha rewrite failed"; exit 1; }; \
+	    echo "$$pkg: pin moved $$pinned -> $$newest (sha256 $$sum)"; \
+	  else \
+	    if ! echo "$$sha  web/static/$$file" | sha256sum -c --status -; then \
+	      curl -fsSL "$$pinned_url" -o web/static/$$file.tmp; \
+	      if head -c 1 web/static/$$file.tmp | grep -q '<'; then \
+	        echo "$$pkg: $$pinned_url returned HTML, refusing to replace the pinned bytes"; \
+	        exit 1; \
+	      fi; \
+	      mv web/static/$$file.tmp web/static/$$file; \
+	    fi; \
+	    echo "$$sha  web/static/$$file" | sha256sum -c -; \
+	  fi; \
+	}; \
+	vendor_one htmx.org '$(HTMX_VERSION)' '$(HTMX_SHA256)' htmx.min.js HTMX_VERSION HTMX_SHA256 '$(HTMX_URL)'; \
+	vendor_one cytoscape '$(CYTOSCAPE_VERSION)' '$(CYTOSCAPE_SHA256)' cytoscape.min.js CYTOSCAPE_VERSION CYTOSCAPE_SHA256 '$(CYTOSCAPE_URL)'
+
+stage: build ## run one pipeline stage via the built binary: make stage STAGE=parse
+	@if [ -z "$(STAGE)" ]; then echo "STAGE required: sync prune parse load triangulate export report all"; exit 2; fi
+	./$(BIN) $(STAGE)
 
 run server: ## run the web server (http://$(ADDR))
 	$(GO) run $(TAGS) ./cmd/qm serve --addr $(ADDR) --db $(DB)
