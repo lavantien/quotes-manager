@@ -76,7 +76,10 @@
     Array.from(tpl.content.children).forEach(function (el) {
       if (!el.id) return;
       var existing = document.getElementById(el.id);
-      if (existing) existing.replaceWith(el);
+      if (existing) {
+        existing.replaceWith(el);
+        htmx.process(el);
+      }
     });
     refreshBulk();
     equalizeHeaders();
