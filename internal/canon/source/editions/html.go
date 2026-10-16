@@ -4,16 +4,26 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"golang.org/x/net/html"
 	"golang.org/x/text/unicode/norm"
 )
 
-const htmlDir = "html"
+const (
+	langDir      = "en"
+	texZipSuffix = "-tex.zip"
+	lastRunFile  = "last_run_date"
+	htmlDir      = "html"
+)
+
+var dateRe = regexp.MustCompile(`[0-9]{4}-[0-9]{2}-[0-9]{2}`)
 
 type HTMLInfo struct {
 	Author     string
@@ -179,4 +189,90 @@ func ParseHTMLSegments(r io.Reader, yield func(muid, segkey, text string) error)
 			}
 		}
 	}
+}
+
+func ParseBuildDate(zipName string) (string, error) {
+	if !strings.HasSuffix(zipName, texZipSuffix) {
+		return "", fmt.Errorf("zip name %q lacks %s suffix", zipName, texZipSuffix)
+	}
+	return StemDate(strings.TrimSuffix(zipName, texZipSuffix))
+}
+
+func StemDate(stem string) (string, error) {
+	date := ""
+	for _, loc := range dateRe.FindAllStringIndex(stem, -1) {
+		before, after := loc[0]-1, loc[1]
+		if before >= 0 && isDigit(stem[before]) {
+			continue
+		}
+		if after < len(stem) && isDigit(stem[after]) {
+			continue
+		}
+		date = stem[loc[0]:loc[1]]
+	}
+	if date == "" {
+		return "", fmt.Errorf("name %q carries no build date", stem)
+	}
+	if _, err := time.Parse("2006-01-02", date); err != nil {
+		return "", fmt.Errorf("name %q: bad date %q", stem, date)
+	}
+	return date, nil
+}
+
+func isDigit(b byte) bool { return b >= '0' && b <= '9' }
+
+func ReadLastRunDate(repoRoot string) (string, error) {
+	b, err := os.ReadFile(filepath.Join(repoRoot, lastRunFile))
+	if err != nil {
+		return "", fmt.Errorf("read %s: %w", lastRunFile, err)
+	}
+	return strings.TrimSpace(strings.TrimPrefix(string(b), string(rune(0xFEFF)))), nil
+}
+
+func LatestCommit(repoDir, pathFilter string) (string, error) {
+	git, err := exec.LookPath("git")
+	if err != nil {
+		return "", fmt.Errorf("git not found: %w", err)
+	}
+	args := []string{"-C", repoDir, "log", "-1", "--format=%cI"}
+	if pathFilter != "" {
+		args = append(args, "--", pathFilter)
+	}
+	out, err := exec.Command(git, args...).Output()
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("git log: %v: %s", err, strings.TrimSpace(string(ee.Stderr)))
+		}
+		return "", fmt.Errorf("git log: %w", err)
+	}
+	s := strings.TrimSpace(string(out))
+	if s == "" {
+		return "", fmt.Errorf("git log: no commit touches %q", pathFilter)
+	}
+	return s, nil
+}
+
+func DiscoveryReport(htmls []HTMLInfo, outPath string) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "# editions html discovery report\n\nhtml editions: %d\n\n", len(htmls))
+	b.WriteString("## html editions\n\n")
+	b.WriteString("| author | collection | build date | file |\n")
+	b.WriteString("| --- | --- | --- | --- |\n")
+	sorted := slices.Clone(htmls)
+	slices.SortFunc(sorted, func(a, b HTMLInfo) int {
+		return strings.Compare(a.Author+"/"+a.Collection+"/"+a.FileName,
+			b.Author+"/"+b.Collection+"/"+b.FileName)
+	})
+	for _, h := range sorted {
+		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
+			cell(h.Author), cell(h.Collection), cell(h.BuildDate), cell(h.FileName))
+	}
+	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(outPath, []byte(b.String()), 0o644)
+}
+
+func cell(v string) string {
+	return strings.NewReplacer("|", `\|`, "\r\n", " ", "\n", " ", "\r", " ").Replace(v)
 }

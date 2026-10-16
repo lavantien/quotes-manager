@@ -1,10 +1,14 @@
 package editions
 
 import (
+	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/net/html"
 )
@@ -187,5 +191,219 @@ func TestParseHTMLSegmentsSelfClosing(t *testing.T) {
 		if got[i] != want[i] {
 			t.Errorf("record[%d] = %+v; want %+v", i, got[i], want[i])
 		}
+	}
+}
+
+func TestParseBuildDate(t *testing.T) {
+	cases := []struct {
+		in      string
+		want    string
+		wantErr bool
+	}{
+		{"Middle-Discourses-sujato-2026-08-26-tex.zip", "2026-08-26", false},
+		{"Vinaya-Brahmali-2026-08-26-hardcover-tex.zip", "2026-08-26", false},
+		{"Name-2025-01-02-and-2025-03-04-tex.zip", "2025-03-04", false},
+		{"no-date-tex.zip", "", true},
+		{"x-2026-13-01-tex.zip", "", true},
+		{"x-2026-02-30-tex.zip", "", true},
+		{"X-12345-01-01-tex.zip", "", true},
+		{"X-2026-01-019-tex.zip", "", true},
+		{"plain.zip", "", true},
+		{"", "", true},
+	}
+	for _, tc := range cases {
+		got, err := ParseBuildDate(tc.in)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("ParseBuildDate(%q): expected error, got %q", tc.in, got)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("ParseBuildDate(%q): %v", tc.in, err)
+		}
+		if got != tc.want {
+			t.Errorf("ParseBuildDate(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestReadLastRunDate(t *testing.T) {
+	root := t.TempDir()
+	p := filepath.Join(root, lastRunFile)
+	if err := os.WriteFile(p, []byte("2026-09-30 \r\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ReadLastRunDate(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "2026-09-30" {
+		t.Errorf("ReadLastRunDate = %q, want 2026-09-30", got)
+	}
+	if err := os.WriteFile(p, []byte(string(rune(0xFEFF))+"2026-09-30\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got, err = ReadLastRunDate(root); err != nil || got != "2026-09-30" {
+		t.Errorf("ReadLastRunDate with BOM = %q, %v, want 2026-09-30", got, err)
+	}
+	if _, err := ReadLastRunDate(t.TempDir()); err == nil {
+		t.Error("ReadLastRunDate on missing file: expected error")
+	}
+}
+
+func TestLatestCommit(t *testing.T) {
+	git, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("git not in PATH")
+	}
+	dir := t.TempDir()
+	emptyCfg := filepath.Join(t.TempDir(), "gitconfig")
+	if err := os.WriteFile(emptyCfg, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	env := append(os.Environ(),
+		"GIT_CONFIG_GLOBAL="+emptyCfg,
+		"GIT_CONFIG_SYSTEM="+emptyCfg,
+		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com",
+		"GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@example.com",
+		"GIT_AUTHOR_DATE=2026-01-02T03:04:05Z",
+		"GIT_COMMITTER_DATE=2026-01-02T03:04:05Z",
+	)
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command(git, append([]string{"-C", dir}, args...)...)
+		cmd.Env = env
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	run("init", "-q")
+	tex := filepath.Join(dir, "en", "x.tex")
+	if err := os.MkdirAll(filepath.Dir(tex), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(tex, []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run("add", ".")
+	run("commit", "-q", "-m", "one")
+
+	got, err := LatestCommit(dir, "en")
+	if err != nil {
+		t.Fatalf("LatestCommit: %v", err)
+	}
+	ts, err := time.Parse(time.RFC3339, got)
+	if err != nil {
+		t.Fatalf("LatestCommit = %q, not RFC3339: %v", got, err)
+	}
+	if want := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC); !ts.Equal(want) {
+		t.Errorf("LatestCommit = %q, want %v", got, want)
+	}
+	if _, err := LatestCommit(dir, "does-not-exist"); err == nil {
+		t.Error("LatestCommit with no matching path: expected error")
+	}
+}
+
+func TestCellSanitize(t *testing.T) {
+	if got := cell("a|b\nc\r"); got != `a\|b c ` {
+		t.Errorf("cell = %q, want %q", got, `a\|b c `)
+	}
+	if got := cell("plain"); got != "plain" {
+		t.Errorf("cell = %q, want plain", got)
+	}
+}
+
+func TestDiscoveryReportHTMLOnly(t *testing.T) {
+	root := t.TempDir()
+	writeHTMLTree(t, root, map[string]string{
+		"en/sujato/mn/html/Middle-Discourses-sujato-2026-08-26.html":     "a",
+		"en/sujato/an/html/Numbered-Discourses-sujato-2026-08-26.html":   "b",
+		"en/brahmali/pli-tv-vi/html/Collection-brahmali-2026-09-26.html": "c",
+	})
+	htmls, err := FindHTML(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	slices.Reverse(htmls)
+	out := filepath.Join(t.TempDir(), "nested", "dir", "r.md")
+	if err := DiscoveryReport(htmls, out); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(body)
+	if !strings.HasPrefix(s, "# editions html discovery report\n\nhtml editions: 3\n\n") {
+		t.Errorf("report header wrong\nreport:\n%s", s)
+	}
+	rows := []string{
+		"| brahmali | pli-tv-vi | 2026-09-26 | Collection-brahmali-2026-09-26.html |",
+		"| sujato | an | 2026-08-26 | Numbered-Discourses-sujato-2026-08-26.html |",
+		"| sujato | mn | 2026-08-26 | Middle-Discourses-sujato-2026-08-26.html |",
+	}
+	last := 0
+	for _, row := range rows {
+		i := strings.Index(s, row)
+		if i < 0 {
+			t.Fatalf("report missing row %q\nreport:\n%s", row, s)
+		}
+		if i < last {
+			t.Errorf("row %q out of sorted order in report:\n%s", row, s)
+		}
+		last = i
+	}
+	if !strings.Contains(s, "| author | collection | build date | file |") {
+		t.Errorf("report missing table header\nreport:\n%s", s)
+	}
+	if strings.Contains(s, "tex") {
+		t.Errorf("html-only report must not mention tex\nreport:\n%s", s)
+	}
+	if strings.Contains(s, "zips") {
+		t.Errorf("html-only report must not render a zip table\nreport:\n%s", s)
+	}
+}
+
+func TestDiscoveryReportEmptyAndDeterministic(t *testing.T) {
+	dir := t.TempDir()
+	empty := filepath.Join(dir, "a.md")
+	if err := DiscoveryReport(nil, empty); err != nil {
+		t.Fatal(err)
+	}
+	first, err := os.ReadFile(empty)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(first), "html editions: 0") {
+		t.Errorf("empty report header wrong\nreport:\n%s", first)
+	}
+	htmls := []HTMLInfo{
+		{Author: "sujato", Collection: "mn", FileName: "b-2026-01-01.html", BuildDate: "2026-01-01"},
+		{Author: "sujato", Collection: "mn", FileName: "a-2026-01-01.html", BuildDate: "2026-01-01"},
+	}
+	b := filepath.Join(dir, "b.md")
+	if err := DiscoveryReport(htmls, b); err != nil {
+		t.Fatal(err)
+	}
+	second, err := os.ReadFile(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := filepath.Join(dir, "c.md")
+	if err := DiscoveryReport(htmls, c); err != nil {
+		t.Fatal(err)
+	}
+	third, err := os.ReadFile(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(second, third) {
+		t.Error("DiscoveryReport output differs between runs")
+	}
+	i := strings.Index(string(second), "a-2026-01-01.html")
+	j := strings.Index(string(second), "b-2026-01-01.html")
+	if i < 0 || j < 0 || i > j {
+		t.Errorf("report rows not sorted by file name\nreport:\n%s", second)
 	}
 }
