@@ -89,7 +89,7 @@ coverage: ## recompute Go test coverage and refresh the README coverage badge
 	$(GO) run $(TAGS) ./cmd/qm coverage -profile=coverage.out -readme=readme.md
 	rm -f coverage.out
 
-screenshot: ## capture the home page into docs/home.png (needs Chrome or Edge)
+screenshot: ## capture the home page into project-pictures/home.png (needs Chrome or Edge)
 	$(GO) run $(TAGS) ./cmd/qm screenshot
 
 fixture: ## regenerate the clone-of-main test fixture (internal/store/storetest/testdata)
