@@ -3,13 +3,9 @@ package e2e
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
-
-	"github.com/lavantien/quotes-manager/internal/config"
 )
 
 var quotesPatterns = []string{
@@ -105,7 +101,7 @@ var canonPatterns = []string{
 }
 
 func TestMergedRouteInventory(t *testing.T) {
-	app := mergedRouteApp(t)
+	app := mergedAppFor(t, false)
 	got, err := muxPatterns(app.mux())
 	if err != nil {
 		t.Fatalf("walk mux patterns: %v", err)
@@ -120,7 +116,7 @@ func TestMergedRouteInventory(t *testing.T) {
 }
 
 func TestMergedRouteProbes(t *testing.T) {
-	app := mergedRouteApp(t)
+	app := mergedAppFor(t, false)
 	m := app.mux()
 	for _, probe := range []struct {
 		method, target, want string
@@ -162,26 +158,4 @@ func diff(a, b []string) []string {
 
 func (a *mergedApp) mux() *http.ServeMux {
 	return a.root
-}
-
-func mergedRouteApp(t *testing.T) *mergedApp {
-	t.Helper()
-	tmp := t.TempDir()
-	cfgPath, err := writeMergedConfig(tmp, filepath.Join(tmp, "quotes.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	cfg, err := config.Load(cfgPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	app, err := newMergedApp(cfg, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		_ = app.close()
-		_ = os.RemoveAll(tmp)
-	})
-	return app
 }

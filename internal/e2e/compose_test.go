@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -102,6 +104,28 @@ func mustFetch(t *testing.T, f fetched, err error) fetched {
 		t.Fatal(err)
 	}
 	return f
+}
+
+func mergedAppFor(t *testing.T, seeded bool) *mergedApp {
+	t.Helper()
+	tmp := t.TempDir()
+	cfgPath, err := writeMergedConfig(tmp, filepath.Join(tmp, "quotes.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app, err := newMergedApp(cfg, seeded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = app.close()
+		_ = os.RemoveAll(tmp)
+	})
+	return app
 }
 
 func (a *mergedApp) get(t *testing.T, path string) fetched {
