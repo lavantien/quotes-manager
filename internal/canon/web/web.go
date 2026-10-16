@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	qmweb "github.com/lavantien/quotes-manager/web"
 )
 
 //go:embed templates
@@ -75,6 +77,10 @@ func build() {
 	fm := template.FuncMap{"urlescape": urlescape, "intcomma": intcomma}
 	base := template.New("base").Funcs(fm)
 	files := []string{"templates/layout.tmpl"}
+	if base, initErr = base.ParseFS(qmweb.Templates, "templates/nav.html"); initErr != nil {
+		initErr = fmt.Errorf("web: parse nav: %w", initErr)
+		return
+	}
 	for _, n := range partialNames {
 		files = append(files, "templates/"+n+".tmpl")
 	}

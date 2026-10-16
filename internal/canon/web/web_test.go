@@ -452,10 +452,18 @@ func TestNoExternalAssetReferences(t *testing.T) {
 	}
 	for _, rep := range reps {
 		out := render(t, rep.name, rep.data)
-		for _, m := range []string{`src="/static/htmx.min.js"`, `src="/static/cytoscape.min.js"`, `src="/static/canon.js"`, `href="/static/canon.css"`} {
+		for _, m := range []string{`src="/static/htmx.min.js"`, `src="/static/cytoscape.min.js"`, `src="/static/canon.js"`, `href="/static/canon.css"`, `href="/static/nav.css"`} {
 			if !strings.Contains(out, m) {
 				t.Errorf("page %s missing vendored asset %q", rep.name, m)
 			}
+		}
+		for _, m := range []string{`<nav class="nav">`, `class="nav-brand" href="/">qm</a>`, `href="/dashboard">overview</a>`, `href="/texts">texts</a>`, `href="/discrepancies">discrepancies</a>`} {
+			if !strings.Contains(out, m) {
+				t.Errorf("page %s missing shared nav marker %q", rep.name, m)
+			}
+		}
+		if strings.Contains(out, "sc-graph") {
+			t.Errorf("page %s still carries the old sc-graph brand", rep.name)
 		}
 		if i := strings.Index(out, `="http://`); i >= 0 {
 			t.Errorf("page %s references an external http asset near %q", rep.name, out[i:i+60])

@@ -689,6 +689,32 @@ func TestEditFormPrefilled(t *testing.T) {
 	}
 }
 
+func TestNavRendered(t *testing.T) {
+	srv := newServer(t, newFake())
+	rec := do(t, srv, "GET", "/", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	for _, m := range []string{
+		`href="/static/nav.css"`,
+		`<nav class="nav">`,
+		`class="nav-brand" href="/">qm</a>`,
+		`href="/dashboard">overview</a>`,
+		`href="/texts">texts</a>`,
+		`href="/search">search</a>`,
+		`href="/words">words</a>`,
+		`href="/graph">graph</a>`,
+		`href="/analytics">analytics</a>`,
+		`href="/pipeline">pipeline</a>`,
+		`href="/discrepancies">discrepancies</a>`,
+	} {
+		if !strings.Contains(body, m) {
+			t.Errorf("page missing nav marker %q", m)
+		}
+	}
+}
+
 func TestStaticAssetsServed(t *testing.T) {
 	srv := newServer(t, newFake())
 	for _, p := range []string{"/static/app.css", "/static/app.js", "/static/htmx.min.js"} {

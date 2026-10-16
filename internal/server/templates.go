@@ -30,6 +30,7 @@ func mustTemplates() *template.Template {
 	})
 	return template.Must(tmpl.ParseFS(web.Templates,
 		"templates/layout.html",
+		"templates/nav.html",
 		"templates/rail_left.html",
 		"templates/rail_right.html",
 		"templates/root_zone.html",

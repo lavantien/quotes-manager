@@ -6,10 +6,12 @@
 <title>quotes-manager</title>
 <link rel="stylesheet" href="/static/app.css">
 <link rel="stylesheet" href="/static/layout.css">
+<link rel="stylesheet" href="/static/nav.css">
 <script src="/static/htmx.min.js" defer></script>
 <script src="/static/app.js" defer></script>
 </head>
 <body>
+{{template "nav" .}}
 <main class="page">
   <div class="layout">
     {{template "rail_left" .}}

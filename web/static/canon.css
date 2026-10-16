@@ -49,21 +49,6 @@ p { margin: 0.4rem 0; }
 .note { color: var(--muted); font-style: italic; }
 .error { color: var(--err); }
 
-.nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.9rem;
-  align-items: baseline;
-  padding: 0.55rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.nav-brand { font-weight: 700; }
-
 .main {
   max-width: 1100px;
   margin: 0 auto;
