@@ -37,7 +37,7 @@ func TestDisplayHTML(t *testing.T) {
 		got := string(q.DisplayHTML())
 		mustContain(t, got, `<em>&#34;hi&#34;</em>`)
 		mustContain(t, got, `the Buddha, `)
-		mustContain(t, got, `<a class="sutta-link" href="https://suttacentral.net/mn22" target="_blank" rel="noopener"><strong>MN 22</strong></a>`)
+		mustContain(t, got, `<a class="sutta-link" href="/texts/mn22"><strong>MN 22</strong></a>`)
 		if strings.Contains(got, "<strong>the Buddha") {
 			t.Errorf("attribution must not be bolded: %s", got)
 		}
@@ -46,7 +46,7 @@ func TestDisplayHTML(t *testing.T) {
 		q := New("KN Snp 2.14", "the Buddha, KN Snp 2.14", []string{`"line one`, `line two"`})
 		got := string(q.DisplayHTML())
 		mustContain(t, got, `<em>&#34;line one</em><br><em>line two&#34;</em>`)
-		mustContain(t, got, `href="https://suttacentral.net/knsnp2.14"`)
+		mustContain(t, got, `href="/texts/snp2.14"`)
 	})
 	t.Run("multi-comma attribution only bolds the id", func(t *testing.T) {
 		c := "These were the Buddha's, the Realized One's last words, DN 16"
@@ -61,7 +61,26 @@ func TestDisplayHTML(t *testing.T) {
 		q := New("MN 38", "MN 38", []string{`"x"`})
 		got := string(q.DisplayHTML())
 		mustContain(t, got, `<strong>MN 38</strong>`)
-		mustContain(t, got, `href="https://suttacentral.net/mn38"`)
+		mustContain(t, got, `href="/texts/mn38"`)
+	})
+	t.Run("alias collision falls back to suttacentral", func(t *testing.T) {
+		q := New("KN Sn 22", "the Buddha, KN Sn 22", []string{`"x"`})
+		got := string(q.DisplayHTML())
+		mustContain(t, got, `href="https://suttacentral.net/knsn22"`)
+		mustContain(t, got, `target="_blank" rel="noopener"`)
+	})
+	t.Run("fragment kept and escaped in muid path", func(t *testing.T) {
+		q := New("AN 5.34#7.9", "the Buddha, AN 5.34#7.9", []string{`"x"`})
+		got := string(q.DisplayHTML())
+		mustContain(t, got, `href="/texts/an5.34%237.9"`)
+		if strings.Contains(got, `target="_blank"`) {
+			t.Errorf("internal link must not open a new tab: %s", got)
+		}
+	})
+	t.Run("vinaya fragment dropped from muid", func(t *testing.T) {
+		q := New("pli-tv-bu-vb-pj1#5.11.20", "the Buddha, pli-tv-bu-vb-pj1#5.11.20", []string{`"x"`})
+		got := string(q.DisplayHTML())
+		mustContain(t, got, `href="/texts/pli-tv-bu-vb-pj1"`)
 	})
 }
 
@@ -89,8 +108,6 @@ func TestBodyMDEmptyPassages(t *testing.T) {
 }
 
 func TestDisplayHTMLNoSuttaID(t *testing.T) {
-	// A citation with no recognizable sutta id: the whole citation is emitted as
-	// escaped text, with no suttacentral link.
 	q := New("", "a sage of old", []string{`"wisdom"`})
 	got := string(q.DisplayHTML())
 	mustContain(t, got, `<em>&#34;wisdom&#34;</em>`)
@@ -133,7 +150,7 @@ func TestDisplayHTMLWithTermsNilEqualsDisplayHTML(t *testing.T) {
 	if string(q.DisplayHTMLWithTerms(nil)) != string(q.DisplayHTML()) {
 		t.Errorf("DisplayHTMLWithTerms(nil) must equal DisplayHTML()")
 	}
-	// An empty (but non-nil) terms slice must also be a no-op.
+
 	if string(q.DisplayHTMLWithTerms([]string{})) != string(q.DisplayHTML()) {
 		t.Errorf("DisplayHTMLWithTerms([]) must equal DisplayHTML()")
 	}
@@ -142,7 +159,7 @@ func TestDisplayHTMLWithTermsNilEqualsDisplayHTML(t *testing.T) {
 func TestDisplayHTMLWithTermsWrapsBodyMatch(t *testing.T) {
 	q := New("MN 22", "the Buddha, MN 22", []string{"the Buddha spoke"})
 	got := string(q.DisplayHTMLWithTerms([]string{"buddha"}))
-	mustContain(t, got, "<mark>Buddha</mark>") // original case preserved
+	mustContain(t, got, "<mark>Buddha</mark>")
 	mustNotContain(t, got, "<script>")
 }
 

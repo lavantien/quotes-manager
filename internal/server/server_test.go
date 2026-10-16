@@ -505,7 +505,7 @@ func TestIndexListsQuotesAndLinksSuttacentral(t *testing.T) {
 	if !strings.Contains(body, "Human beings are shady") {
 		t.Error("index missing quote body")
 	}
-	if !strings.Contains(body, `href="https://suttacentral.net/mn22"`) {
+	if !strings.Contains(body, `href="/texts/mn22"`) {
 		t.Error("index missing suttacentral link")
 	}
 	if !strings.Contains(body, `<strong>MN 22</strong>`) {
@@ -549,7 +549,7 @@ func TestCreateAddsQuote(t *testing.T) {
 	if q.Citation != "the Buddha, MN 44" {
 		t.Errorf("Citation = %q", q.Citation)
 	}
-	if !strings.Contains(rec.Body.String(), `href="https://suttacentral.net/mn44"`) {
+	if !strings.Contains(rec.Body.String(), `href="/texts/mn44"`) {
 		t.Error("create response missing link to new quote")
 	}
 }
