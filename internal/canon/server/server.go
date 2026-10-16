@@ -106,19 +106,24 @@ func (s *Server) RegisterRoutes(m *http.ServeMux) {
 	s.registerAnalyticsRoutes(m)
 	s.registerReportRoutes(m)
 	s.registerPageRoutes(m)
-	m.HandleFunc("/api/", s.apiNotFound)
+	for _, method := range []string{http.MethodGet, http.MethodPost} {
+		m.HandleFunc(method+" /api/", s.apiNotFound)
+	}
+}
+
+func (s *Server) Chain(h http.Handler) http.Handler {
+	h = s.recoverPanic(h)
+	h = s.securityHeaders(h)
+	h = s.checkOrigin(h)
+	h = s.logRequests(h)
+	return h
 }
 
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	s.RegisterRoutes(mux)
 	mux.HandleFunc("/", s.pageNotFound)
-	var h http.Handler = mux
-	h = s.recoverPanic(h)
-	h = s.securityHeaders(h)
-	h = s.checkOrigin(h)
-	h = s.logRequests(h)
-	return h
+	return s.Chain(mux)
 }
 
 func (s *Server) Serve(ctx context.Context) error {
@@ -181,6 +186,10 @@ func (s *Server) cancelActiveJobs(budget time.Duration) {
 		}
 		time.Sleep(jobDrainInterval)
 	}
+}
+
+func (s *Server) CancelActiveJobs(budget time.Duration) {
+	s.cancelActiveJobs(budget)
 }
 
 func (s *Server) Close() error {

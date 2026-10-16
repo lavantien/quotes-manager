@@ -85,7 +85,7 @@ func (s *Server) checkOrigin(next http.Handler) http.Handler {
 		if r.Method == http.MethodPost {
 			if origin := r.Header.Get("Origin"); origin != "" {
 				u, err := url.Parse(origin)
-				if err != nil || u.Host != s.cfg.Server.Addr {
+				if err != nil || u.Host != r.Host {
 					writeErr(w, http.StatusForbidden, codeForbidden,
 						"cross-origin POST rejected")
 					return

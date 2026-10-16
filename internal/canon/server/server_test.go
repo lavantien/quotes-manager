@@ -420,27 +420,31 @@ func TestRegisterRoutesSharedMux(t *testing.T) {
 }
 
 func TestMiddlewareOriginCheck(t *testing.T) {
-	srv, cfg := newFixtureServer(t)
+	srv, _ := newFixtureServer(t)
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	handler := srv.checkOrigin(next)
-	origin := "http://" + cfg.Server.Addr
 
 	for _, tc := range []struct {
 		name   string
 		method string
+		host   string
 		origin string
 		status int
 	}{
-		{"post cross origin", http.MethodPost, "http://evil.example", http.StatusForbidden},
-		{"post same origin", http.MethodPost, origin, http.StatusOK},
-		{"post no origin", http.MethodPost, "", http.StatusOK},
-		{"get cross origin", http.MethodGet, "http://evil.example", http.StatusOK},
-		{"post malformed origin", http.MethodPost, "://", http.StatusForbidden},
+		{"post same origin localhost", http.MethodPost, "localhost:8080", "http://localhost:8080", http.StatusOK},
+		{"post same origin loopback", http.MethodPost, "127.0.0.1:8080", "http://127.0.0.1:8080", http.StatusOK},
+		{"post cross origin", http.MethodPost, "127.0.0.1:8080", "http://evil.example", http.StatusForbidden},
+		{"post origin host mismatch", http.MethodPost, "localhost:8080", "http://127.0.0.1:8080", http.StatusForbidden},
+		{"post no origin", http.MethodPost, "127.0.0.1:8080", "", http.StatusOK},
+		{"get cross origin", http.MethodGet, "127.0.0.1:8080", "http://evil.example", http.StatusOK},
+		{"post malformed origin", http.MethodPost, "127.0.0.1:8080", "://", http.StatusForbidden},
+		{"post null origin", http.MethodPost, "127.0.0.1:8080", "null", http.StatusForbidden},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(tc.method, "/api/v1/jobs", nil)
+			req.Host = tc.host
 			if tc.origin != "" {
 				req.Header.Set("Origin", tc.origin)
 			}

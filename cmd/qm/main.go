@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	canonserver "github.com/lavantien/quotes-manager/internal/canon/server"
 	"github.com/lavantien/quotes-manager/internal/cli"
 	"github.com/lavantien/quotes-manager/internal/config"
 	"github.com/lavantien/quotes-manager/internal/seed"
@@ -15,11 +16,11 @@ import (
 )
 
 func main() {
-	cli.SetServeStarter(serveQuotes)
+	cli.SetServeStarter(serveMerged)
 	os.Exit(cli.Main(os.Args[1:]))
 }
 
-func serveQuotes(ctx context.Context, cfg *config.Config) error {
+func serveMerged(ctx context.Context, cfg *config.Config) error {
 	st, err := store.Open(cfg.Quotes.DBPath)
 	if err != nil {
 		return err
@@ -28,9 +29,16 @@ func serveQuotes(ctx context.Context, cfg *config.Config) error {
 	if err := seed.EnsureSeeded(st.DB()); err != nil {
 		return err
 	}
+	canonSrv, err := canonserver.New(cfg)
+	if err != nil {
+		return err
+	}
+	root := http.NewServeMux()
+	server.New(st).RegisterRoutes(root)
+	canonSrv.RegisterRoutes(root)
 	srv := &http.Server{
 		Addr:         cfg.Server.Addr,
-		Handler:      server.New(st),
+		Handler:      canonSrv.Chain(root),
 		ReadTimeout:  time.Duration(cfg.Server.ReadTimeoutSeconds) * time.Second,
 		WriteTimeout: time.Duration(cfg.Server.WriteTimeoutSeconds) * time.Second,
 		IdleTimeout:  time.Duration(cfg.Server.IdleTimeoutSeconds) * time.Second,
@@ -44,8 +52,16 @@ func serveQuotes(ctx context.Context, cfg *config.Config) error {
 		}
 		return err
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Server.ShutdownTimeoutSeconds)*time.Second)
+		budget := time.Duration(cfg.Server.ShutdownTimeoutSeconds) * time.Second
+		canonSrv.CancelActiveJobs(budget)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), budget)
 		defer cancel()
-		return srv.Shutdown(shutdownCtx)
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			return err
+		}
+		if err := <-errCh; err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+		return canonSrv.Close()
 	}
 }
