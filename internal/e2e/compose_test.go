@@ -140,12 +140,6 @@ func (a *mergedApp) postForm(t *testing.T, path string, form url.Values, origin 
 	return mustFetch(t, f, err)
 }
 
-func (a *mergedApp) postJSON(t *testing.T, path, body string) fetched {
-	t.Helper()
-	f, err := a.fetch(http.MethodPost, path, "application/json", body, "")
-	return mustFetch(t, f, err)
-}
-
 func decodeJSON(t *testing.T, f fetched, dst any) {
 	t.Helper()
 	if ct := f.header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
