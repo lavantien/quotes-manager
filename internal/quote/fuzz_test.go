@@ -27,6 +27,7 @@ func FuzzParseCanonical(f *testing.F) {
 		"*p* - ****",
 		"***\n*after stars* - **the Buddha, MN 4**",
 		"*a - **x** b* - **MN 3**",
+		"000000000 - **00000000000000\n- **0**",
 		"*one* - **the Buddha, MN 1**\n\n\n.  \n.  \n.\n\n\n**still starred**\n*second* - **the Buddha, SN 2.1**",
 		"*p*\r\n*q* - **the Buddha, DN 2**\r",
 		".\n.\n.",

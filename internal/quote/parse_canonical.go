@@ -5,17 +5,8 @@ import (
 	"strings"
 )
 
-// boldTailRe matches the canonical " - **citation**" suffix BodyMD appends to the
-// final passage line.
-var boldTailRe = regexp.MustCompile(`\s+-\s+\*\*(.+)\*\*\s*$`)
+var boldTailRe = regexp.MustCompile(`(?s:.*)(\s+-\s+\*\*(.+)\*\*\s*)$`)
 
-// ParseCanonical parses the canonical text format — quotes rendered by BodyMD
-// and separated by the three-dot divider (see RenderExportFile) — back into
-// quotes. It is the inverse of the export: each block's italic passage lines and
-// bold citation tail are recovered. A block whose last line carries a plain
-// " - clean-citation" tail (no bold markers) is accepted as a fallback for
-// lightly edited pastes; blocks without any recognizable citation are skipped.
-// The result is in document order and is not de-duplicated.
 func ParseCanonical(text string) []*Quote {
 	var out []*Quote
 	for _, block := range splitCanonicalBlocks(text) {
@@ -26,8 +17,6 @@ func ParseCanonical(text string) []*Quote {
 	return out
 }
 
-// splitCanonicalBlocks divides text on runs of '.'-only divider lines (the dot
-// separator), returning the trimmed non-empty quote blocks between them.
 func splitCanonicalBlocks(text string) []string {
 	var blocks []string
 	var cur strings.Builder
@@ -54,11 +43,10 @@ func splitCanonicalBlocks(text string) []string {
 
 func parseCanonicalBlock(block string) (*Quote, bool) {
 	body, citation := block, ""
-	if m := boldTailRe.FindStringSubmatch(block); m != nil {
-		citation = strings.TrimSpace(m[1])
-		body = block[:len(block)-len(m[0])]
+	if loc := boldTailRe.FindStringSubmatchIndex(block); loc != nil {
+		citation = strings.TrimSpace(block[loc[4]:loc[5]])
+		body = block[:loc[2]]
 	} else {
-		// Fallback: a plain " - clean-citation" tail on the last line.
 		lines := strings.Split(body, "\n")
 		passage, cit, ok := splitCitation(lines[len(lines)-1])
 		if !ok {
@@ -79,8 +67,6 @@ func parseCanonicalBlock(block string) (*Quote, bool) {
 	return New(sutta, ensureAttribution(citation), passages), true
 }
 
-// parsePassageLines strips the '*' italics wrapping and the trailing two-space
-// markdown break BodyMD adds to each passage line.
 func parsePassageLines(body string) []string {
 	var out []string
 	for _, raw := range strings.Split(body, "\n") {

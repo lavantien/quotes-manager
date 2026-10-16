@@ -101,3 +101,21 @@ func TestParseCanonicalSeedExport(t *testing.T) {
 		t.Errorf("got %d quotes from the seed export, want 109", len(got))
 	}
 }
+
+func TestParseCanonicalTailIsRightmostSeparator(t *testing.T) {
+	in := "000000000 - **00000000000000\n- **0**"
+	got := ParseCanonical(in)
+	if len(got) != 1 {
+		t.Fatalf("got %d quotes, want 1", len(got))
+	}
+	if got[0].Citation != "0" {
+		t.Errorf("Citation = %q, want 0", got[0].Citation)
+	}
+	if len(got[0].Passages) != 1 || got[0].Passages[0] != "000000000 - **00000000000000" {
+		t.Errorf("Passages = %q, want the star-bearing line", got[0].Passages)
+	}
+	again := ParseCanonical(RenderExportFile(got))
+	if len(again) != 1 || !quotesEqual(again[0], got[0]) {
+		t.Fatalf("re-export mismatch:\n got  %+v\n want %+v", again, got)
+	}
+}
