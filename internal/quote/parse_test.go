@@ -15,15 +15,19 @@ func TestSplitCitation(t *testing.T) {
 	}{
 		{"plain id", `...suffering." - MN 38`, `...suffering."`, "MN 38", true},
 		{"attribution", `...couples." - the Buddha, MN 22`, `...couples."`, "the Buddha, MN 22", true},
-		{"url stripped", `...discard it." - AN 4.180 ( https://suttacentral.net/an4.180 )`,
-			`...discard it."`, "AN 4.180", true},
+		{
+			"url stripped", `...discard it." - AN 4.180 ( https://suttacentral.net/an4.180 )`,
+			`...discard it."`, "AN 4.180", true,
+		},
 		{"no closing quote", `the householder left. - MN 87`, `the householder left.`, "MN 87", true},
 		{"range id", `...untrue persons." - AN 1.278-286`, `...untrue persons."`, "AN 1.278-286", true},
 		{"KN sub-book", `...rhino." - KN Snp 2.14`, `...rhino."`, "KN Snp 2.14", true},
 		{"abbrev vinaya", `...couples." - Tv Vi Bu Pj1`, `...couples."`, "Tv Vi Bu Pj1", true},
 		{"full vinaya", `...couples." - pli-tv-bu-vb-pj1#5.11.20`, `...couples."`, "pli-tv-bu-vb-pj1#5.11.20", true},
-		{"multi-comma attribution", `...diligence." - These were the Buddha's, the Realized One's last words, DN 16`,
-			`...diligence."`, "These were the Buddha's, the Realized One's last words, DN 16", true},
+		{
+			"multi-comma attribution", `...diligence." - These were the Buddha's, the Realized One's last words, DN 16`,
+			`...diligence."`, "These were the Buddha's, the Realized One's last words, DN 16", true,
+		},
 		{"mid-text dash stays", `some - text - MN 8`, `some - text`, "MN 8", true},
 		{"plain prose", `This is plain prose with no citation.`, `This is plain prose with no citation.`, "", false},
 		{"section title", `(A) What is the Buddha's attitude?`, `(A) What is the Buddha's attitude?`, "", false},
