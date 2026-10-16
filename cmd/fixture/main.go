@@ -34,7 +34,7 @@ func run(dbPath, outPath string) error {
 	if err != nil {
 		return err
 	}
-	defer st.Close()
+	defer func() { _ = st.Close() }()
 	if err := seed.EnsureSeeded(st.DB()); err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func dumpTable(b *strings.Builder, db *sql.DB, t table) error {
 	if err != nil {
 		return err
 	}
-	defer rs.Close()
+	defer func() { _ = rs.Close() }()
 	cols := strings.Join(t.columns, ", ")
 	for rs.Next() {
 		vals := make([]any, len(t.columns))

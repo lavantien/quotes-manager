@@ -46,7 +46,7 @@ func TestRunRoundTripsAllTables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open clone: %v", err)
 	}
-	defer clone.Close()
+	defer func() { _ = clone.Close() }()
 	if _, err := clone.DB().Exec(string(dump)); err != nil {
 		t.Fatalf("load dump into clone: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestRunRoundTripsAllTables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reopen source: %v", err)
 	}
-	defer ref.Close()
+	defer func() { _ = ref.Close() }()
 
 	for _, tb := range tables {
 		want := count(t, ref.DB(), tb.name)

@@ -25,9 +25,9 @@ func main() {
 
 // report prints a summary of the extraction to out.
 func report(out io.Writer, count int) {
-	fmt.Fprintf(out, "extracted %d unique quotes\n", count)
-	fmt.Fprintln(out, "  -> database/seed.sql")
-	fmt.Fprintln(out, "  -> exports/shortest-first.md")
+	_, _ = fmt.Fprintf(out, "extracted %d unique quotes\n", count)
+	_, _ = fmt.Fprintln(out, "  -> database/seed.sql")
+	_, _ = fmt.Fprintln(out, "  -> exports/shortest-first.md")
 }
 
 // generate reads the dumps, normalizes and sorts the quotes, and writes the

@@ -51,14 +51,14 @@ func runWith(out io.Writer, target string, capture func(url string) ([]byte, err
 		return fmt.Errorf("temp db: %w", err)
 	}
 	tmpPath := tmp.Name()
-	tmp.Close()
-	defer os.Remove(tmpPath)
+	_ = tmp.Close()
+	defer func() { _ = os.Remove(tmpPath) }()
 
 	st, err := store.Open(tmpPath)
 	if err != nil {
 		return fmt.Errorf("open store: %w", err)
 	}
-	defer st.Close()
+	defer func() { _ = st.Close() }()
 	if err := seed.EnsureSeeded(st.DB()); err != nil {
 		return fmt.Errorf("seed: %w", err)
 	}
@@ -85,7 +85,7 @@ func runWith(out io.Writer, target string, capture func(url string) ([]byte, err
 	if err := os.WriteFile(target, buf, 0o644); err != nil {
 		return fmt.Errorf("write %s: %w", target, err)
 	}
-	fmt.Fprintf(out, "wrote %s (%d bytes)\n", filepath.ToSlash(target), len(buf))
+	_, _ = fmt.Fprintf(out, "wrote %s (%d bytes)\n", filepath.ToSlash(target), len(buf))
 	return nil
 }
 

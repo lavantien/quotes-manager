@@ -30,7 +30,7 @@ func serve(addr, dbPath string) error {
 	if err != nil {
 		return err
 	}
-	defer st.Close()
+	defer func() { _ = st.Close() }()
 
 	if err := seed.EnsureSeeded(st.DB()); err != nil {
 		return err
