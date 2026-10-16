@@ -24,6 +24,8 @@ func TestNoDeadLinksCrawl(t *testing.T) {
 		"/rail/left",
 		"/rail/right",
 		"/pane/root",
+		"/pane/check",
+		"/pane/collection",
 	}
 	type queued struct {
 		path, from string

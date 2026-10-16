@@ -62,6 +62,19 @@ func TestChromedpUISmoke(t *testing.T) {
 	defer cancel()
 
 	messages := chromedp.Console(ctx)
+	var consoleErrs []string
+	drained := make(chan struct{})
+	go func() {
+		defer close(drained)
+		for m, merr := range messages {
+			if merr != nil {
+				return
+			}
+			if (m.Type == chromedp.ConsoleError || m.IsException()) && len(consoleErrs) < 50 {
+				consoleErrs = append(consoleErrs, m.String())
+			}
+		}
+	}()
 	var flowErr error
 	run := func(name string, acts ...chromedp.Action[chromedp.Void]) {
 		if flowErr != nil {
@@ -116,19 +129,9 @@ func TestChromedpUISmoke(t *testing.T) {
 	searched := poll("search filtered",
 		fmt.Sprintf(`(function(){var n = document.querySelectorAll('#quote-list [id^="quote-"]').length; return n > 0 && n < %d;})()`, seedCorpusTotal+1))
 
+	time.Sleep(750 * time.Millisecond)
 	cancel()
-	var consoleErrs []string
-	for m, merr := range messages {
-		if merr != nil {
-			break
-		}
-		if m.Type == chromedp.ConsoleError || m.IsException() {
-			consoleErrs = append(consoleErrs, m.String())
-		}
-		if len(consoleErrs) > 20 {
-			break
-		}
-	}
+	<-drained
 
 	switch {
 	case flowErr != nil:

@@ -1,6 +1,9 @@
 package e2e
 
-import "strings"
+import (
+	"html"
+	"strings"
+)
 
 type htmlTag struct {
 	name  string
@@ -66,6 +69,7 @@ func parseTagBody(body string) (string, map[string]string, bool) {
 			continue
 		}
 		key := strings.ToLower(body[keyStart:i])
+		skipSpace()
 		val := ""
 		if i < len(body) && body[i] == '=' {
 			i++
@@ -88,7 +92,7 @@ func parseTagBody(body string) (string, map[string]string, bool) {
 				val = body[valStart:i]
 			}
 		}
-		attrs[key] = val
+		attrs[key] = html.UnescapeString(val)
 	}
 	return name, attrs, true
 }

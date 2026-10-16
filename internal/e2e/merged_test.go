@@ -91,7 +91,7 @@ func TestMergedHermeticE2E(t *testing.T) {
 
 	static := map[string]string{
 		"/static/app.css":          "--",
-		"/static/layout.css":       ".",
+		"/static/layout.css":       "grid-template-columns",
 		"/static/nav.css":          ".nav",
 		"/static/htmx.min.js":      `this.version="4.0.0"`,
 		"/static/app.js":           "htmx",
@@ -112,15 +112,51 @@ func TestMergedHermeticE2E(t *testing.T) {
 			t.Errorf("%s: missing marker %q", asset, marker)
 		}
 	}
+
+	created := app.postForm(t, "/quotes", url.Values{
+		"content": {"Merged e2e citation passage."},
+		"text_id": {"MN 1"},
+	}, app.server().URL)
+	if created.status != http.StatusOK {
+		t.Fatalf("same-origin POST /quotes = %d, want 200 (%s)", created.status, clip(created.body))
+	}
+	if !strings.Contains(created.body, "Merged e2e citation passage.") {
+		t.Errorf("same-origin POST did not render the persisted quote (%s)", clip(created.body))
+	}
+	if !strings.Contains(created.body, `href="/texts/mn1"`) {
+		t.Errorf("MN 1 citation must render href=/texts/mn1 against the canon db (%s)", clip(created.body))
+	}
+	if resolved := app.get(t, "/texts/mn1"); !strings.Contains(resolved.body, "/words?form=") {
+		t.Errorf("citation target /texts/mn1 lost its word links after the post")
+	}
 }
 
 func TestMergedOriginPost(t *testing.T) {
 	app := mergedAppFor(t, true)
-	form := url.Values{"content": {"Merged e2e origin post."}, "text_id": {"MN 22"}}
-	same := app.postForm(t, "/quotes", form, app.server().URL)
+	var before quotesEnvelope
+	decodeJSON(t, app.get(t, "/api/v1/quotes?limit=1"), &before)
+	same := app.postForm(t, "/quotes", url.Values{
+		"content": {"Merged e2e origin post."},
+		"text_id": {"MN 22"},
+	}, app.server().URL)
 	if same.status != http.StatusOK {
 		t.Errorf("same-origin POST /quotes = %d, want 200 (%s)", same.status, clip(same.body))
 	}
-	cross := app.postForm(t, "/quotes", form, "http://evil.example")
+	if !strings.Contains(same.body, "Merged e2e origin post.") {
+		t.Errorf("same-origin POST did not render the persisted quote (%s)", clip(same.body))
+	}
+	cross := app.postForm(t, "/quotes", url.Values{
+		"content": {"Cross-origin posts must never land."},
+		"text_id": {"MN 22"},
+	}, "http://evil.example")
 	wantStatusBody(t, cross, http.StatusForbidden, "origin_rejected")
+	var after quotesEnvelope
+	decodeJSON(t, app.get(t, "/api/v1/quotes?limit=1"), &after)
+	if after.Total != before.Total+1 {
+		t.Errorf("corpus total = %d after one same-origin create and one rejected cross-origin post, want %d",
+			after.Total, before.Total+1)
+	}
+	if strings.Contains(app.get(t, "/").body, "Cross-origin posts must never land.") {
+		t.Error("rejected cross-origin post leaked into the corpus")
+	}
 }

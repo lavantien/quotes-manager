@@ -26,8 +26,8 @@ func TestContentSecurityPolicyLint(t *testing.T) {
 			t.Fatalf("%s: content-type = %q, want text/html", page, ct)
 		}
 		csp := f.header.Get("Content-Security-Policy")
-		if !strings.Contains(csp, "default-src 'self'") {
-			t.Errorf("%s: Content-Security-Policy = %q, want default-src 'self'", page, csp)
+		if csp != "default-src 'self'" {
+			t.Errorf("%s: Content-Security-Policy = %q, want exactly default-src 'self'", page, csp)
 		}
 		lintInlineScripts(t, page, f.body)
 		lintEventAttributes(t, page, f.body)
