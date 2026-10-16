@@ -34,7 +34,7 @@ EXE := .exe
 endif
 BIN := dist/qm$(EXE)
 
-.PHONY: help all build test test-pkg vet fmt lint typecheck run server extract seed tidy clean coverage screenshot fixture monitor
+.PHONY: help all build test test-pkg vet fmt lint lint-pkg typecheck run server extract seed tidy clean coverage screenshot fixture monitor
 
 help: ## show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make <target>\n\nTargets:\n"} \
@@ -59,6 +59,9 @@ fmt: ## gofumpt all Go files
 
 lint: ## golangci-lint run
 	golangci-lint run
+
+lint-pkg: ## lint one package: make lint-pkg PKG=./internal/config
+	golangci-lint run $(PKG)
 
 typecheck: ## compile every package, then go vet
 	$(GO) build $(TAGS) ./...
