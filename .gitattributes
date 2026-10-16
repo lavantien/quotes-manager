@@ -1,0 +1,8 @@
+* text=auto eol=lf
+
+*.png -text
+*.db -text
+*.duckdb -text
+*.parquet -text
+*.tar.xz -text
+*.exe -text
