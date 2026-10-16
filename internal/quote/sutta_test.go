@@ -63,6 +63,154 @@ func TestCanonicalSuttaIDMore(t *testing.T) {
 	}
 }
 
+func TestMuidFromSuttaID(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"main nikaya", "MN 22", "mn22"},
+		{"digha nikaya", "DN 16", "dn16"},
+		{"samyutta with vaggas", "SN 12.63", "sn12.63"},
+		{"anguttara with nipata", "AN 4.77", "an4.77"},
+		{"range id", "AN 1.278-286", "an1.278-286"},
+		{"fragment kept", "AN 5.34#7.9", "an5.34#7.9"},
+		{"deep section", "DN 16.1.5", "dn16.1.5"},
+		{"kn sub-book", "KN Snp 2.14", "snp2.14"},
+		{"kn itivuttaka", "KN Iti 25", "iti25"},
+		{"kn udana", "KN Ud 8.8", "ud8.8"},
+		{"kn dhammapada", "KN Dhp 20", "dhp20"},
+		{"full vinaya", "pli-tv-bu-vb-pj1", "pli-tv-bu-vb-pj1"},
+		{"full vinaya fragment dropped", "pli-tv-bu-vb-pj1#5.11.20", "pli-tv-bu-vb-pj1"},
+		{"abbreviated vinaya", "Tv Vi Bu Pj1", "tvvibupj1"},
+		{"extracts id from citation", "the Buddha, MN 22", "mn22"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := MuidFromSuttaID(c.in)
+			if err != nil {
+				t.Fatalf("MuidFromSuttaID(%q): %v", c.in, err)
+			}
+			if got != c.want {
+				t.Errorf("MuidFromSuttaID(%q) = %q, want %q", c.in, got, c.want)
+			}
+		})
+	}
+}
+
+func TestMuidFromSuttaIDUnmappable(t *testing.T) {
+	for _, in := range []string{
+		"",
+		"   ",
+		"no sutta id here",
+		"mn 22",
+		"KN An 5",
+		"KN Sn 12.63",
+	} {
+		if got, err := MuidFromSuttaID(in); err == nil {
+			t.Errorf("MuidFromSuttaID(%q) = %q, want an error", in, got)
+		}
+	}
+}
+
+func TestDisplaySuttaID(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"main nikaya", "mn22", "MN 22"},
+		{"range id", "an1.278-286", "AN 1.278-286"},
+		{"fragment kept", "an5.34#7.9", "AN 5.34#7.9"},
+		{"deep section", "dn16.1.5", "DN 16.1.5"},
+		{"kn sub-book", "snp2.14", "KN Snp 2.14"},
+		{"kn itivuttaka", "iti25", "KN Iti 25"},
+		{"kn udana", "ud8.8", "KN Ud 8.8"},
+		{"kn dhammapada", "dhp20", "KN Dhp 20"},
+		{"full vinaya", "pli-tv-bu-vb-pj1", "pli-tv-bu-vb-pj1"},
+		{"abbreviated vinaya", "tvvibupj1", "Tv Vi Bu Pj1"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := DisplaySuttaID(c.in)
+			if err != nil {
+				t.Fatalf("DisplaySuttaID(%q): %v", c.in, err)
+			}
+			if got != c.want {
+				t.Errorf("DisplaySuttaID(%q) = %q, want %q", c.in, got, c.want)
+			}
+		})
+	}
+}
+
+func TestDisplaySuttaIDUnmappable(t *testing.T) {
+	for _, in := range []string{
+		"",
+		"MN1",
+		"Snp2.14",
+		"abc",
+		"1.2",
+		"22mn",
+	} {
+		if got, err := DisplaySuttaID(in); err == nil {
+			t.Errorf("DisplaySuttaID(%q) = %q, want an error", in, got)
+		}
+	}
+}
+
+func TestSuttaIDMuidRoundTrip(t *testing.T) {
+	familyReps := []struct {
+		family string
+		id     string
+	}{
+		{"dn", "DN 16"},
+		{"mn", "MN 22"},
+		{"sn", "SN 12.63"},
+		{"an", "AN 4.77"},
+		{"an range", "AN 1.278-286"},
+		{"an fragment", "AN 5.34#7.9"},
+		{"dn deep", "DN 16.1.5"},
+		{"kn snp", "KN Snp 2.14"},
+		{"kn iti", "KN Iti 25"},
+		{"kn ud", "KN Ud 8.8"},
+		{"kn dhp", "KN Dhp 20"},
+		{"vinaya full", "pli-tv-bu-vb-pj1"},
+		{"vinaya abbreviated", "Tv Vi Bu Pj1"},
+	}
+	for _, c := range familyReps {
+		t.Run(c.family, func(t *testing.T) {
+			muid, err := MuidFromSuttaID(c.id)
+			if err != nil {
+				t.Fatalf("MuidFromSuttaID(%q): %v", c.id, err)
+			}
+			got, err := DisplaySuttaID(muid)
+			if err != nil {
+				t.Fatalf("DisplaySuttaID(%q): %v", muid, err)
+			}
+			if got != c.id {
+				t.Errorf("round trip %q -> %q -> %q", c.id, muid, got)
+			}
+		})
+	}
+}
+
+func TestSuttaIDMuidRoundTripDropsVinayaFragment(t *testing.T) {
+	muid, err := MuidFromSuttaID("pli-tv-bu-vb-pj1#5.11.20")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if muid != "pli-tv-bu-vb-pj1" {
+		t.Fatalf("muid = %q, want the fragment dropped", muid)
+	}
+	got, err := DisplaySuttaID(muid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "pli-tv-bu-vb-pj1" {
+		t.Fatalf("display = %q, want the bare full vinaya id", got)
+	}
+}
+
 func TestSplitCitationReverseIteration(t *testing.T) {
 	// Multiple " - " separators where the rightmost tail is not a citation: the
 	// loop walks left, finds no clean citation, and reports not-ok.

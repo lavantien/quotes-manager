@@ -1,15 +1,12 @@
 package quote
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
-// suttaIDPat matches a single sutta identifier (non-capturing alternation):
-//   - four main nikayas:   MN 22, AN 1.278-286, SN 12.63, AN 5.34#7.9
-//   - Khuddaka sub-books:  KN Snp 2.14, KN Iti 25, KN Ud 8.8
-//   - full Vinaya id:      pli-tv-bu-vb-pj1#5.11.20
-//   - abbreviated Vinaya:  Tv Vi Bu Pj1
 const suttaIDPat = `(?:` +
 	`(?:DN|MN|AN|SN)\s+\d+(?:[.-]\d+)*(?:#\d+(?:\.\d+)*)?` +
 	`|KN\s+[A-Za-z]+\s+\d+(?:[.-]\d+)*` +
@@ -20,43 +17,86 @@ const suttaIDPat = `(?:` +
 var (
 	suttaIDRe = regexp.MustCompile(suttaIDPat)
 
-	// citationRe matches a clean citation tail: [attribution,]* SUTTA [( url )].
 	citationRe = regexp.MustCompile(`^\s*(?:[^(),]+,\s+)*` + suttaIDPat + `(?:\s*\([^)]*\))?\s*$`)
 
-	// headerRe matches a lone "SUTTA:" line (header-cited quote).
 	headerRe = regexp.MustCompile(`^` + suttaIDPat + `:\s*$`)
 
-	// sepRe matches the " - " separating a passage from its inline citation.
 	sepRe = regexp.MustCompile(`\s+-\s+`)
 
-	// urlParensRe matches a trailing "( ... )" (e.g. a suttacentral URL).
 	urlParensRe = regexp.MustCompile(`\s*\([^)]*\)\s*$`)
+
+	muidNikayaRe       = regexp.MustCompile(`^(dn|mn|an|sn)(\d.*)$`)
+	muidAbbrevVinayaRe = regexp.MustCompile(`^tvvibu(pj\d)$`)
+	muidSubBookRe      = regexp.MustCompile(`^([a-z]+)(\d.*)$`)
 )
 
-// CanonicalSuttaID returns the sutta identifier embedded in s.
 func CanonicalSuttaID(s string) string {
 	return strings.TrimSpace(suttaIDRe.FindString(s))
 }
 
-// SuttaURL returns the suttacentral URL for a sutta id (or any string carrying
-// one). The signature is the canonical id lowercased with all spaces removed:
-//
-//	"MN 22"              -> "https://suttacentral.net/mn22"
-//	"AN 4.180"           -> "https://suttacentral.net/an4.180"
-//	"KN Snp 2.14"        -> "https://suttacentral.net/knsnp2.14"
-//	"the Buddha, MN 22"  -> "https://suttacentral.net/mn22"
+func MuidFromSuttaID(id string) (string, error) {
+	c := CanonicalSuttaID(id)
+	if c == "" {
+		return "", fmt.Errorf("no sutta id in %q", id)
+	}
+	if strings.HasPrefix(c, "pli-tv") {
+		if i := strings.IndexByte(c, '#'); i >= 0 {
+			c = c[:i]
+		}
+		return c, nil
+	}
+	if rest, ok := strings.CutPrefix(c, "KN "); ok {
+		if muidNikayaRe.MatchString(compactLower(rest)) {
+			return "", fmt.Errorf("kn sub-book %q aliases a main nikaya muid", rest)
+		}
+		c = rest
+	}
+	return compactLower(c), nil
+}
+
+func DisplaySuttaID(muid string) (string, error) {
+	if m := muidNikayaRe.FindStringSubmatch(muid); m != nil {
+		return strings.ToUpper(m[1]) + " " + m[2], nil
+	}
+	if m := muidAbbrevVinayaRe.FindStringSubmatch(muid); m != nil {
+		return "Tv Vi Bu Pj" + m[1][2:], nil
+	}
+	if strings.HasPrefix(muid, "pli-tv") {
+		return muid, nil
+	}
+	if m := muidSubBookRe.FindStringSubmatch(muid); m != nil {
+		return "KN " + titleFirst(m[1]) + " " + m[2], nil
+	}
+	return "", fmt.Errorf("no display id for muid %q", muid)
+}
+
+func compactLower(s string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(s) {
+		if !unicode.IsSpace(r) {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func titleFirst(s string) string {
+	if s == "" {
+		return s
+	}
+	r := []rune(s)
+	return string(unicode.ToUpper(r[0])) + string(r[1:])
+}
+
 func SuttaURL(id string) string {
 	sig := strings.ToLower(strings.ReplaceAll(CanonicalSuttaID(id), " ", ""))
 	return "https://suttacentral.net/" + sig
 }
 
-// cleanCitation drops a trailing URL-in-parens and trims whitespace.
 func cleanCitation(s string) string {
 	return strings.TrimSpace(urlParensRe.ReplaceAllString(strings.TrimSpace(s), ""))
 }
 
-// ensureAttribution prefixes "the Buddha, " when a citation carries no
-// attribution — i.e. it is just the sutta id with nothing before it.
 func ensureAttribution(citation string) string {
 	c := strings.TrimSpace(citation)
 	if c == CanonicalSuttaID(c) {
@@ -65,9 +105,6 @@ func ensureAttribution(citation string) string {
 	return c
 }
 
-// splitCitation splits a line into (passage, citation, ok). It locates the
-// rightmost " - " whose tail is a clean citation; if none qualifies the line is
-// not an inline-citation line.
 func splitCitation(line string) (passage, citation string, ok bool) {
 	idxs := sepRe.FindAllStringIndex(line, -1)
 	for i := len(idxs) - 1; i >= 0; i-- {
