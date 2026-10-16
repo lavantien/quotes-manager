@@ -4,6 +4,7 @@
 [default.extend-words]
 unparseable = "unparseable"
 INSER = "INSER"
+gam = "gam"
 
 # Source dumps are transcribed artifacts (scripture quotes with the
 # original spelling kept), and web/static holds vendored minified assets:
