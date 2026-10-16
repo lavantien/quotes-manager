@@ -3,13 +3,13 @@ module github.com/lavantien/quotes-manager
 go 1.27.2
 
 require (
-	github.com/chromedp/chromedp v0.16.0
+	github.com/chromedp/chromedp v0.21.0
 	github.com/mattn/go-sqlite3 v1.14.52
 )
 
 require (
 	github.com/apache/arrow-go/v18 v18.5.1 // indirect
-	github.com/chromedp/cdproto v0.0.0-20260714215040-dc233986426f // indirect
+	github.com/chromedp/cdproto v0.157.8 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/duckdb/duckdb-go-bindings v0.10506.0 // indirect
 	github.com/duckdb/duckdb-go-bindings/lib/darwin-amd64 v0.10506.0 // indirect

@@ -103,17 +103,15 @@ func captureScreenshot(url string) ([]byte, error) {
 	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
-	var buf []byte
-	if err := chromedp.Run(ctx,
+	if err := chromedp.Do(ctx,
 		chromedp.EmulateViewport(viewportW, viewportH),
 		chromedp.Navigate(url),
-		chromedp.WaitVisible("#quote-list", chromedp.ByID),
+		chromedp.WaitVisible(chromedp.ID("quote-list")),
 		chromedp.Sleep(300*time.Millisecond),
-		chromedp.CaptureScreenshot(&buf),
 	); err != nil {
 		return nil, err
 	}
-	return buf, nil
+	return chromedp.Run(ctx, chromedp.CaptureScreenshot())
 }
 
 func browserPath() string {
