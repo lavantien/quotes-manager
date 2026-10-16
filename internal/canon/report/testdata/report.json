@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-05",
+  "provenance": {
+    "bilara_commit": "abc123",
+    "editions_commit": "def456"
+  },
+  "counts": {
+    "edges": 250,
+    "nodes": 100
+  },
+  "coverage": [
+    {
+      "division": "an",
+      "texts": 1,
+      "covered": 1
+    },
+    {
+      "division": "mn",
+      "texts": 2,
+      "covered": 1
+    }
+  ],
+  "discrepancies": [
+    {
+      "check": "B001",
+      "severity": "error",
+      "muid": "mn1",
+      "detail": "orphan translation en/sujato:mn1:9.9"
+    },
+    {
+      "check": "B001",
+      "severity": "warn",
+      "muid": "mn1",
+      "detail": "untranslated by sujato: mn1:0.3"
+    }
+  ],
+  "discrepancy_counts": {
+    "B001/error": 1,
+    "B001/warn": 1
+  },
+  "detail_sample_max": 200
+}
