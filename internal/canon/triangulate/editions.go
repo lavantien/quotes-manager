@@ -8,9 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -74,39 +72,15 @@ func escapeLike(s string) string {
 	return strings.ReplaceAll(s, `_`, `\_`)
 }
 
-func readDirNames(dir string) ([]string, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, fmt.Errorf("read tex parsed dir: %w", err)
-	}
-	var out []string
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".txt") {
-			continue
-		}
-		out = append(out, strings.TrimSuffix(e.Name(), ".txt"))
-	}
-	sort.Strings(out)
-	return out, nil
-}
-
 func runE101(ctx context.Context, cfg *config.Config, st Store, env Env) ([]model.Discrepancy, error) {
 	htmlSegs, err := loadHTMLSegments(env.HtmlSegmentsFile)
 	if err != nil {
 		return nil, fmt.Errorf("e101: %w", err)
 	}
-	if len(htmlSegs) > 0 {
-		return e101HTML(ctx, cfg, st, htmlSegs)
-	}
-
-	absent, err := env.texParsedAbsent()
-	if err != nil {
-		return nil, fmt.Errorf("e101: %w", err)
-	}
-	if absent {
-		detail := "html stream absent and tex parsed dir not configured; editions checks degraded (tex fallback)"
-		if env.TexParsedDir != "" {
-			detail = "html stream absent and tex parsed dir missing or empty: " + env.TexParsedDir + "; editions checks degraded (tex fallback)"
+	if len(htmlSegs) == 0 {
+		detail := "html editions stream not configured; editions checks degraded"
+		if env.HtmlSegmentsFile != "" {
+			detail = "html editions stream missing or empty: " + env.HtmlSegmentsFile + "; editions checks degraded"
 		}
 		return []model.Discrepancy{{
 			Check:    model.CheckEditionsCoverage,
@@ -114,50 +88,7 @@ func runE101(ctx context.Context, cfg *config.Config, st Store, env Env) ([]mode
 			Detail:   detail,
 		}}, nil
 	}
-	texMuids, err := readDirNames(env.TexParsedDir)
-	if err != nil {
-		return nil, fmt.Errorf("e101: %w", err)
-	}
-	texSet := map[string]bool{}
-	for _, m := range texMuids {
-		texSet[m] = true
-	}
-
-	sev := model.Severity(cfg.Canon.SeverityFor(string(model.CheckEditionsCoverage)))
-	var ds []model.Discrepancy
-	bilaraAll := map[string]bool{}
-	for _, author := range sortedAuthors(cfg) {
-		files, err := authorFileMuids(ctx, st.DB(), author)
-		if err != nil {
-			return nil, fmt.Errorf("e101: %w", err)
-		}
-		for _, fileMuid := range files {
-			bilaraAll[fileMuid] = true
-			col, ok := assignCollection(fileMuid, cfg.Canon.Editions.Authors[author])
-			if !ok {
-				continue
-			}
-			if !texSet[fileMuid] {
-				ds = append(ds, model.Discrepancy{
-					Check:    model.CheckEditionsCoverage,
-					Severity: sev,
-					Muid:     fileMuid,
-					Detail:   "no tex for " + col + ": " + fileMuid,
-				})
-			}
-		}
-	}
-	for _, muid := range texMuids {
-		if !bilaraAll[muid] {
-			ds = append(ds, model.Discrepancy{
-				Check:    model.CheckEditionsCoverage,
-				Severity: sev,
-				Muid:     muid,
-				Detail:   "tex muid without bilara text: " + muid,
-			})
-		}
-	}
-	return ds, nil
+	return e101HTML(ctx, cfg, st, htmlSegs)
 }
 
 func e101HTML(ctx context.Context, cfg *config.Config, st Store, htmlSegs map[string]map[string][]model.HTMLSegment) ([]model.Discrepancy, error) {
@@ -305,38 +236,23 @@ type coversData struct {
 }
 
 func runE102(ctx context.Context, cfg *config.Config, st Store, env Env) ([]model.Discrepancy, error) {
-	absent, err := env.texParsedAbsent()
-	if err != nil {
-		return nil, fmt.Errorf("e102: %w", err)
-	}
 	htmlSegs, err := loadHTMLSegments(env.HtmlSegmentsFile)
 	if err != nil {
 		return nil, fmt.Errorf("e102: %w", err)
 	}
-	if len(env.EditionsZips) == 0 {
+	if len(env.EditionsHTML) == 0 {
 		return nil, nil
 	}
 	comparable := map[string]bool{}
-	for _, z := range env.EditionsZips {
-		if _, err := parseDateTolerant(z.BuildDate); err == nil {
-			comparable[editionKey(z.Author, z.Collection)] = true
+	for _, h := range env.EditionsHTML {
+		if _, err := parseDateTolerant(h.BuildDate); err == nil {
+			comparable[editionKey(h.Author, h.Collection)] = true
 		}
 	}
 	if len(comparable) == 0 {
 		return nil, nil
 	}
-	texSet := map[string]bool{}
-	if !absent {
-		texMuids, err := readDirNames(env.TexParsedDir)
-		if err != nil {
-			return nil, fmt.Errorf("e102: %w", err)
-		}
-		for _, m := range texMuids {
-			texSet[m] = true
-		}
-	}
 
-	sev := model.Severity(cfg.Canon.SeverityFor(string(model.CheckEditionsContent)))
 	var ds []model.Discrepancy
 	for _, author := range sortedAuthors(cfg) {
 		files, err := authorFileMuids(ctx, st.DB(), author)
@@ -356,58 +272,15 @@ func runE102(ctx context.Context, cfg *config.Config, st Store, env Env) ([]mode
 				if err != nil {
 					return nil, fmt.Errorf("e102: %w", err)
 				}
-				if hasHTMLSegments(authorHTML, texts) {
-					findings, err := compareHTMLSegments(ctx, st.DB(), author, fileMuid, texts, authorHTML, cfg)
-					if err != nil {
-						return nil, fmt.Errorf("e102: %w", err)
-					}
-					if len(findings) == 0 {
-						data, err := json.Marshal(coversData{Similarity: 1, Source: "html " + editionKey(author, col)})
-						if err != nil {
-							return nil, fmt.Errorf("e102 marshal covers: %w", err)
-						}
-						for _, muid := range texts {
-							if err := st.SetCoversEdge(ctx, muid, editionKey(author, col), string(data)); err != nil {
-								return nil, fmt.Errorf("e102 set covers %s: %w", muid, err)
-							}
-						}
-						continue
-					}
-					ds = append(ds, findings...)
+				if !hasHTMLSegments(authorHTML, texts) {
 					continue
 				}
-				if !texSet[fileMuid] {
-					continue
-				}
-				segs, err := enSegmentTexts(ctx, st.DB(), author, fileMuid)
+				findings, err := compareHTMLSegments(ctx, st.DB(), author, fileMuid, texts, authorHTML, cfg)
 				if err != nil {
 					return nil, fmt.Errorf("e102: %w", err)
 				}
-				texPath := filepath.Join(env.TexParsedDir, fileMuid+".txt")
-				texBytes, err := os.ReadFile(texPath)
-				if err != nil {
-					return nil, fmt.Errorf("e102 read tex %s: %w", texPath, err)
-				}
-				texFolded := norm.Fold(string(texBytes))
-				enFolded := make([]string, len(segs))
-				bilaraCounts := map[string]int{}
-				for i, s := range segs {
-					enFolded[i] = norm.Fold(s)
-					addTrigramCounts(bilaraCounts, enFolded[i])
-				}
-				enTrim := strings.TrimSpace(strings.Join(enFolded, " "))
-				if enTrim == "" && texFolded == "" {
-					ds = append(ds, model.Discrepancy{
-						Check:    model.CheckEditionsContent,
-						Severity: sev,
-						Muid:     fileMuid,
-						Detail:   "empty bilara and tex text: " + editionKey(author, col),
-					})
-					continue
-				}
-				sim := countsJaccard(bilaraCounts, trigramCounts(texFolded))
-				if sim >= cfg.Canon.Triangulate.SimilarityMin {
-					data, err := json.Marshal(coversData{Similarity: round4(sim), Source: texPath})
+				if len(findings) == 0 {
+					data, err := json.Marshal(coversData{Similarity: 1, Source: "html " + editionKey(author, col)})
 					if err != nil {
 						return nil, fmt.Errorf("e102 marshal covers: %w", err)
 					}
@@ -418,13 +291,7 @@ func runE102(ctx context.Context, cfg *config.Config, st Store, env Env) ([]mode
 					}
 					continue
 				}
-				ds = append(ds, model.Discrepancy{
-					Check:    model.CheckEditionsContent,
-					Severity: sev,
-					Muid:     fileMuid,
-					Detail: divergenceDetail(enTrim, texFolded, sim,
-						cfg.Canon.Triangulate.SimilarityMin, cfg.Canon.Triangulate.DetailSampleMax),
-				})
+				ds = append(ds, findings...)
 			}
 		}
 	}
@@ -632,126 +499,13 @@ func sortedStrings(in []string) []string {
 	return out
 }
 
-func enSegmentTexts(ctx context.Context, db *sql.DB, author, fileMuid string) ([]string, error) {
-	rows, err := db.QueryContext(ctx, `
-		SELECT json_extract(en.data, '$.text') AS text
-		FROM node en
-		JOIN edge che ON che.src = en.id AND che.type = 'CHILD_OF'
-		JOIN node t ON t.id = che.dst
-		WHERE en.type = 'segment' AND en.key LIKE ? ESCAPE '\'
-		  AND t.type = 'text' AND json_extract(t.data, '$.file_muid') = ?
-		ORDER BY json_extract(t.data, '$.file_ord'), che.ord, en.key`,
-		prefixEn+escapeLike(author)+":%", fileMuid)
-	if err != nil {
-		return nil, fmt.Errorf("en segments query %s/%s: %w", author, fileMuid, err)
-	}
-	defer func() { _ = rows.Close() }()
-	var out []string
-	for rows.Next() {
-		var text sql.NullString
-		if err := rows.Scan(&text); err != nil {
-			return nil, fmt.Errorf("en segments scan: %w", err)
-		}
-		if text.Valid {
-			out = append(out, text.String)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("en segments iterate: %w", err)
-	}
-	return out, nil
-}
-
-func trigramJaccard(a, b string) float64 {
-	return countsJaccard(trigramCounts(a), trigramCounts(b))
-}
-
-func countsJaccard(ta, tb map[string]int) float64 {
-	if len(ta) == 0 && len(tb) == 0 {
-		return 1
-	}
-	var inter, union float64
-	for k, ca := range ta {
-		cb := tb[k]
-		inter += float64(min(ca, cb))
-		union += float64(max(ca, cb))
-	}
-	for k, cb := range tb {
-		if _, ok := ta[k]; !ok {
-			union += float64(cb)
-		}
-	}
-	if union == 0 {
-		return 0
-	}
-	return inter / union
-}
-
-func trigramCounts(s string) map[string]int {
-	rs := []rune(s)
-	out := make(map[string]int, len(rs))
-	addRunTrigrams(out, rs)
-	return out
-}
-
-func addTrigramCounts(dst map[string]int, s string) {
-	addRunTrigrams(dst, []rune(s))
-}
-
-func addRunTrigrams(dst map[string]int, rs []rune) {
-	for i := 0; i+3 <= len(rs); i++ {
-		dst[string(rs[i:i+3])]++
-	}
-}
-
-func round4(f float64) float64 {
-	return math.Round(f*10000) / 10000
-}
-
-func divergenceDetail(a, b string, sim, minimum float64, maxChars int) string {
-	base := fmt.Sprintf("similarity %.4f < %.4f", sim, minimum)
-	ra, rb := []rune(a), []rune(b)
-	off := firstDiffRune(ra, rb)
-	if off < 0 {
-		return base + "; texts are equal"
-	}
-	half := maxChars / 2
-	pre := 20
-	if pre > half {
-		pre = half
-	}
-	start := off - pre
-	if start < 0 {
-		start = 0
-	}
-	sa := string(ra[start:min(len(ra), start+half)])
-	sb := string(rb[start:min(len(rb), start+half)])
-	return fmt.Sprintf("%s; first divergence at rune %d: a=%q b=%q", base, off, sa, sb)
-}
-
-func firstDiffRune(a, b []rune) int {
-	n := len(a)
-	if len(b) < n {
-		n = len(b)
-	}
-	for i := 0; i < n; i++ {
-		if a[i] != b[i] {
-			return i
-		}
-	}
-	if len(a) != len(b) {
-		return n
-	}
-	return -1
-}
-
 func runE103(ctx context.Context, cfg *config.Config, st Store, env Env) ([]model.Discrepancy, error) {
-	if env.BilaraNewerThan == nil || len(env.EditionsZips) == 0 {
+	if env.BilaraNewerThan == nil || len(env.EditionsHTML) == 0 {
 		return nil, nil
 	}
 	sev := model.Severity(cfg.Canon.SeverityFor(string(model.CheckEditionsStaleness)))
 	var ds []model.Discrepancy
-	zips := newestPerEdition(env.EditionsZips)
+	htmls := newestPerEdition(env.EditionsHTML)
 	for _, author := range sortedAuthors(cfg) {
 		latest, ok := env.BilaraNewerThan(author)
 		if !ok {
@@ -766,30 +520,30 @@ func runE103(ctx context.Context, cfg *config.Config, st Store, env Env) ([]mode
 			})
 			continue
 		}
-		for _, z := range zips {
-			if z.Author != author {
+		for _, h := range htmls {
+			if h.Author != author {
 				continue
 			}
-			bt, err := parseDateTolerant(z.BuildDate)
+			bt, err := parseDateTolerant(h.BuildDate)
 			if err != nil {
 				ds = append(ds, model.Discrepancy{
 					Check:    model.CheckEditionsStaleness,
 					Severity: model.Info,
-					Detail: fmt.Sprintf("zip %s build date unparsable: %s",
-						editionKey(z.Author, z.Collection), z.BuildDate),
+					Detail: fmt.Sprintf("html %s build date unparsable: %s",
+						editionKey(h.Author, h.Collection), h.BuildDate),
 				})
 				continue
 			}
 			if lt.After(bt) {
-				name := z.ZipName
+				name := h.FileName
 				if name == "" {
-					name = editionKey(z.Author, z.Collection)
+					name = editionKey(h.Author, h.Collection)
 				}
 				ds = append(ds, model.Discrepancy{
 					Check:    model.CheckEditionsStaleness,
 					Severity: sev,
 					Detail: fmt.Sprintf("bilara newer than %s built %s: latest %s",
-						name, z.BuildDate, latest),
+						name, h.BuildDate, latest),
 				})
 			}
 		}
@@ -797,23 +551,23 @@ func runE103(ctx context.Context, cfg *config.Config, st Store, env Env) ([]mode
 	return ds, nil
 }
 
-func newestPerEdition(zips []ZipRef) []ZipRef {
-	best := map[string]ZipRef{}
-	for _, z := range zips {
-		k := editionKey(z.Author, z.Collection)
-		if cur, ok := best[k]; !ok || z.BuildDate > cur.BuildDate ||
-			(z.BuildDate == cur.BuildDate && z.ZipName > cur.ZipName) {
-			best[k] = z
+func newestPerEdition(htmls []HTMLRef) []HTMLRef {
+	best := map[string]HTMLRef{}
+	for _, h := range htmls {
+		k := editionKey(h.Author, h.Collection)
+		if cur, ok := best[k]; !ok || h.BuildDate > cur.BuildDate ||
+			(h.BuildDate == cur.BuildDate && h.FileName > cur.FileName) {
+			best[k] = h
 		}
 	}
-	out := make([]ZipRef, 0, len(best))
+	out := make([]HTMLRef, 0, len(best))
 	for _, k := range sortedKeys2(best) {
 		out = append(out, best[k])
 	}
 	return out
 }
 
-func sortedKeys2(m map[string]ZipRef) []string {
+func sortedKeys2(m map[string]HTMLRef) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
 		out = append(out, k)
@@ -822,8 +576,8 @@ func sortedKeys2(m map[string]ZipRef) []string {
 	return out
 }
 
-func sortedZips(in []ZipRef) []ZipRef {
-	out := append([]ZipRef(nil), in...)
+func sortedHTML(in []HTMLRef) []HTMLRef {
+	out := append([]HTMLRef(nil), in...)
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Author != out[j].Author {
 			return out[i].Author < out[j].Author
@@ -837,7 +591,7 @@ func sortedZips(in []ZipRef) []ZipRef {
 }
 
 func runE104(ctx context.Context, cfg *config.Config, st Store, env Env) ([]model.Discrepancy, error) {
-	if env.LastRunDate == "" || len(env.EditionsZips) == 0 {
+	if env.LastRunDate == "" || len(env.EditionsHTML) == 0 {
 		return nil, nil
 	}
 	lr, err := parseDateTolerant(env.LastRunDate)
@@ -850,13 +604,13 @@ func runE104(ctx context.Context, cfg *config.Config, st Store, env Env) ([]mode
 	}
 	var newest time.Time
 	var newestRaw string
-	for _, z := range sortedZips(env.EditionsZips) {
-		bt, err := parseDateTolerant(z.BuildDate)
+	for _, h := range sortedHTML(env.EditionsHTML) {
+		bt, err := parseDateTolerant(h.BuildDate)
 		if err != nil {
 			continue
 		}
 		if newestRaw == "" || bt.After(newest) {
-			newest, newestRaw = bt, z.BuildDate
+			newest, newestRaw = bt, h.BuildDate
 		}
 	}
 	if newestRaw == "" {

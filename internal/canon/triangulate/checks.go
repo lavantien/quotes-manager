@@ -3,10 +3,7 @@ package triangulate
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 	"strings"
 
 	"github.com/lavantien/quotes-manager/internal/canon/model"
@@ -19,19 +16,18 @@ type Store interface {
 	SetCoversEdge(ctx context.Context, muid, editionKey, dataJSON string) error
 }
 
-type ZipRef struct {
+type HTMLRef struct {
 	Author     string
 	Collection string
 	BuildDate  string
-	ZipName    string
+	FileName   string
 }
 
 type Env struct {
 	RunID            int64
 	ParsedDir        string
-	TexParsedDir     string
 	HtmlSegmentsFile string
-	EditionsZips     []ZipRef
+	EditionsHTML     []HTMLRef
 	BilaraNewerThan  func(author string) (string, bool)
 	LastRunDate      string
 	DpdDBPath        string
@@ -144,25 +140,4 @@ func capJoin(items []string, max int) string {
 		s += fmt.Sprintf(" (+%d more)", rest)
 	}
 	return s
-}
-
-func (e Env) texParsedAbsent() (bool, error) {
-	if e.TexParsedDir == "" {
-		return true, nil
-	}
-	fi, err := os.Stat(e.TexParsedDir)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return true, nil
-		}
-		return false, fmt.Errorf("stat tex parsed dir: %w", err)
-	}
-	if !fi.IsDir() {
-		return false, fmt.Errorf("tex parsed dir %s is not a directory", e.TexParsedDir)
-	}
-	names, err := readDirNames(e.TexParsedDir)
-	if err != nil {
-		return false, err
-	}
-	return len(names) == 0, nil
 }

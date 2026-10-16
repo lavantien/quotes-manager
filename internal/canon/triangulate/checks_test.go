@@ -145,13 +145,6 @@ func (s *testStore) addCognate(t *testing.T, prefix, muid, segkey string) {
 	s.addEdge(t, id, s.nodeID(t, "text", muid, textData(muid)), "CHILD_OF", s.nextOrd(muid))
 }
 
-func (s *testStore) writeTex(t *testing.T, dir, muid, body string) {
-	t.Helper()
-	if err := os.WriteFile(filepath.Join(dir, muid+".txt"), []byte(body), 0o644); err != nil {
-		t.Fatalf("write tex %s: %v", muid, err)
-	}
-}
-
 func writeMeta(t *testing.T, dir string, files map[string]parsedFile) {
 	t.Helper()
 	b, err := json.Marshal(parsedMeta{Files: files})
@@ -320,29 +313,5 @@ func TestRunNilCfgDefaults(t *testing.T) {
 	}
 	if !sum.HasErrors {
 		t.Fatal("default orphan severity is error, HasErrors must be set")
-	}
-}
-
-func TestEnvTexParsedAbsent(t *testing.T) {
-	var zero Env
-	if absent, err := zero.texParsedAbsent(); !absent || err != nil {
-		t.Fatalf("empty dir name must degrade, got absent=%v err=%v", absent, err)
-	}
-	dir := t.TempDir()
-	if absent, err := (Env{TexParsedDir: dir}).texParsedAbsent(); !absent || err != nil {
-		t.Fatalf("existing empty dir must degrade, got absent=%v err=%v", absent, err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "mn1.txt"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if absent, err := (Env{TexParsedDir: dir}).texParsedAbsent(); absent || err != nil {
-		t.Fatalf("dir with a tex file must be live, got absent=%v err=%v", absent, err)
-	}
-	if absent, err := (Env{TexParsedDir: filepath.Join(dir, "nope")}).texParsedAbsent(); !absent || err != nil {
-		t.Fatalf("missing dir must degrade, got absent=%v err=%v", absent, err)
-	}
-	notADir := filepath.Join(dir, "mn1.txt")
-	if absent, err := (Env{TexParsedDir: notADir}).texParsedAbsent(); absent || err == nil {
-		t.Fatalf("a file in the dir's place must error, got absent=%v err=%v", absent, err)
 	}
 }

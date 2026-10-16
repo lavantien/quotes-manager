@@ -5,25 +5,6 @@ import (
 	"testing"
 )
 
-func FuzzTrigramJaccard(f *testing.F) {
-	f.Add("", "")
-	f.Add("abc", "abc")
-	f.Add("Evaṁ me sutaṁ—", "So I have heard. ")
-	f.Add("abcd", "abce")
-	f.Fuzz(func(t *testing.T, a, b string) {
-		j := trigramJaccard(a, b)
-		if j < 0 || j > 1 {
-			t.Fatalf("jaccard out of [0,1]: %v (%q,%q)", j, a, b)
-		}
-		if j2 := trigramJaccard(b, a); j2 != j {
-			t.Fatalf("jaccard not symmetric: %v vs %v (%q,%q)", j, j2, a, b)
-		}
-		if a == b && j != 1 {
-			t.Fatalf("jaccard of equal strings = %v (%q)", j, a)
-		}
-	})
-}
-
 func FuzzSplitEnKey(f *testing.F) {
 	f.Add("en/sujato:mn1:0.1")
 	f.Add("en/:mn1:0.1")
@@ -62,21 +43,6 @@ func FuzzParseDateTolerant(f *testing.F) {
 		}
 		if _, err := parseDateTolerant(got.Format("2006-01-02")); err != nil {
 			t.Fatalf("date-only reparse failed: %v (%q)", got, s)
-		}
-	})
-}
-
-func FuzzDivergenceDetail(f *testing.F) {
-	f.Add("same", "same", 0.5, 0.85, 200)
-	f.Add("a", "b", 0.1, 0.9, 20)
-	f.Add("", "long text here", 0.0, 1.0, 40)
-	f.Fuzz(func(t *testing.T, a, b string, sim, minimum float64, maxChars int) {
-		if maxChars < 0 {
-			maxChars = -maxChars
-		}
-		d := divergenceDetail(a, b, sim, minimum, maxChars)
-		if bound := maxChars*4 + 256; len(d) > bound {
-			t.Fatalf("detail %d runes exceeds bound %d: %q", len(d), bound, d)
 		}
 	})
 }
