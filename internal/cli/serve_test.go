@@ -58,6 +58,32 @@ func TestResolveServeRejectsUnexpectedArg(t *testing.T) {
 	}
 }
 
+func TestResolveServeDBOverride(t *testing.T) {
+	cfg := config.Defaults()
+	got, err := resolveServe(cfg, []string{"--db", "tmp/other.db"})
+	if err != nil {
+		t.Fatalf("resolveServe: %v", err)
+	}
+	if got.Quotes.DBPath != "tmp/other.db" {
+		t.Errorf("resolved db = %q, want tmp/other.db", got.Quotes.DBPath)
+	}
+	if cfg.Quotes.DBPath != "database/quotes.db" {
+		t.Errorf("caller config mutated: db = %q", cfg.Quotes.DBPath)
+	}
+}
+
+func TestResolveServeDefaultKeepsCfgDB(t *testing.T) {
+	cfg := config.Defaults()
+	cfg.Quotes.DBPath = "custom/quotes.db"
+	got, err := resolveServe(cfg, nil)
+	if err != nil {
+		t.Fatalf("resolveServe: %v", err)
+	}
+	if got.Quotes.DBPath != "custom/quotes.db" {
+		t.Errorf("resolved db = %q, want custom/quotes.db", got.Quotes.DBPath)
+	}
+}
+
 func TestServeRequiresWiring(t *testing.T) {
 	old := serveStarter
 	serveStarter = nil

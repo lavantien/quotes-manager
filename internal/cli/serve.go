@@ -20,7 +20,7 @@ func SetServeStarter(f func(ctx context.Context, cfg *config.Config) error) {
 func init() {
 	Register(Command{
 		Name:  "serve",
-		Usage: "serve the api and frontend: --addr override",
+		Usage: "serve the api and frontend: --addr --db overrides",
 		Run:   runServe,
 	})
 }
@@ -28,6 +28,7 @@ func init() {
 func resolveServe(cfg *config.Config, args []string) (*config.Config, error) {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 	addr := fs.String("addr", cfg.Server.Addr, "listen address, host:port")
+	db := fs.String("db", cfg.Quotes.DBPath, "SQLite database path")
 	if err := fs.Parse(args); err != nil {
 		return nil, err
 	}
@@ -36,6 +37,7 @@ func resolveServe(cfg *config.Config, args []string) (*config.Config, error) {
 	}
 	resolved := *cfg
 	resolved.Server.Addr = *addr
+	resolved.Quotes.DBPath = *db
 	if err := resolved.Validate(); err != nil {
 		return nil, fmt.Errorf("serve: %w", err)
 	}
