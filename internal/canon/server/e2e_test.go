@@ -574,16 +574,6 @@ func TestE2EServerHermetic(t *testing.T) {
 		}
 	}
 
-	for asset, marker := range map[string]string{
-		"htmx.min.js": "htmx", "cytoscape.min.js": "cytoscape", "app.js": "job", "app.css": "body",
-	} {
-		rec := getPage(t, h, "/static/"+asset)
-		if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), marker) {
-			t.Errorf("asset %s = %d, contains %q = %v", asset, rec.Code, marker,
-				strings.Contains(rec.Body.String(), marker))
-		}
-	}
-
 	wantHTML(t, getPage(t, h, "/nope"), http.StatusNotFound, "not found")
 	status, body := getError(t, h, "/api/v1/nope")
 	if status != http.StatusNotFound || body.Code != codeNotFound {

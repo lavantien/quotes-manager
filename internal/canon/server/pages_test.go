@@ -354,25 +354,11 @@ func TestPageDiscrepancies(t *testing.T) {
 	wantPlain(t, getPage(t, h, "/discrepancies?run=x"), http.StatusBadRequest, "run")
 }
 
-func TestPageNotFoundAndStatic(t *testing.T) {
+func TestPageNotFound(t *testing.T) {
 	srv, _ := newFixtureServer(t)
 	h := srv.Routes()
 
 	wantHTML(t, getPage(t, h, "/nope"), http.StatusNotFound, "not found", "/nope")
-
-	rec := getPage(t, h, "/static/app.css")
-	if rec.Code != http.StatusOK {
-		t.Fatalf("app.css = %d", rec.Code)
-	}
-	if cc := rec.Header().Get("Cache-Control"); cc != "public, max-age=86400" {
-		t.Fatalf("cache-control = %q", cc)
-	}
-	if rec = getPage(t, h, "/static/htmx.min.js"); rec.Code != http.StatusOK || rec.Body.Len() == 0 {
-		t.Fatalf("htmx.min.js = %d (%d bytes)", rec.Code, rec.Body.Len())
-	}
-	if rec := getPage(t, h, "/static/nope.css"); rec.Code != http.StatusNotFound {
-		t.Fatalf("unknown asset = %d", rec.Code)
-	}
 }
 
 func TestPagesBeforePublish(t *testing.T) {

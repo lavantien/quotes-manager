@@ -29,8 +29,6 @@ func (s *Server) registerPageRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /pipeline", s.pagePipelineStart)
 	mux.HandleFunc("GET /discrepancies", s.pageDiscrepancies)
 	mux.HandleFunc("GET /partials/job/{id}", s.pageJobStatus)
-	mux.Handle("GET /static/", cacheStatic(http.StripPrefix("/static/",
-		http.FileServerFS(web.Assets()))))
 	mux.HandleFunc("/", s.pageNotFound)
 }
 
@@ -70,13 +68,6 @@ func (s *Server) pageInternalError(w http.ResponseWriter, err error) {
 func (s *Server) pageNotFound(w http.ResponseWriter, r *http.Request) {
 	s.renderPage(w, http.StatusNotFound, web.PageNotFound,
 		web.NotFoundPage{Page: web.Page{Title: "not found"}, Path: r.URL.Path})
-}
-
-func cacheStatic(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=86400")
-		h.ServeHTTP(w, r)
-	})
 }
 
 func (s *Server) pageDashboard(w http.ResponseWriter, r *http.Request) {

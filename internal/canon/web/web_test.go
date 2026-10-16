@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/lavantien/quotes-manager/web"
 )
 
 func TestMain(m *testing.M) {
@@ -450,7 +452,7 @@ func TestNoExternalAssetReferences(t *testing.T) {
 	}
 	for _, rep := range reps {
 		out := render(t, rep.name, rep.data)
-		for _, m := range []string{`src="/static/htmx.min.js"`, `src="/static/cytoscape.min.js"`, `src="/static/app.js"`, `href="/static/app.css"`} {
+		for _, m := range []string{`src="/static/htmx.min.js"`, `src="/static/cytoscape.min.js"`, `src="/static/canon.js"`, `href="/static/canon.css"`} {
 			if !strings.Contains(out, m) {
 				t.Errorf("page %s missing vendored asset %q", rep.name, m)
 			}
@@ -464,33 +466,25 @@ func TestNoExternalAssetReferences(t *testing.T) {
 	}
 }
 
-func TestAssetsEmbedded(t *testing.T) {
-	f := Assets()
-	if f == nil {
-		t.Fatal("Assets() returned nil")
+func TestCanonAssetBudgets(t *testing.T) {
+	sub, err := fs.Sub(web.Static, "static")
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, name := range []string{"app.css", "app.js", "htmx.min.js", "cytoscape.min.js"} {
-		raw, err := fs.ReadFile(f, name)
+	for name, budget := range map[string]int{"canon.css": 400, "canon.js": 300} {
+		raw, err := fs.ReadFile(sub, name)
 		if err != nil {
 			t.Fatalf("asset %s: %v", name, err)
 		}
 		if len(raw) == 0 {
 			t.Errorf("asset %s is empty", name)
 		}
-	}
-	for _, name := range []string{"app.css", "app.js"} {
-		raw, _ := fs.ReadFile(f, name)
 		if strings.Contains(string(raw), "http://") || strings.Contains(string(raw), "https://") {
 			t.Errorf("asset %s references a remote url", name)
 		}
-	}
-	css, _ := fs.ReadFile(f, "app.css")
-	if n := strings.Count(string(css), "\n"); n > 400 {
-		t.Errorf("app.css has %d lines, budget is 400", n)
-	}
-	js, _ := fs.ReadFile(f, "app.js")
-	if n := strings.Count(string(js), "\n"); n > 300 {
-		t.Errorf("app.js has %d lines, budget is 300", n)
+		if n := strings.Count(string(raw), "\n"); n > budget {
+			t.Errorf("%s has %d lines, budget is %d", name, n, budget)
+		}
 	}
 }
 

@@ -700,6 +700,11 @@ func TestStaticAssetsServed(t *testing.T) {
 	if rec := do(t, srv, "GET", "/static/app.css", ""); !strings.Contains(rec.Body.String(), "--paper") {
 		t.Error("app.css not served correctly")
 	}
+	for _, p := range []string{"/static/app.css", "/static/htmx.min.js", "/static/canon.css", "/static/cytoscape.min.js"} {
+		if cc := do(t, srv, "GET", p, "").Header().Get("Cache-Control"); cc != "public, max-age=86400" {
+			t.Errorf("%s: cache-control = %q", p, cc)
+		}
+	}
 }
 
 func fakeWithCollection(t *testing.T) (*fakeStore, int64) {

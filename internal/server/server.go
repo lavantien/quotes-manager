@@ -73,8 +73,15 @@ func (s *Server) routes() *http.ServeMux {
 	m.HandleFunc("POST /categories", s.createCategory)
 	m.HandleFunc("POST /categories/{ctid}/rename", s.renameCategory)
 	m.HandleFunc("DELETE /categories/{ctid}", s.deleteCategory)
-	m.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS()))))
+	m.Handle("GET /static/", cacheStatic(http.StripPrefix("/static/", http.FileServer(http.FS(staticFS())))))
 	return m
+}
+
+func cacheStatic(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		h.ServeHTTP(w, r)
+	})
 }
 
 // render writes a template as UTF-8 HTML.

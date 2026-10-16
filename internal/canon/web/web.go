@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/fs"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 )
 
-//go:embed templates assets
+//go:embed templates
 var content embed.FS
 
 const (
@@ -64,7 +63,6 @@ var (
 	initOnce sync.Once
 	pageTpls map[string]*template.Template
 	partials *template.Template
-	assetsFS fs.FS
 	initErr  error
 )
 
@@ -74,11 +72,6 @@ func Init() error {
 }
 
 func build() {
-	assetsFS, initErr = fs.Sub(content, "assets")
-	if initErr != nil {
-		initErr = fmt.Errorf("web: assets: %w", initErr)
-		return
-	}
 	fm := template.FuncMap{"urlescape": urlescape, "intcomma": intcomma}
 	base := template.New("base").Funcs(fm)
 	files := []string{"templates/layout.tmpl"}
@@ -127,13 +120,6 @@ func RenderPartial(w io.Writer, name string, data any) error {
 		return fmt.Errorf("web: unknown partial template %q", name)
 	}
 	return partials.ExecuteTemplate(w, name, data)
-}
-
-func Assets() fs.FS {
-	if err := Init(); err != nil {
-		return nil
-	}
-	return assetsFS
 }
 
 func urlescape(s string) template.URL { return template.URL(url.PathEscape(s)) }
