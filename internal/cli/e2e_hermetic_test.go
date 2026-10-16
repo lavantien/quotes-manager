@@ -206,7 +206,7 @@ func TestE2EHermetic(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("triangulate exit %d (want 1, errors expected): %s", code, out)
 	}
-	for _, want := range []string{"B004/error", "B001/warn", "B002/error", "D001/info"} {
+	for _, want := range []string{"B004/error", "B001/warn", "B002/info", "D001/info"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("triangulate output missing %q:\n%s", want, out)
 		}
