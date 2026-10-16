@@ -1,0 +1,14 @@
+{{define "content"}}<h1>graph</h1>
+<form id="graph-form" class="graph-form" method="get" action="/graph">
+<label class="field">dataset
+<select id="graph-dataset" name="dataset">
+{{range .Datasets}}<option value="{{.Name}}" data-api="{{.APIPath}}" data-param="{{.Param}}" data-layout="{{.Layout}}" data-placeholder="{{.Placeholder}}" data-list="{{.OptionsListID}}"{{if eq .Name $.Dataset}} selected{{end}}>{{.Label}}</option>
+{{end}}</select></label>
+<input id="graph-param" type="text" name="param" value="{{.Param}}" list="{{.SelectedDataset.OptionsListID}}" placeholder="{{.SelectedDataset.Placeholder}}">
+<button type="submit">draw</button>
+</form>
+{{range .Datasets}}<datalist id="{{.OptionsListID}}">{{range .Options}}<option value="{{.}}">{{end}}</datalist>
+{{end}}<div id="graph-banner" class="banner hidden"></div>
+<div id="graph-canvas" class="graph-canvas graph-canvas-main"></div>
+<p class="muted">the graph canvas needs javascript; the reading, search, and word pages work without it.</p>
+{{end}}

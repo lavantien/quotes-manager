@@ -1,0 +1,13 @@
+{{define "content"}}<h1>{{.Lemma}}</h1>
+{{template "word_entries" .Entries}}
+<section class="usage">
+<h2>usage</h2>
+<p class="usage-count">{{intcomma .Total}} segments</p>
+{{template "usage_refs" .Refs}}
+{{if .RefsPager}}{{template "pager" .RefsPager}}{{end}}
+</section>
+{{if .GraphURL}}<section class="graph-mini">
+<h2>neighborhood</h2>
+<div class="graph-canvas graph-canvas-mini" data-graph-url="{{.GraphURL}}" data-layout="concentric"></div>
+</section>{{end}}
+{{end}}

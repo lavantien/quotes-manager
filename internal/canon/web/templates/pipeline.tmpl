@@ -1,0 +1,17 @@
+{{define "content"}}<h1>pipeline</h1>
+<p class="muted">stages serialize process-wide, one job at a time.</p>
+<div class="stages">
+{{range .Stages}}<form class="stage-form" method="post" action="/pipeline" hx-post="/pipeline" hx-target="#job-live" hx-swap="innerHTML">
+<input type="hidden" name="stage" value="{{.}}">
+<button type="submit" class="stage-button">run {{.}}</button>
+</form>
+{{end}}</div>
+<p class="note">triangulate exits non-zero on error-severity findings by design; an error state for that stage is expected when such findings exist.</p>
+<section class="job-section">
+<h2>job</h2>
+<div id="job-live">
+{{if .Job}}{{template "job_status" .Job}}{{else}}<p class="muted">no job yet</p>{{end}}
+{{if .Log}}{{template "job_log" .Log}}{{end}}
+</div>
+</section>
+{{end}}

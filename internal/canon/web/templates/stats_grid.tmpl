@@ -1,0 +1,4 @@
+{{define "stats_grid"}}<div class="stats-grid">
+{{range .Rows}}<div class="stat"><span class="stat-label">{{.Label}}</span><span class="stat-value">{{intcomma .Value}}</span></div>
+{{else}}<p class="muted">no stats</p>{{end}}
+</div>{{end}}

@@ -1,0 +1,6 @@
+{{define "search_results"}}{{range .}}<section class="hit">
+<p class="hit-meta"><a href="/texts/{{urlescape .Muid}}#{{urlescape .SegKey}}">{{.Muid}} {{.SegKey}}</a></p>
+<p class="pali">{{.Pali}}</p>
+{{if .En}}<p class="en">{{.En}}</p>{{end}}
+</section>
+{{else}}<p class="muted">no results</p>{{end}}{{end}}

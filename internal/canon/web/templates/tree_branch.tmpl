@@ -1,0 +1,6 @@
+{{define "tree_branch"}}<li class="tree-node type-{{.Type}}"{{if .Expandable}} hx-get="/texts/branch?node={{urlescape .Key}}" hx-trigger="click" hx-swap="outerHTML"{{end}}>
+{{if .Muid}}<a class="tree-label" href="/texts/{{urlescape .Muid}}">{{.Label}}</a>
+{{else if .Expandable}}<button class="tree-expander" type="button">{{.Label}}</button>
+{{else}}<span class="tree-label">{{.Label}}</span>{{end}}
+{{if .Children}}<ul class="tree-kids">{{range .Children}}{{template "tree_branch" .}}{{end}}</ul>{{end}}
+</li>{{end}}

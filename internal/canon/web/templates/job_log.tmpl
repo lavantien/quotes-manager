@@ -1,0 +1,6 @@
+{{define "job_log"}}<div class="job-log" id="job-log" data-log-url="{{.LogURL}}" data-next-seq="{{.NextSeq}}" data-polling="{{.Polling}}">
+<table class="log"><tbody>
+{{range .Lines}}<tr class="log-line" data-seq="{{.Seq}}"><td class="seq">{{.Seq}}</td><td class="text">{{.Text}}</td></tr>
+{{else}}<tr><td class="muted" colspan="2">no log lines yet</td></tr>{{end}}
+</tbody></table>
+</div>{{end}}

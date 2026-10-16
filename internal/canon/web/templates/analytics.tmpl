@@ -1,0 +1,32 @@
+{{define "content"}}<h1>analytics</h1>
+<form class="analytics-form" method="get" action="/analytics">
+<label class="field">aggregate
+<select name="aggregate">
+{{$sel := .Selected}}{{range .Catalog}}<option value="{{.Name}}"{{if eq .Name $sel}} selected{{end}}>{{.Name}}{{if .Description}}: {{.Description}}{{end}}</option>
+{{end}}</select></label>
+<input type="text" name="division" value="{{.Division}}" placeholder="division filter">
+<input type="number" name="limit" value="{{.Limit}}" min="1" max="500">
+<button type="submit">run</button>
+</form>
+{{if .Cols}}<section class="result">
+{{if .CSVURL}}<p><a class="csv-link" href="{{.CSVLink}}">download csv</a></p>{{end}}
+<table class="table">
+<thead><tr>{{range .Cols}}<th>{{.}}</th>{{end}}</tr></thead>
+<tbody>{{range .Rows}}<tr>{{range .}}<td>{{.}}</td>{{end}}</tr>{{end}}</tbody>
+</table>
+{{if .Chart}}{{template "bars" .Chart}}{{end}}
+</section>{{end}}
+{{if .ConsoleEnabled}}<section class="console">
+<h2>sql console</h2>
+<form class="console-form" method="post" action="/analytics">
+<input type="hidden" name="console" value="1">
+<textarea name="sql" rows="4" spellcheck="false" placeholder="select ...">{{.SQL}}</textarea>
+<button type="submit">run query</button>
+</form>
+{{if .ConsoleErr}}<p class="error">{{.ConsoleErr}}</p>{{end}}
+{{if .ConsoleCols}}<table class="table">
+<thead><tr>{{range .ConsoleCols}}<th>{{.}}</th>{{end}}</tr></thead>
+<tbody>{{range .ConsoleRows}}<tr>{{range .}}<td>{{.}}</td>{{end}}</tr>{{end}}</tbody>
+</table>{{end}}
+</section>{{end}}
+{{end}}

@@ -1,0 +1,5 @@
+{{define "pager"}}{{if .}}<nav class="pager">
+{{if .HasPrev}}<a class="pager-link" href="{{.PrevHref}}">prev</a>{{end}}
+<span class="pager-info">{{if gt .Total 0}}showing {{.Start}} to {{.End}} of {{intcomma .Total}}{{else}}no rows{{end}}</span>
+{{if .HasNext}}<a class="pager-link" href="{{.NextHref}}">next</a>{{end}}
+</nav>{{end}}{{end}}

@@ -1,0 +1,7 @@
+{{define "content"}}<h1>texts</h1>
+<p class="muted">click a division to expand its tree lazily; text labels open the aligned reading.</p>
+<ul class="tree">
+{{range .Divisions}}{{template "tree_branch" .}}
+{{else}}<li class="muted">no divisions</li>{{end}}
+</ul>
+{{end}}

@@ -1,0 +1,8 @@
+{{define "discrepancy_rows"}}{{range .}}<tr class="sev-{{.Severity}}">
+<td>{{.ID}}</td>
+<td>{{.Check}}</td>
+<td><span class="badge badge-{{.Severity}}">{{.Severity}}</span></td>
+<td>{{if .Muid}}<a href="/texts/{{urlescape .Muid}}">{{.Muid}}</a>{{else}}<span class="muted">-</span>{{end}}</td>
+<td>{{.Detail}}</td>
+</tr>
+{{else}}<tr><td class="muted" colspan="5">no discrepancies</td></tr>{{end}}{{end}}

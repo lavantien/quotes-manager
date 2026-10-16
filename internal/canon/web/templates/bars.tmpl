@@ -1,0 +1,7 @@
+{{define "bars"}}{{if .Bars}}<svg class="bars" viewBox="0 0 640 {{.Height}}" width="640" height="{{.Height}}" role="img" aria-label="bar chart">
+{{range .Rows}}<g class="bar-row" transform="translate(0 {{.Y}})">
+<text class="bar-label" x="0" y="13">{{.Label}}</text>
+<rect class="bar-rect" x="180" y="2" width="{{.W}}" height="14" rx="2"></rect>
+<text class="bar-value" x="{{.ValueX}}" y="13">{{intcomma .Value}}</text>
+</g>
+{{end}}</svg>{{end}}{{end}}

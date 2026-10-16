@@ -1,0 +1,7 @@
+{{define "content"}}<h1>words</h1>
+<form class="word-form" method="get" action="/words">
+<input type="text" name="form" value="{{.Form}}" placeholder="surface form, e.g. dhamma">
+<button type="submit">resolve</button>
+</form>
+{{if .Form}}{{template "word_entries" .Entries}}{{end}}
+{{end}}

@@ -1,0 +1,5 @@
+{{define "job_status"}}<div class="job" id="job-status" data-state="{{.State}}"{{if .Polling}} hx-get="{{.StatusURL}}" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+<span class="badge badge-{{.State}}">{{.State}}</span>
+<span class="job-meta">job {{.ID}} · {{.Stage}}{{if .Started}} · started {{.Started}}{{end}}{{if .Finished}} · finished {{.Finished}}{{end}}</span>
+{{if .Err}}<p class="error">{{.Err}}{{if eq .Stage "triangulate"}} <span class="note">triangulate reports error-severity findings as a non-zero exit on purpose</span>{{end}}</p>{{end}}
+</div>{{end}}

@@ -1,0 +1,4 @@
+{{define "usage_refs"}}<ul class="refs">
+{{range .}}<li class="ref"><a href="/texts/{{urlescape .Muid}}#{{urlescape .SegKey}}">{{.Muid}}:{{.SegKey}}</a></li>
+{{else}}<li class="muted">no usage</li>{{end}}
+</ul>{{end}}

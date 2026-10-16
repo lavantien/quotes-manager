@@ -1,0 +1,20 @@
+{{define "content"}}<h1>discrepancies</h1>
+<form class="filters" method="get" action="/discrepancies">
+<label class="field">run <input type="number" name="run" value="{{.RunID}}" min="0" placeholder="0 = latest"></label>
+<label class="field">severity <select name="severity">
+<option value=""{{if eq .Severity ""}} selected{{end}}>any</option>
+<option value="info"{{if eq .Severity "info"}} selected{{end}}>info</option>
+<option value="warn"{{if eq .Severity "warn"}} selected{{end}}>warn</option>
+<option value="error"{{if eq .Severity "error"}} selected{{end}}>error</option>
+</select></label>
+<label class="field">check <input type="text" name="check" value="{{.Check}}" placeholder="B001"></label>
+<button type="submit">filter</button>
+</form>
+<table class="table">
+<thead><tr><th>id</th><th>check</th><th>severity</th><th>muid</th><th>detail</th></tr></thead>
+<tbody>
+{{template "discrepancy_rows" .Rows}}
+</tbody>
+</table>
+{{template "pager" .Pager}}
+{{end}}

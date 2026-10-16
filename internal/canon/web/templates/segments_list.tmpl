@@ -1,0 +1,7 @@
+{{define "segments_list"}}<div class="segments">
+{{range .}}<section class="segment" id="{{urlescape .SegKey}}">
+<p class="pali">{{range .Tokens}}{{if .IsWord}}<a class="tok" href="/words?form={{urlescape .Text}}">{{.Text}}</a>{{else if .Text}}<span class="gap">{{.Text}}</span>{{end}}{{end}}{{if not .Tokens}}{{.Pali}}{{end}}</p>
+{{if .En}}<p class="en">{{.En}}{{if .Author}} <span class="author">({{.Author}})</span>{{end}}</p>{{end}}
+</section>
+{{else}}<p class="muted">no segments</p>{{end}}
+</div>{{end}}

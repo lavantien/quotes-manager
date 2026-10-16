@@ -1,0 +1,13 @@
+{{define "content"}}<h1>search</h1>
+<form class="search-form" method="get" action="/search" hx-get="/search" hx-target="#search-results" hx-swap="morph:innerHTML" hx-trigger="submit, input delay:400ms">
+<input type="text" name="text" value="{{.Text}}" placeholder="phrase" required>
+<select name="lang">
+<option value="pali"{{if eq .Lang "pali"}} selected{{end}}>pali</option>
+<option value="en"{{if eq .Lang "en"}} selected{{end}}>english</option>
+</select>
+<button type="submit">search</button>
+</form>
+<div id="search-results">
+{{template "search_results" .Results}}
+</div>
+{{end}}

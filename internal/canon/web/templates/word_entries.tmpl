@@ -1,0 +1,13 @@
+{{define "word_entries"}}<div class="entries">
+{{range .}}<article class="entry">
+<h2 class="entry-lemma"><a href="/words/{{urlescape .Lemma}}">{{.Lemma}}</a></h2>
+<dl class="entry-facts">
+<dt>pos</dt><dd>{{.POS}}</dd>
+<dt>meaning</dt><dd>{{.Meaning}}</dd>
+{{if .Root}}<dt>root</dt><dd>{{.Root}}</dd>{{end}}
+{{if .FamilyRoot}}<dt>family</dt><dd>{{.FamilyRoot}}</dd>{{end}}
+<dt>segments</dt><dd>{{intcomma .Segments}}</dd>
+</dl>
+</article>
+{{else}}<p class="muted">no entries</p>{{end}}
+</div>{{end}}

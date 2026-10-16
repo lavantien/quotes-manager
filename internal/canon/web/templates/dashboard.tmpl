@@ -1,0 +1,25 @@
+{{define "content"}}<h1>dashboard</h1>
+<section class="stats">
+{{template "stats_grid" .Stats}}
+</section>
+<section class="coverage">
+<h2>coverage</h2>
+<table class="table">
+<thead><tr><th>division</th><th>texts</th><th>covered</th><th>percent</th></tr></thead>
+<tbody>
+{{range .Coverage}}<tr><td>{{.Division}}</td><td>{{intcomma .Texts}}</td><td>{{intcomma .Covered}}</td><td>{{.Percent}}%</td></tr>
+{{else}}<tr><td class="muted" colspan="4">no coverage data</td></tr>{{end}}
+</tbody>
+</table>
+{{if .CoverageBars}}{{template "bars" .CoverageBars}}{{end}}
+</section>
+{{if .Run}}<section class="run">
+<h2>latest run</h2>
+<p class="run-meta">run {{.Run.ID}}{{if .Run.Label}} · {{.Run.Label}}{{end}}{{if .Run.Started}} · started {{.Run.Started}}{{end}}{{if .Run.Finished}} · finished {{.Run.Finished}}{{end}}</p>
+</section>{{end}}
+{{if .Job}}
+<section class="job-section">
+<h2>job</h2>
+{{template "job_status" .Job}}
+</section>{{end}}
+{{end}}
