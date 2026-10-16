@@ -9,8 +9,6 @@ import (
 	"github.com/lavantien/quotes-manager/web"
 )
 
-// mustTemplates parses all templates once. The display func renders a quote in
-// the on-screen format (italic passages, bolded suttacentral link).
 func mustTemplates() *template.Template {
 	tmpl := template.New("").Funcs(template.FuncMap{
 		"display": func(q store.Quote, terms []string) template.HTML {
@@ -49,7 +47,6 @@ func mustTemplates() *template.Template {
 	))
 }
 
-// staticFS returns the embedded static assets rooted at web/static.
 func staticFS() fs.FS {
 	sub, err := fs.Sub(web.Static, "static")
 	if err != nil {
