@@ -90,7 +90,7 @@ func migrateCollectionsName(db *sql.DB) error {
 		var name, typ string
 		var dflt sql.NullString
 		if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return err
 		}
 		if name == "name" {
@@ -98,10 +98,10 @@ func migrateCollectionsName(db *sql.DB) error {
 		}
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return err
 	}
-	rows.Close()
+	_ = rows.Close()
 	if hasName {
 		return nil
 	}
@@ -119,7 +119,7 @@ func (s *SQLiteStore) List() ([]Quote, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []Quote
 	for rows.Next() {
 		q, err := scanQuote(rows)
@@ -219,7 +219,7 @@ func (s *SQLiteStore) ListCollections() ([]Collection, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []Collection
 	for rows.Next() {
 		var c Collection
@@ -368,7 +368,7 @@ func collectionMembers(tx *sql.Tx, cid int64) (map[int64]bool, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := make(map[int64]bool)
 	for rows.Next() {
 		var qid int64
@@ -399,7 +399,7 @@ func (s *SQLiteStore) CollectionQuotes(id int64) ([]Quote, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []Quote
 	for rows.Next() {
 		q, err := scanQuote(rows)
@@ -476,7 +476,7 @@ func (s *SQLiteStore) ListCategories() ([]Category, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []Category
 	for rows.Next() {
 		var c Category
@@ -556,7 +556,7 @@ func (s *SQLiteStore) CategoryQuotes(id int64) ([]Quote, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []Quote
 	for rows.Next() {
 		q, err := scanQuote(rows)
@@ -624,7 +624,7 @@ func (s *SQLiteStore) QuoteCategoryMap() (map[int64][]Category, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := make(map[int64][]Category)
 	for rows.Next() {
 		var qid int64
@@ -648,7 +648,7 @@ func (s *SQLiteStore) QuoteCollectionMap() (map[int64][]Collection, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := make(map[int64][]Collection)
 	for rows.Next() {
 		var qid int64
