@@ -2,9 +2,11 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/lavantien/quotes-manager/internal/canon/graph"
@@ -217,6 +219,36 @@ func TestQueryQuotesBadFormat(t *testing.T) {
 	}
 	if code, _ := runMain(t, cfgPath, "query", "quotes", "stray"); code != 1 {
 		t.Fatalf("positional arg exit = %d, want 1", code)
+	}
+}
+
+func TestQueryQuotesMissingDBFailsWithoutCreating(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "absent.db")
+	cfg := config.Defaults()
+	cfg.Quotes.DBPath = dbPath
+	cfg.Canon.Paths.DBDir = filepath.Join(t.TempDir(), "canon")
+
+	err := runQueryQuotes(cfg, "", "", 0, "")
+	if err == nil {
+		t.Fatal("query quotes on a missing db must fail")
+	}
+	if !strings.Contains(err.Error(), dbPath) {
+		t.Errorf("error %q must name the db path %q", err, dbPath)
+	}
+	if _, statErr := os.Stat(dbPath); !os.IsNotExist(statErr) {
+		t.Errorf("read verb created the database at %s", dbPath)
+	}
+
+	if err := runQuery(context.Background(), cfg, []string{"segments", "--muid", "mn1"}); err == nil {
+		t.Error("query segments without a published canon db must fail")
+	}
+
+	cfgPath := quotesCLIConfig(t, dbPath)
+	if code, out := runMain(t, cfgPath, "query", "quotes"); code != 1 {
+		t.Fatalf("query quotes on missing db exit = %d, want 1: %s", code, out)
+	}
+	if _, statErr := os.Stat(dbPath); !os.IsNotExist(statErr) {
+		t.Errorf("cli run created the database at %s", dbPath)
 	}
 }
 

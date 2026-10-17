@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/lavantien/quotes-manager/internal/canon/graph"
@@ -86,6 +87,9 @@ func runQueryQuotes(cfg *config.Config, text, form string, limit int, dbOverride
 	dbPath := cfg.Quotes.DBPath
 	if dbOverride != "" {
 		dbPath = dbOverride
+	}
+	if _, err := os.Stat(dbPath); err != nil {
+		return fmt.Errorf("quotes: database %s does not exist: %w", dbPath, err)
 	}
 	st, err := store.Open(dbPath)
 	if err != nil {
