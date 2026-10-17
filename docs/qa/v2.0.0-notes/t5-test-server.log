@@ -1,0 +1,520 @@
+=== t5 stage 1 isolated rerun: make test-pkg PKG=./internal/server GOFLAGS='-v -count=1 -timeout=8m' start 2026-10-17T12:59:46.6208194+07:00 ===
+CGO_ENABLED=1 go test -tags sqlite_fts5 ./internal/server
+=== RUN   TestSplitIDLines
+=== RUN   TestSplitIDLines/empty
+=== RUN   TestSplitIDLines/whitespace_only
+=== RUN   TestSplitIDLines/single
+=== RUN   TestSplitIDLines/two_lines
+=== RUN   TestSplitIDLines/crlf
+=== RUN   TestSplitIDLines/trailing_newline
+=== RUN   TestSplitIDLines/surrounding_spaces
+=== RUN   TestSplitIDLines/blank_middle_line
+--- PASS: TestSplitIDLines (0.00s)
+    --- PASS: TestSplitIDLines/empty (0.00s)
+    --- PASS: TestSplitIDLines/whitespace_only (0.00s)
+    --- PASS: TestSplitIDLines/single (0.00s)
+    --- PASS: TestSplitIDLines/two_lines (0.00s)
+    --- PASS: TestSplitIDLines/crlf (0.00s)
+    --- PASS: TestSplitIDLines/trailing_newline (0.00s)
+    --- PASS: TestSplitIDLines/surrounding_spaces (0.00s)
+    --- PASS: TestSplitIDLines/blank_middle_line (0.00s)
+=== RUN   TestRunCheck
+=== RUN   TestRunCheck/empty_corpus_empty_inputs
+=== RUN   TestRunCheck/corpus_empty_inputs
+=== RUN   TestRunCheck/found_with_count
+=== RUN   TestRunCheck/not_found
+=== RUN   TestRunCheck/case_insensitive
+=== RUN   TestRunCheck/canonical_extraction
+=== RUN   TestRunCheck/non-canonical_literal_misses
+=== RUN   TestRunCheck/dup_inputs_each_reported
+--- PASS: TestRunCheck (0.00s)
+    --- PASS: TestRunCheck/empty_corpus_empty_inputs (0.00s)
+    --- PASS: TestRunCheck/corpus_empty_inputs (0.00s)
+    --- PASS: TestRunCheck/found_with_count (0.00s)
+    --- PASS: TestRunCheck/not_found (0.00s)
+    --- PASS: TestRunCheck/case_insensitive (0.00s)
+    --- PASS: TestRunCheck/canonical_extraction (0.00s)
+    --- PASS: TestRunCheck/non-canonical_literal_misses (0.00s)
+    --- PASS: TestRunCheck/dup_inputs_each_reported (0.00s)
+=== RUN   TestUniqueSortedIDs
+=== RUN   TestUniqueSortedIDs/nil
+=== RUN   TestUniqueSortedIDs/empty
+=== RUN   TestUniqueSortedIDs/single
+=== RUN   TestUniqueSortedIDs/dups_collapse
+=== RUN   TestUniqueSortedIDs/unsorted_sorted
+=== RUN   TestUniqueSortedIDs/empties_dropped
+=== RUN   TestUniqueSortedIDs/byte-order_case-sensitive
+--- PASS: TestUniqueSortedIDs (0.00s)
+    --- PASS: TestUniqueSortedIDs/nil (0.00s)
+    --- PASS: TestUniqueSortedIDs/empty (0.00s)
+    --- PASS: TestUniqueSortedIDs/single (0.00s)
+    --- PASS: TestUniqueSortedIDs/dups_collapse (0.00s)
+    --- PASS: TestUniqueSortedIDs/unsorted_sorted (0.00s)
+    --- PASS: TestUniqueSortedIDs/empties_dropped (0.00s)
+    --- PASS: TestUniqueSortedIDs/byte-order_case-sensitive (0.00s)
+=== RUN   TestCollectionLabel
+--- PASS: TestCollectionLabel (0.00s)
+=== RUN   TestAttributionOf
+--- PASS: TestAttributionOf (0.00s)
+=== RUN   TestBuildQuote
+=== RUN   TestBuildQuote/defaults_attribution
+=== RUN   TestBuildQuote/preserves_attribution
+=== RUN   TestBuildQuote/no_text_id_yields_empty_citation
+=== RUN   TestBuildQuote/non-canonical_text_id_kept_as_sutta
+--- PASS: TestBuildQuote (0.00s)
+    --- PASS: TestBuildQuote/defaults_attribution (0.00s)
+    --- PASS: TestBuildQuote/preserves_attribution (0.00s)
+    --- PASS: TestBuildQuote/no_text_id_yields_empty_citation (0.00s)
+    --- PASS: TestBuildQuote/non-canonical_text_id_kept_as_sutta (0.00s)
+=== RUN   TestSplitPassages
+--- PASS: TestSplitPassages (0.00s)
+=== RUN   TestParseQueryID
+--- PASS: TestParseQueryID (0.00s)
+=== RUN   TestParseIDs
+--- PASS: TestParseIDs (0.00s)
+=== RUN   TestParseIDBadRequest
+--- PASS: TestParseIDBadRequest (0.00s)
+=== RUN   TestIsHTMX
+--- PASS: TestIsHTMX (0.00s)
+=== RUN   TestHandleStoreErr
+2026/10/17 12:59:58 server error: boom
+--- PASS: TestHandleStoreErr (0.00s)
+=== RUN   TestRenderMissingTemplate
+2026/10/17 12:59:58 render "nonexistent-template": html/template: "nonexistent-template" is undefined
+--- PASS: TestRenderMissingTemplate (0.00s)
+=== RUN   TestExecMissingTemplate
+2026/10/17 12:59:58 render "nonexistent-template": html/template: "nonexistent-template" is undefined
+--- PASS: TestExecMissingTemplate (0.00s)
+=== RUN   TestBodyExcerpt
+=== RUN   TestBodyExcerpt/empty
+=== RUN   TestBodyExcerpt/short_single_line
+=== RUN   TestBodyExcerpt/multi-line_uses_first_line_when_short
+=== RUN   TestBodyExcerpt/trims_surrounding_whitespace
+=== RUN   TestBodyExcerpt/long_single_line
+=== RUN   TestBodyExcerpt/multi-line_with_long_first_line
+--- PASS: TestBodyExcerpt (0.00s)
+    --- PASS: TestBodyExcerpt/empty (0.00s)
+    --- PASS: TestBodyExcerpt/short_single_line (0.00s)
+    --- PASS: TestBodyExcerpt/multi-line_uses_first_line_when_short (0.00s)
+    --- PASS: TestBodyExcerpt/trims_surrounding_whitespace (0.00s)
+    --- PASS: TestBodyExcerpt/long_single_line (0.00s)
+    --- PASS: TestBodyExcerpt/multi-line_with_long_first_line (0.00s)
+=== RUN   TestAPIQuotesListClamps
+--- PASS: TestAPIQuotesListClamps (0.00s)
+=== RUN   TestAPIQuotesListPaging
+--- PASS: TestAPIQuotesListPaging (0.00s)
+=== RUN   TestAPIQuotesListBadParams
+--- PASS: TestAPIQuotesListBadParams (0.00s)
+=== RUN   TestAPIQuoteGet
+--- PASS: TestAPIQuoteGet (0.00s)
+=== RUN   TestAPIQuotesOnSharedMux
+--- PASS: TestAPIQuotesOnSharedMux (0.00s)
+=== RUN   TestDuplicatesFromCanonicalSeed
+--- PASS: TestDuplicatesFromCanonicalSeed (0.98s)
+=== RUN   TestDuplicatesRenderedInLeftRail
+--- PASS: TestDuplicatesRenderedInLeftRail (0.00s)
+=== RUN   TestDuplicatesEmptyState
+--- PASS: TestDuplicatesEmptyState (0.00s)
+=== RUN   TestDuplicatesLabelFallsBackToBodyExcerpt
+--- PASS: TestDuplicatesLabelFallsBackToBodyExcerpt (0.00s)
+=== RUN   TestCreateLiveRefreshesLeftRailAndRootCount
+--- PASS: TestCreateLiveRefreshesLeftRailAndRootCount (0.00s)
+=== RUN   TestUpdateLiveRefreshesLeftRail
+--- PASS: TestUpdateLiveRefreshesLeftRail (0.00s)
+=== RUN   TestDeleteLiveRefreshesBothRailsAndRootCount
+--- PASS: TestDeleteLiveRefreshesBothRailsAndRootCount (0.00s)
+=== RUN   TestMutationRailRefreshErrors
+=== RUN   TestMutationRailRefreshErrors/create
+2026/10/17 12:59:59 server error: store unavailable
+=== RUN   TestMutationRailRefreshErrors/update
+2026/10/17 12:59:59 server error: store unavailable
+=== RUN   TestMutationRailRefreshErrors/delete
+2026/10/17 12:59:59 server error: store unavailable
+--- PASS: TestMutationRailRefreshErrors (0.00s)
+    --- PASS: TestMutationRailRefreshErrors/create (0.00s)
+    --- PASS: TestMutationRailRefreshErrors/update (0.00s)
+    --- PASS: TestMutationRailRefreshErrors/delete (0.00s)
+=== RUN   TestBackupJSON
+--- PASS: TestBackupJSON (0.97s)
+=== RUN   TestRestoreReplacesAll
+--- PASS: TestRestoreReplacesAll (1.01s)
+=== RUN   TestRestoreRejectsBadJSON
+--- PASS: TestRestoreRejectsBadJSON (1.26s)
+=== RUN   TestRestoreRejectsBadVersion
+--- PASS: TestRestoreRejectsBadVersion (2.50s)
+=== RUN   TestBackupStoreError
+2026/10/17 13:00:04 server error: store unavailable
+--- PASS: TestBackupStoreError (0.00s)
+=== RUN   TestRestoreStoreError
+2026/10/17 13:00:04 server error: store unavailable
+--- PASS: TestRestoreStoreError (0.00s)
+=== RUN   TestCheckPaneRendersZone
+--- PASS: TestCheckPaneRendersZone (0.00s)
+=== RUN   TestCheckPaneToggleBack
+--- PASS: TestCheckPaneToggleBack (0.00s)
+=== RUN   TestCheckPaneRailError
+2026/10/17 13:00:04 server error: store unavailable
+--- PASS: TestCheckPaneRailError (0.00s)
+=== RUN   TestCheckResultsFoundAndNotFound
+--- PASS: TestCheckResultsFoundAndNotFound (0.00s)
+=== RUN   TestCheckResultsCanonicalizes
+--- PASS: TestCheckResultsCanonicalizes (0.00s)
+=== RUN   TestCheckResultsCaseInsensitive
+--- PASS: TestCheckResultsCaseInsensitive (0.00s)
+=== RUN   TestCheckResultsDuplicateInputs
+--- PASS: TestCheckResultsDuplicateInputs (0.00s)
+=== RUN   TestCheckResultsEmptyInput
+--- PASS: TestCheckResultsEmptyInput (0.00s)
+=== RUN   TestCheckResultsNonCanonicalInput
+--- PASS: TestCheckResultsNonCanonicalInput (0.00s)
+=== RUN   TestCheckResultsStoreError
+2026/10/17 13:00:04 server error: store unavailable
+--- PASS: TestCheckResultsStoreError (0.00s)
+=== RUN   TestRightRailCheckButton
+--- PASS: TestRightRailCheckButton (0.00s)
+=== RUN   TestNewFormListsCategories
+--- PASS: TestNewFormListsCategories (0.00s)
+=== RUN   TestCreateWithExistingCategory
+--- PASS: TestCreateWithExistingCategory (0.00s)
+=== RUN   TestCreateWithNewCategory
+--- PASS: TestCreateWithNewCategory (0.00s)
+=== RUN   TestCreateWithExistingAndNewCategory
+--- PASS: TestCreateWithExistingAndNewCategory (0.00s)
+=== RUN   TestCreateNewCategoryDedupsExistingName
+--- PASS: TestCreateNewCategoryDedupsExistingName (0.00s)
+=== RUN   TestCreateWithoutCategories
+--- PASS: TestCreateWithoutCategories (0.00s)
+=== RUN   TestCreateResolveCategoryError
+2026/10/17 13:00:04 server error: store unavailable
+--- PASS: TestCreateResolveCategoryError (0.00s)
+=== RUN   TestCreateSetQuoteCategoriesError
+2026/10/17 13:00:04 server error: store unavailable
+--- PASS: TestCreateSetQuoteCategoriesError (0.00s)
+=== RUN   TestMergeDuplicatesHTTP
+--- PASS: TestMergeDuplicatesHTTP (1.69s)
+=== RUN   TestMergeDuplicatesUnknownRep
+--- PASS: TestMergeDuplicatesUnknownRep (1.55s)
+=== RUN   TestMergeDuplicatesSingletonRepNotFound
+--- PASS: TestMergeDuplicatesSingletonRepNotFound (0.00s)
+=== RUN   TestMergeDuplicatesNonRepresentativeMemberNotFound
+--- PASS: TestMergeDuplicatesNonRepresentativeMemberNotFound (0.00s)
+=== RUN   TestMergeDuplicatesStoreError
+2026/10/17 13:00:08 server error: store unavailable
+--- PASS: TestMergeDuplicatesStoreError (0.00s)
+=== RUN   TestUpdateReSortsAndFlashes
+--- PASS: TestUpdateReSortsAndFlashes (2.66s)
+=== RUN   TestCorpusIDsExport
+--- PASS: TestCorpusIDsExport (0.00s)
+=== RUN   TestCorpusIDsExportDedupesAndSorts
+--- PASS: TestCorpusIDsExportDedupesAndSorts (0.00s)
+=== RUN   TestCorpusIDsExportSkipsEmptySuttaIDs
+--- PASS: TestCorpusIDsExportSkipsEmptySuttaIDs (0.00s)
+=== RUN   TestCorpusIDsExportEmptyCorpus
+--- PASS: TestCorpusIDsExportEmptyCorpus (0.00s)
+=== RUN   TestCorpusIDsExportStoreError
+2026/10/17 13:00:10 server error: store unavailable
+--- PASS: TestCorpusIDsExportStoreError (0.00s)
+=== RUN   TestCollectionIDsExport
+--- PASS: TestCollectionIDsExport (0.00s)
+=== RUN   TestCollectionIDsExportUnknownCollection
+--- PASS: TestCollectionIDsExportUnknownCollection (0.00s)
+=== RUN   TestCollectionIDsExportStoreError
+2026/10/17 13:00:10 server error: store unavailable
+--- PASS: TestCollectionIDsExportStoreError (0.00s)
+=== RUN   TestLeftRailCopyIDsButton
+--- PASS: TestLeftRailCopyIDsButton (0.00s)
+=== RUN   TestRightRailCopyIDsButton
+--- PASS: TestRightRailCopyIDsButton (0.00s)
+=== RUN   TestImportQuotesForm
+--- PASS: TestImportQuotesForm (1.81s)
+=== RUN   TestImportQuotesHTTP
+--- PASS: TestImportQuotesHTTP (2.67s)
+=== RUN   TestImportQuotesDedupsWithinPaste
+--- PASS: TestImportQuotesDedupsWithinPaste (1.33s)
+=== RUN   TestImportQuotesStoreError
+2026/10/17 13:00:16 server error: store unavailable
+--- PASS: TestImportQuotesStoreError (0.00s)
+=== RUN   TestImportQuotesRailDataError
+2026/10/17 13:00:16 server error: store unavailable
+--- PASS: TestImportQuotesRailDataError (0.00s)
+=== RUN   TestImportQuotesNonHTMXRedirects
+--- PASS: TestImportQuotesNonHTMXRedirects (0.96s)
+=== RUN   TestRenderLogsExecuteFailure
+--- PASS: TestRenderLogsExecuteFailure (0.00s)
+=== RUN   TestExecLogsExecuteFailure
+--- PASS: TestExecLogsExecuteFailure (0.00s)
+=== RUN   TestSearchRootFiltersHome
+--- PASS: TestSearchRootFiltersHome (0.00s)
+=== RUN   TestSearchRootEmptyShowsAll
+--- PASS: TestSearchRootEmptyShowsAll (0.00s)
+=== RUN   TestSearchRootAND
+--- PASS: TestSearchRootAND (0.00s)
+=== RUN   TestSearchRootPhrase
+--- PASS: TestSearchRootPhrase (0.00s)
+=== RUN   TestSearchRootNegation
+--- PASS: TestSearchRootNegation (0.00s)
+=== RUN   TestSearchRootCategoryScoped
+--- PASS: TestSearchRootCategoryScoped (0.00s)
+=== RUN   TestSearchRootNoMatchEmptyState
+--- PASS: TestSearchRootNoMatchEmptyState (0.00s)
+=== RUN   TestSearchRootInputPrefilled
+--- PASS: TestSearchRootInputPrefilled (0.00s)
+=== RUN   TestSearchRootXSS
+--- PASS: TestSearchRootXSS (0.00s)
+=== RUN   TestSearchCollectionDeepLink
+--- PASS: TestSearchCollectionDeepLink (0.00s)
+=== RUN   TestSearchRootFragment
+--- PASS: TestSearchRootFragment (0.00s)
+=== RUN   TestSearchCollectionFragment
+--- PASS: TestSearchCollectionFragment (0.00s)
+=== RUN   TestPaneSwapClearsRootSearch
+--- PASS: TestPaneSwapClearsRootSearch (0.00s)
+=== RUN   TestCreateDoesNotPreserveSearch
+--- PASS: TestCreateDoesNotPreserveSearch (0.00s)
+=== RUN   TestCollectionListGapsAndDragWhenNotSearching
+--- PASS: TestCollectionListGapsAndDragWhenNotSearching (0.00s)
+=== RUN   TestCategoryView
+--- PASS: TestCategoryView (0.00s)
+=== RUN   TestCategoryViewNotFound
+--- PASS: TestCategoryViewNotFound (0.00s)
+=== RUN   TestRailLeftListsCategories
+--- PASS: TestRailLeftListsCategories (0.00s)
+=== RUN   TestCreateCategory
+--- PASS: TestCreateCategory (0.00s)
+=== RUN   TestCreateCategoryDuplicate
+--- PASS: TestCreateCategoryDuplicate (0.00s)
+=== RUN   TestCreateCategoryEmptyName
+--- PASS: TestCreateCategoryEmptyName (0.00s)
+=== RUN   TestRenameCategory
+--- PASS: TestRenameCategory (0.00s)
+=== RUN   TestRenameCategoryDuplicate
+--- PASS: TestRenameCategoryDuplicate (0.00s)
+=== RUN   TestDeleteCategoryHandler
+--- PASS: TestDeleteCategoryHandler (0.00s)
+=== RUN   TestQuoteChips
+--- PASS: TestQuoteChips (0.00s)
+=== RUN   TestEditQuoteCategories
+--- PASS: TestEditQuoteCategories (0.00s)
+=== RUN   TestSetQuoteCategories
+--- PASS: TestSetQuoteCategories (0.00s)
+=== RUN   TestSetQuoteCategoriesWithNewName
+--- PASS: TestSetQuoteCategoriesWithNewName (0.00s)
+=== RUN   TestSetQuoteCategoriesWithExistingName
+--- PASS: TestSetQuoteCategoriesWithExistingName (0.00s)
+=== RUN   TestCategoryExport
+--- PASS: TestCategoryExport (0.00s)
+=== RUN   TestSetQuoteCategoriesUnknownQuote
+--- PASS: TestSetQuoteCategoriesUnknownQuote (0.00s)
+=== RUN   TestIndexSidebarAndChips
+--- PASS: TestIndexSidebarAndChips (0.00s)
+=== RUN   TestRootPaneCategoryFilter
+--- PASS: TestRootPaneCategoryFilter (0.00s)
+=== RUN   TestRenameCategoryEmptyName
+--- PASS: TestRenameCategoryEmptyName (0.00s)
+=== RUN   TestCollectionViewShowsBlockCount
+--- PASS: TestCollectionViewShowsBlockCount (0.00s)
+=== RUN   TestCreateCollectionFromSelection
+--- PASS: TestCreateCollectionFromSelection (0.00s)
+=== RUN   TestAddToCollectionItems
+--- PASS: TestAddToCollectionItems (0.00s)
+=== RUN   TestAddToCollectionItemsUnknownCollection
+--- PASS: TestAddToCollectionItemsUnknownCollection (0.00s)
+=== RUN   TestCollectionView
+--- PASS: TestCollectionView (0.00s)
+=== RUN   TestCollectionReorder
+--- PASS: TestCollectionReorder (0.00s)
+=== RUN   TestCollectionExport
+--- PASS: TestCollectionExport (0.00s)
+=== RUN   TestDeleteCollection
+--- PASS: TestDeleteCollection (0.00s)
+=== RUN   TestCollectionNotFound
+--- PASS: TestCollectionNotFound (0.00s)
+=== RUN   TestRailRightListsCollections
+--- PASS: TestRailRightListsCollections (0.00s)
+=== RUN   TestRenameCollectionHandler
+--- PASS: TestRenameCollectionHandler (0.00s)
+=== RUN   TestRenameCollectionUnknown
+--- PASS: TestRenameCollectionUnknown (0.00s)
+=== RUN   TestInsertCollectionItemsHandler
+--- PASS: TestInsertCollectionItemsHandler (0.00s)
+=== RUN   TestInsertCollectionItemsUnknown
+--- PASS: TestInsertCollectionItemsUnknown (0.00s)
+=== RUN   TestCollectionPaneFragment
+--- PASS: TestCollectionPaneFragment (0.00s)
+=== RUN   TestCollectionPaneEmpty
+--- PASS: TestCollectionPaneEmpty (0.00s)
+=== RUN   TestRootBlockShowsCollectionChips
+--- PASS: TestRootBlockShowsCollectionChips (0.00s)
+=== RUN   TestCollectionReorderBadJSON
+--- PASS: TestCollectionReorderBadJSON (0.00s)
+=== RUN   TestCollectionReorderUnknownCollection
+--- PASS: TestCollectionReorderUnknownCollection (0.00s)
+=== RUN   TestInsertCollectionItemsNonNumericPos
+--- PASS: TestInsertCollectionItemsNonNumericPos (0.00s)
+=== RUN   TestIndexUnknownCollectionClearsCol
+--- PASS: TestIndexUnknownCollectionClearsCol (0.00s)
+=== RUN   TestRenameCollectionEmptyName
+--- PASS: TestRenameCollectionEmptyName (0.00s)
+=== RUN   TestCollectionViewInsertGapPositions
+--- PASS: TestCollectionViewInsertGapPositions (0.00s)
+=== RUN   TestIndexListsQuotesAndLinksSuttacentral
+--- PASS: TestIndexListsQuotesAndLinksSuttacentral (0.01s)
+=== RUN   TestIndexShowsBlockCount
+--- PASS: TestIndexShowsBlockCount (0.00s)
+=== RUN   TestCreateAddsQuote
+--- PASS: TestCreateAddsQuote (0.00s)
+=== RUN   TestCreateDefaultsAttribution
+--- PASS: TestCreateDefaultsAttribution (0.00s)
+=== RUN   TestUpdateChangesQuote
+--- PASS: TestUpdateChangesQuote (0.00s)
+=== RUN   TestUpdateNotFound
+--- PASS: TestUpdateNotFound (0.00s)
+=== RUN   TestDeleteOne
+--- PASS: TestDeleteOne (0.00s)
+=== RUN   TestBulkDelete
+--- PASS: TestBulkDelete (0.00s)
+=== RUN   TestCreateRendersSortedList
+--- PASS: TestCreateRendersSortedList (0.00s)
+=== RUN   TestExportTxt
+--- PASS: TestExportTxt (0.00s)
+=== RUN   TestCopyOne
+--- PASS: TestCopyOne (0.00s)
+=== RUN   TestCopyOneNotFound
+--- PASS: TestCopyOneNotFound (0.00s)
+=== RUN   TestEditFormPrefilled
+--- PASS: TestEditFormPrefilled (0.00s)
+=== RUN   TestNavRendered
+--- PASS: TestNavRendered (0.00s)
+=== RUN   TestStaticAssetsServed
+--- PASS: TestStaticAssetsServed (0.10s)
+=== RUN   TestHandlerStoreErrors
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestHandlerStoreErrors (0.00s)
+=== RUN   TestNewForm
+--- PASS: TestNewForm (0.00s)
+=== RUN   TestListFragment
+--- PASS: TestListFragment (0.00s)
+=== RUN   TestCreateNonHTMXRedirects
+--- PASS: TestCreateNonHTMXRedirects (0.00s)
+=== RUN   TestUpdateNonHTMXRedirects
+--- PASS: TestUpdateNonHTMXRedirects (0.00s)
+=== RUN   TestIndexUnknownCategoryEmptyRoot
+--- PASS: TestIndexUnknownCategoryEmptyRoot (0.00s)
+=== RUN   TestBuildPageDataDeepErrors
+=== RUN   TestBuildPageDataDeepErrors/ListCollections_fails
+2026/10/17 13:00:17 server error: store unavailable
+=== RUN   TestBuildPageDataDeepErrors/QuoteCategoryMap_fails
+2026/10/17 13:00:17 server error: store unavailable
+=== RUN   TestBuildPageDataDeepErrors/QuoteCollectionMap_fails
+2026/10/17 13:00:17 server error: store unavailable
+=== RUN   TestBuildPageDataDeepErrors/List_fails_in_buildRootPane
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestBuildPageDataDeepErrors (0.00s)
+    --- PASS: TestBuildPageDataDeepErrors/ListCollections_fails (0.00s)
+    --- PASS: TestBuildPageDataDeepErrors/QuoteCategoryMap_fails (0.00s)
+    --- PASS: TestBuildPageDataDeepErrors/QuoteCollectionMap_fails (0.00s)
+    --- PASS: TestBuildPageDataDeepErrors/List_fails_in_buildRootPane (0.00s)
+=== RUN   TestRenderQuoteListDeepErrors
+=== RUN   TestRenderQuoteListDeepErrors/QuoteCategoryMap_fails
+2026/10/17 13:00:17 server error: store unavailable
+=== RUN   TestRenderQuoteListDeepErrors/QuoteCollectionMap_fails
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestRenderQuoteListDeepErrors (0.00s)
+    --- PASS: TestRenderQuoteListDeepErrors/QuoteCategoryMap_fails (0.00s)
+    --- PASS: TestRenderQuoteListDeepErrors/QuoteCollectionMap_fails (0.00s)
+=== RUN   TestRenderQuoteBlockDeepErrors
+=== RUN   TestRenderQuoteBlockDeepErrors/QuoteCategoryMap_fails
+2026/10/17 13:00:17 server error: store unavailable
+=== RUN   TestRenderQuoteBlockDeepErrors/QuoteCollectionMap_fails
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestRenderQuoteBlockDeepErrors (0.00s)
+    --- PASS: TestRenderQuoteBlockDeepErrors/QuoteCategoryMap_fails (0.00s)
+    --- PASS: TestRenderQuoteBlockDeepErrors/QuoteCollectionMap_fails (0.00s)
+=== RUN   TestBuildRootPaneCategoryQuotesError
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestBuildRootPaneCategoryQuotesError (0.00s)
+=== RUN   TestRailDataDeepError
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestRailDataDeepError (0.00s)
+=== RUN   TestEditQuoteCategoriesDeepErrors
+=== RUN   TestEditQuoteCategoriesDeepErrors/ListCategories_fails
+2026/10/17 13:00:17 server error: store unavailable
+=== RUN   TestEditQuoteCategoriesDeepErrors/QuoteCategoryMap_fails
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestEditQuoteCategoriesDeepErrors (0.00s)
+    --- PASS: TestEditQuoteCategoriesDeepErrors/ListCategories_fails (0.00s)
+    --- PASS: TestEditQuoteCategoriesDeepErrors/QuoteCategoryMap_fails (0.00s)
+=== RUN   TestSetQuoteCategoriesDeepErrors
+=== RUN   TestSetQuoteCategoriesDeepErrors/QuoteCategoryMap_fails_after_set
+2026/10/17 13:00:17 server error: store unavailable
+=== RUN   TestSetQuoteCategoriesDeepErrors/railData_fails_after_set
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestSetQuoteCategoriesDeepErrors (0.00s)
+    --- PASS: TestSetQuoteCategoriesDeepErrors/QuoteCategoryMap_fails_after_set (0.00s)
+    --- PASS: TestSetQuoteCategoriesDeepErrors/railData_fails_after_set (0.00s)
+=== RUN   TestSwapCollectionZoneBuildError
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestSwapCollectionZoneBuildError (0.00s)
+=== RUN   TestRenameCollectionRailError
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestRenameCollectionRailError (0.00s)
+=== RUN   TestRemainingHandlerDeepErrors
+=== RUN   TestRemainingHandlerDeepErrors/quoteChips_QuoteCategoryMap_fails
+2026/10/17 13:00:17 server error: store unavailable
+=== RUN   TestRemainingHandlerDeepErrors/railData_ListCategories_fails
+2026/10/17 13:00:17 server error: store unavailable
+=== RUN   TestRemainingHandlerDeepErrors/update_railData_fails_after_Update
+2026/10/17 13:00:17 server error: store unavailable
+=== RUN   TestRemainingHandlerDeepErrors/collection_buildPageData_fails
+2026/10/17 13:00:17 server error: store unavailable
+=== RUN   TestRemainingHandlerDeepErrors/category_buildPageData_fails
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestRemainingHandlerDeepErrors (0.00s)
+    --- PASS: TestRemainingHandlerDeepErrors/quoteChips_QuoteCategoryMap_fails (0.00s)
+    --- PASS: TestRemainingHandlerDeepErrors/railData_ListCategories_fails (0.00s)
+    --- PASS: TestRemainingHandlerDeepErrors/update_railData_fails_after_Update (0.00s)
+    --- PASS: TestRemainingHandlerDeepErrors/collection_buildPageData_fails (0.00s)
+    --- PASS: TestRemainingHandlerDeepErrors/category_buildPageData_fails (0.00s)
+=== RUN   TestRenderLeftRailError
+2026/10/17 13:00:17 server error: store unavailable
+--- PASS: TestRenderLeftRailError (0.00s)
+=== RUN   TestDeleteHTMXRootCountTracksCategoryFilter
+--- PASS: TestDeleteHTMXRootCountTracksCategoryFilter (0.00s)
+=== RUN   TestUpdateRejectsNonPositiveID
+--- PASS: TestUpdateRejectsNonPositiveID (0.00s)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/server	20.497s
+=== t5 stage 1 isolated rerun end 2026-10-17T13:00:17.7653049+07:00 rc=0 ===
