@@ -1,0 +1,16 @@
+CGO_ENABLED=1 go test -tags sqlite_fts5 ./tools/memcapmon
+# github.com/lavantien/quotes-manager/tools/memcapmon [github.com/lavantien/quotes-manager/tools/memcapmon.test]
+tools\memcapmon\main_test.go:135:13: undefined: underRoot
+tools\memcapmon\main_test.go:144:28: unknown field exe in struct literal of type procInfo
+tools\memcapmon\main_test.go:145:30: unknown field exe in struct literal of type procInfo
+tools\memcapmon\main_test.go:146:30: unknown field exe in struct literal of type procInfo
+tools\memcapmon\main_test.go:147:28: unknown field exe in struct literal of type procInfo
+tools\memcapmon\main_test.go:148:28: unknown field exe in struct literal of type procInfo
+tools\memcapmon\main_test.go:149:30: unknown field exe in struct literal of type procInfo
+tools\memcapmon\main_test.go:151:9: undefined: rootedSet
+tools\memcapmon\main_test.go:167:26: unknown field exe in struct literal of type procInfo
+tools\memcapmon\main_test.go:168:27: unknown field exe in struct literal of type procInfo
+tools\memcapmon\main_test.go:168:27: too many errors
+FAIL	github.com/lavantien/quotes-manager/tools/memcapmon [build failed]
+FAIL
+make: *** [makefile:105: test-pkg] Error 1

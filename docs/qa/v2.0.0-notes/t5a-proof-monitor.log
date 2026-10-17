@@ -1,0 +1,3 @@
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 16GB -poll 2s -for 6s -root C:/Users/lavantien/dev/github/quotes-manager
+13:15:12 memcapmon: cap 17179869184 bytes, poll 2s, root "C:/Users/lavantien/dev/github/quotes-manager"
+13:15:18 memcapmon: deadline reached, exiting

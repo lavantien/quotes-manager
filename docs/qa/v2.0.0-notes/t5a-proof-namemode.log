@@ -1,0 +1,3 @@
+name-mode -list (no -root), machine-captured 2026-10-17 13:16:34, foreign decoy go.exe pid 72488, no repo ancestry
+72488	21569536	go.exe	C:\Program Files\Go\bin\go.exe
+decoy listed: True (verified by pid-anchored match on a second -list snapshot)

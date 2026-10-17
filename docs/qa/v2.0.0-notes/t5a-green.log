@@ -1,0 +1,2 @@
+CGO_ENABLED=1 C:/Users/lavantien/dev/github/quotes-manager/dist/tools/jobwrap.exe go test -tags sqlite_fts5 ./tools/memcapmon -count=1
+ok  	github.com/lavantien/quotes-manager/tools/memcapmon	1.356s

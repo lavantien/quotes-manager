@@ -1,0 +1,3 @@
+CGO_ENABLED=1 go build -o C:/Users/lavantien/dev/github/quotes-manager/dist/tools/jobwrap.exe ./tools/jobwrap
+CGO_ENABLED=1 C:/Users/lavantien/dev/github/quotes-manager/dist/tools/jobwrap.exe go test -tags sqlite_fts5 ./internal/config
+ok  	github.com/lavantien/quotes-manager/internal/config	(cached)

@@ -1,0 +1,5 @@
+13:15:02 memcapmon: cap 8589934592 bytes, poll 2s, root "C:\\Users\\lavantien\\dev\\github\\quotes-manager"
+49160	20467712	go.exe	C:\Program Files\Go\bin\go.exe
+13:15:02 memcapmon: 3 supervised processes, 72118272 bytes total
+54828	43814912	go.exe	C:\Users\lavantien\go\pkg\mod\golang.org\toolchain@v0.0.1-go1.27.2.windows-amd64\bin\go.exe
+55452	7835648	jobwrap.exe	C:\Users\lavantien\dev\github\quotes-manager\dist\tools\jobwrap.exe
