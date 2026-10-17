@@ -1,0 +1,14 @@
+QM_E2E_LIVE=1 CGO_ENABLED=1 C:/Users/lavantien/dev/github/quotes-manager/dist/tools/jobwrap.exe go test -tags sqlite_fts5 -count=1 ./internal/cli -run 'TestE2ELive' -v -timeout 30m
+=== RUN   TestE2ELive
+B002/info: 754
+B003/info: 754
+B005/info: 3
+D001/warn: 3
+E101/warn: 5517
+E103/warn: 9
+E104/info: 1
+total: 7041
+live stats: map[edge:CHILD_OF:2431 edge:COVERED_BY:2 edge:DERIVED_FROM:3 edge:HAS_WORD:110 edge:PART_OF:11 edge:TRANSLATES:1213 node:collection:2 node:division:2 node:dpd_form:15 node:dpd_root:3 node:edition:11 node:headword:5 node:segment:3344 node:source:3 node:text:3]
+--- PASS: TestE2ELive (10.63s)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/cli	11.796s
