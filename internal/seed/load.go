@@ -1,6 +1,3 @@
-// Package seed ensures the quotes database carries the canonical seed data.
-// EnsureSeeded is idempotent and seeds exactly once: it never drops a populated
-// table or re-seeds a database a user has emptied.
 package seed
 
 import (
@@ -9,12 +6,6 @@ import (
 	"github.com/lavantien/quotes-manager/database"
 )
 
-// EnsureSeeded brings db up to the expected state:
-//   - Fresh database (no quotes table, or empty): load the canonical seed.
-//   - Already seeded: leave the data untouched.
-//
-// A persistent app_meta marker records that seeding has happened, so a user who
-// deletes every quote is not re-seeded on the next launch.
 func EnsureSeeded(db *sql.DB) error {
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`); err != nil {
 		return err
@@ -38,7 +29,6 @@ func EnsureSeeded(db *sql.DB) error {
 			empty = n == 0
 		}
 		if empty {
-			// Canonical seed (re)creates the table + rows.
 			if _, err := db.Exec(database.SeedSQL); err != nil {
 				return err
 			}
@@ -57,11 +47,6 @@ func EnsureSeeded(db *sql.DB) error {
 	return nil
 }
 
-// seedCategories tags a handful of the shortest canonical quotes with example
-// categories, so a fresh install (and docs/home.png) shows a populated sidebar
-// and chip rows. It is a no-op when the categories tables are absent (e.g. the
-// raw seed tests) and idempotent via INSERT OR IGNORE, so re-entering the
-// seeding path after a partial failure cannot duplicate tags.
 func seedCategories(db *sql.DB) error {
 	has, err := tableExists(db, "categories")
 	if err != nil || !has {
@@ -94,11 +79,6 @@ func seedCategories(db *sql.DB) error {
 	return nil
 }
 
-// seedSampleCollection creates one numbered collection holding the two shortest
-// quotes, so a fresh install (and docs/home.png) shows a populated collection
-// column and membership chips on those root blocks. It is a no-op when the
-// collections tables are absent (raw seed tests) and when any collection already
-// exists, so re-entering the seeding path cannot duplicate it.
 func seedSampleCollection(db *sql.DB) error {
 	has, err := tableExists(db, "collections")
 	if err != nil || !has {
