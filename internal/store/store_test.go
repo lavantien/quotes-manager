@@ -53,9 +53,9 @@ func TestCreateListRoundTrip(t *testing.T) {
 
 func TestListOrderedByCharCount(t *testing.T) {
 	s := newTestStore(t)
-	long := mustCreate(t, s, quote.New("Long", "Long", []string{"abcdef"})) // 6 runes
-	short := mustCreate(t, s, quote.New("Short", "Short", []string{"ab"}))  // 2 runes
-	mid := mustCreate(t, s, quote.New("Mid", "Mid", []string{"abcd"}))      // 4 runes
+	long := mustCreate(t, s, quote.New("Long", "Long", []string{"abcdef"}))
+	short := mustCreate(t, s, quote.New("Short", "Short", []string{"ab"}))
+	mid := mustCreate(t, s, quote.New("Mid", "Mid", []string{"abcd"}))
 	got, err := s.List()
 	if err != nil {
 		t.Fatal(err)
@@ -68,16 +68,51 @@ func TestListOrderedByCharCount(t *testing.T) {
 	}
 }
 
-func TestListCharCountTieBreaksByID(t *testing.T) {
+func TestListCharCountTieBreaksBySuttaID(t *testing.T) {
 	s := newTestStore(t)
-	a := mustCreate(t, s, quote.New("A", "A", []string{"xx"})) // 2 runes, lower id
-	b := mustCreate(t, s, quote.New("B", "B", []string{"yy"})) // 2 runes, higher id
+	mn := mustCreate(t, s, quote.New("MN 10", "MN 10", []string{"xx"}))
+	an := mustCreate(t, s, quote.New("AN 2", "AN 2", []string{"yy"}))
 	got, err := s.List()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 2 || got[0].ID != a || got[1].ID != b {
-		t.Errorf("tie-break order = %+v, want [%d %d]", got, a, b)
+	if len(got) != 2 || got[0].ID != an || got[1].ID != mn {
+		t.Errorf("tie-break order = %+v, want AN 2 (%d) before MN 10 (%d)", got, an, mn)
+	}
+}
+
+func TestListSuttaIDTieBreaksByBodyText(t *testing.T) {
+	s := newTestStore(t)
+	zz := mustCreate(t, s, quote.New("SN 1.1", "SN 1.1", []string{"zz"}))
+	aa := mustCreate(t, s, quote.New("SN 1.1", "SN 1.1", []string{"aa"}))
+	got, err := s.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].ID != aa || got[1].ID != zz {
+		t.Errorf("body-text tie-break = %+v, want aa (%d) before zz (%d)", got, aa, zz)
+	}
+}
+
+func TestCategoryQuotesCanonicalTieBreak(t *testing.T) {
+	s := newTestStore(t)
+	mn := mustCreate(t, s, quote.New("MN 10", "MN 10", []string{"xx"}))
+	an := mustCreate(t, s, quote.New("AN 2", "AN 2", []string{"yy"}))
+	cid, err := s.CreateCategory("wisdom")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range []int64{mn, an} {
+		if err := s.SetQuoteCategories(q, []int64{cid}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	qs, err := s.CategoryQuotes(cid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(qs) != 2 || qs[0].ID != an || qs[1].ID != mn {
+		t.Errorf("category tie-break = %+v, want AN 2 (%d) before MN 10 (%d)", qs, an, mn)
 	}
 }
 
@@ -174,16 +209,12 @@ func TestSourcesRoundTrip(t *testing.T) {
 	}
 }
 
-// TestOpenMigratesCollectionsName opens a database built with the pre-0.6.0
-// collections schema (id only) and asserts Open adds the name column, preserving
-// existing rows with the empty-string default.
 func TestOpenMigratesCollectionsName(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "quotes.db")
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Legacy schema: collections had only an id column.
 	if _, err := db.Exec("CREATE TABLE collections (id INTEGER PRIMARY KEY)"); err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +231,6 @@ func TestOpenMigratesCollectionsName(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = s.Close() })
 
-	// The name column is now present and defaults to "" for the legacy row.
 	cols, err := s.ListCollections()
 	if err != nil {
 		t.Fatal(err)
@@ -208,7 +238,6 @@ func TestOpenMigratesCollectionsName(t *testing.T) {
 	if len(cols) != 1 || cols[0].ID != 7 || cols[0].Name != "" {
 		t.Errorf("legacy row after migration = %+v", cols)
 	}
-	// And the migrated column is writable.
 	if err := s.RenameCollection(7, "keepsakes"); err != nil {
 		t.Fatal(err)
 	}

@@ -11,8 +11,6 @@ import (
 	"github.com/lavantien/quotes-manager/internal/quote"
 )
 
-// schemaSQL creates the quotes table. char_count is the rune-count sort key
-// (home is ordered by char_count, then id); id is the seed's shortest-first rank.
 const schemaSQL = `CREATE TABLE IF NOT EXISTS quotes (
     id          INTEGER PRIMARY KEY,
     sutta_id    TEXT    NOT NULL,
@@ -52,18 +50,15 @@ var quoteColumns = []string{"id", "sutta_id", "citation", "body_md", "body_text"
 
 var columns = strings.Join(quoteColumns, ", ")
 
-// SQLiteStore is a Store backed by a single SQLite file.
 type SQLiteStore struct {
 	db *sql.DB
 }
 
-// Open opens (creating if needed) the SQLite file and ensures the schema exists.
 func Open(path string) (*SQLiteStore, error) {
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return nil, err
 	}
-	// A single connection serializes writes and avoids "database is locked".
 	db.SetMaxOpenConns(1)
 	if _, err := db.Exec(schemaSQL); err != nil {
 		_ = db.Close()
@@ -76,9 +71,6 @@ func Open(path string) (*SQLiteStore, error) {
 	return &SQLiteStore{db: db}, nil
 }
 
-// migrateCollectionsName adds the collections.name column to databases created
-// before it existed. CREATE TABLE IF NOT EXISTS won't alter an existing table,
-// so a one-shot ALTER bridges legacy schemas. Idempotent: no-op once present.
 func migrateCollectionsName(db *sql.DB) error {
 	rows, err := db.Query("PRAGMA table_info(collections)")
 	if err != nil {
@@ -109,13 +101,12 @@ func migrateCollectionsName(db *sql.DB) error {
 	return err
 }
 
-// DB exposes the underlying connection so internal/seed can run migrations.
 func (s *SQLiteStore) DB() *sql.DB { return s.db }
 
 func (s *SQLiteStore) Close() error { return s.db.Close() }
 
 func (s *SQLiteStore) List() ([]Quote, error) {
-	rows, err := s.db.Query("SELECT " + columns + " FROM quotes ORDER BY char_count ASC, id ASC")
+	rows, err := s.db.Query("SELECT " + columns + " FROM quotes ORDER BY char_count ASC, sutta_id ASC, body_text ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -257,11 +248,6 @@ func (s *SQLiteStore) CreateCollection(quoteIDs []int64) (int64, error) {
 	return cid, nil
 }
 
-// AddToCollection prepends quoteIDs onto the top of an existing collection in
-// the order given, shifting existing members down so their relative order is
-// preserved. Quotes already in the collection (and repeats within quoteIDs) are
-// skipped — no duplicates, and the existing copy keeps its place. ErrNotFound if
-// the collection does not exist.
 func (s *SQLiteStore) AddToCollection(cid int64, quoteIDs []int64) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -278,8 +264,6 @@ func (s *SQLiteStore) AddToCollection(cid int64, quoteIDs []int64) error {
 	if err != nil {
 		return rollback(tx, err)
 	}
-	// De-duplicate the incoming list and drop ids already in the collection,
-	// preserving first-seen order.
 	seen := make(map[int64]bool)
 	var add []int64
 	for _, qid := range quoteIDs {
@@ -304,12 +288,6 @@ func (s *SQLiteStore) AddToCollection(cid int64, quoteIDs []int64) error {
 	return tx.Commit()
 }
 
-// InsertAtCollection inserts quoteIDs at the 1-based position pos (clamped to
-// [1, count+1]) inside an existing collection, shifting every member at or below
-// that position down so the new items land contiguously starting at pos. Quotes
-// already in the collection (and repeats within quoteIDs) are skipped — their
-// existing copy stays, in its (shifted) place. ErrNotFound if the collection is
-// unknown. pos is 1-based; values outside [1, count+1] clamp to the ends.
 func (s *SQLiteStore) InsertAtCollection(cid int64, quoteIDs []int64, pos int) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -326,8 +304,6 @@ func (s *SQLiteStore) InsertAtCollection(cid int64, quoteIDs []int64, pos int) e
 	if err != nil {
 		return rollback(tx, err)
 	}
-	// De-duplicate the incoming list and drop ids already in the collection,
-	// preserving first-seen order.
 	seen := make(map[int64]bool)
 	var add []int64
 	for _, qid := range quoteIDs {
@@ -340,7 +316,6 @@ func (s *SQLiteStore) InsertAtCollection(cid int64, quoteIDs []int64, pos int) e
 	if len(add) == 0 {
 		return tx.Commit()
 	}
-	// Clamp pos to [1, count+1] (count+1 = append at the end).
 	count := len(members)
 	if pos < 1 {
 		pos = 1
@@ -362,7 +337,6 @@ func (s *SQLiteStore) InsertAtCollection(cid int64, quoteIDs []int64, pos int) e
 	return tx.Commit()
 }
 
-// collectionMembers returns the set of quote_ids already in a collection.
 func collectionMembers(tx *sql.Tx, cid int64) (map[int64]bool, error) {
 	rows, err := tx.Query("SELECT quote_id FROM collection_items WHERE collection_id = ?", cid)
 	if err != nil {
@@ -411,8 +385,6 @@ func (s *SQLiteStore) CollectionQuotes(id int64) ([]Quote, error) {
 	return out, rows.Err()
 }
 
-// RenameCollection sets a collection's name. Collection names are not unique, so
-// this never returns ErrDuplicate. ErrNotFound if the collection is missing.
 func (s *SQLiteStore) RenameCollection(id int64, name string) error {
 	res, err := s.db.Exec("UPDATE collections SET name = ? WHERE id = ?", name, id)
 	if err != nil {
@@ -464,8 +436,6 @@ func (s *SQLiteStore) DeleteCollection(id int64) error {
 	}
 	return tx.Commit()
 }
-
-// --- categories ---
 
 func (s *SQLiteStore) ListCategories() ([]Category, error) {
 	rows, err := s.db.Query(
@@ -525,8 +495,6 @@ func (s *SQLiteStore) RenameCategory(id int64, name string) error {
 	return rowsAffected(res, id)
 }
 
-// DeleteCategory removes a category and untaggs every quote that carried it;
-// the quotes themselves are left intact. ErrNotFound if the category is missing.
 func (s *SQLiteStore) DeleteCategory(id int64) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -545,14 +513,11 @@ func (s *SQLiteStore) DeleteCategory(id int64) error {
 	return tx.Commit()
 }
 
-// CategoryQuotes returns the quotes tagged with a category in home order
-// (char_count, then id) — categories are unordered tags, so there is no
-// curated position like a collection has.
 func (s *SQLiteStore) CategoryQuotes(id int64) ([]Quote, error) {
 	rows, err := s.db.Query(
 		"SELECT q."+strings.Join(quoteColumns, ", q.")+
 			" FROM quotes q JOIN category_items ci ON ci.quote_id = q.id"+
-			" WHERE ci.category_id = ? ORDER BY q.char_count ASC, q.id ASC", id)
+			" WHERE ci.category_id = ? ORDER BY q.char_count ASC, q.sutta_id ASC, q.body_text ASC", id)
 	if err != nil {
 		return nil, err
 	}
@@ -568,10 +533,6 @@ func (s *SQLiteStore) CategoryQuotes(id int64) ([]Quote, error) {
 	return out, rows.Err()
 }
 
-// SetQuoteCategories replaces a quote's category set in a single transaction:
-// it validates the quote and every category id first, then deletes the old
-// memberships and inserts the new ones. ErrNotFound (and no partial state) on
-// an unknown quote or category id.
 func (s *SQLiteStore) SetQuoteCategories(quoteID int64, categoryIDs []int64) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -584,7 +545,6 @@ func (s *SQLiteStore) SetQuoteCategories(quoteID int64, categoryIDs []int64) err
 		}
 		return rollback(tx, err)
 	}
-	// De-duplicate the incoming list, dropping non-positive ids.
 	seen := make(map[int64]bool)
 	var ids []int64
 	for _, cid := range categoryIDs {
@@ -613,8 +573,6 @@ func (s *SQLiteStore) SetQuoteCategories(quoteID int64, categoryIDs []int64) err
 	return tx.Commit()
 }
 
-// QuoteCategoryMap returns quote_id -> its categories in a single query, for
-// rendering chip rows on a list of quotes without an N+1 lookup.
 func (s *SQLiteStore) QuoteCategoryMap() (map[int64][]Category, error) {
 	rows, err := s.db.Query(
 		`SELECT ci.quote_id, c.id, c.name
@@ -637,8 +595,6 @@ func (s *SQLiteStore) QuoteCategoryMap() (map[int64][]Category, error) {
 	return out, rows.Err()
 }
 
-// QuoteCollectionMap returns quote_id -> its collections in a single query, for
-// rendering membership chips on a list of root quotes without an N+1 lookup.
 func (s *SQLiteStore) QuoteCollectionMap() (map[int64][]Collection, error) {
 	rows, err := s.db.Query(
 		`SELECT ci.quote_id, c.id, c.name
@@ -661,8 +617,6 @@ func (s *SQLiteStore) QuoteCollectionMap() (map[int64][]Collection, error) {
 	return out, rows.Err()
 }
 
-// isUniqueViolation reports whether err is a SQLite uniqueness-constraint
-// failure (e.g. a duplicate category name).
 func isUniqueViolation(err error) bool {
 	var se sqlite3.Error
 	if errors.As(err, &se) {
