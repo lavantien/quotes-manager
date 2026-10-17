@@ -5,6 +5,8 @@ Task: restore the 1.x quotes workspace identity under one shared slim nav, keep 
 ## durable progress
 
 - 2026-10-17 lane opened. Cron a50f31fe pings main every 20 min.
+- 2026-10-17 change set 1 landed as c94689d (nav restyle + grid offset + canon token mapping, evidence committed).
+- 2026-10-17 change set 2: min-height wrap hardening, verified, landed.
 - git archaeology done. UI-relevant commits since 1.x: 104be70 merged the servers, 7d51ff4 unified static assets, 662b12e introduced the shared nav (web/templates/nav.html + web/static/nav.css), 8ae72bd htmx node swap fix, f29ddbf vendor pins, 6c2a938 comment strip. Diff 662b12e~1..HEAD over web/templates + web/static touches only nav.css (new), nav.html (new), layout.html (+2 lines: nav.css link + nav template call), canon.css (-15: own .nav block removed), app.js (comment strip). app.css, layout.css, all zone/rail templates unchanged since 1.x: the workspace's own CSS identity is intact, the damage is the injected nav.
 - 1.x workspace layout (662b12e~1 layout.html): body > main.page > .layout grid, no nav element at all. Zone heads sticky at top 0 inside 100vh scroll zones.
 - canon 1.x (sc-graph): own .nav in canon.css styled with canon variables (--card, --border), brand "sc-graph", links texts/search/words/graph/analytics/pipeline/discrepancies. 662b12e deleted that block and moved both shells onto web/templates/nav.html + nav.css with var() fallbacks.
@@ -65,6 +67,26 @@ Chain on the final state: make test-pkg PKG="./internal/server ./internal/cli" g
 - make test-pkg PKG="./internal/server ./internal/cli": green (2x, before and after the brand specificity fix).
 - make e2e-hermetic: green (2x, pre-fix and final state; includes the chromedp console-error gate).
 - make fmt/lint/typecheck/sloc: n/a, no Go file touched in this change set.
+
+## change set 2: fix(ui) let the nav grow instead of clipping on narrow wrap
+
+nav.css height -> min-height. At 375px the 2-row wrap already fit the 40px box, but 320px wraps to 3 rows and the fixed height would paint row 3 over the workspace. DOM-verified on the rebuilt binary: desktop unchanged (nav 40, layout top 40, bodyOverflow 0, cache-busted reload), 320x800 emulation nav grows to 54.6px with all links inside the box and layout starting below. Chain: make test-pkg ./internal/server ./internal/cli green, make e2e-hermetic green.
+
+## incident: chrome profile dialog on the geometry shot
+
+The first geometry capture (the inline run that produced 02-after-workspace-scrollbars.png pre-commit) launched chrome with a relative `--user-data-dir=dist\ui-geo\profile` while the PowerShell session cwd was the repo root and Start-Process launched chrome with its own default working directory. Chrome resolved the relative profile path against its own cwd, could not create or lock it there, and surfaced a read/write error dialog that reached the user's desktop; the same stall is why that chrome call exceeded its 60s wait and only wrote the png after the dialog cleared. capture-baseline.ps1 (the durable artifact) already used absolute paths, which is why all its 9-shot runs were clean. Fix applied to the script: GetFullPath on the profile and every screenshot output, explicit New-Item of the profile dir before any launch, and the narrow-width and scrollbars variants folded into the standard shot list so no ad hoc chrome launch is needed again.
+
+## cross-surface type rhythm verdict: no change warranted
+
+Measured on both surfaces with the real binary: nav computed font-size 13.6px (0.85rem) and height 40px identical on the workspace and canon pages, same link treatment and gap rhythm; the nav is the only shared element at the seam and its metrics already match across surfaces. Each surface's internal type scale (workspace 0.72 to 1.05rem rail/zone scale with serif quote bodies, canon 15px base with 1.5rem h1) is its own 1.x identity and stays untouched. Forcing them onto one scale would be a new design language, which the task forbids.
+
+## narrow-width verdict and pre-existing overflow note
+
+At 375px the nav wraps to 2 rows inside the cream bar with zero link crossing the content edge (DOM: max link right 326.9 vs content right 348) and grows instead of clipping (min-height fix). At 320px it wraps to 3 rows, nav height 54.6px, all links inside the box, layout below the nav. Captured as ui/02-after-workspace-375.png.
+
+Separate finding, pre-existing and out of lane: at 375px the page itself has 21px horizontal overflow (htmlScrollW 381 vs clientWidth 360) caused by the left rail's min-content width under the 1.x mobile layout (`.layout { grid-template-columns: 1fr }` tracks size to min-content; rail__row icon chains are the wide unbreakable content). That media block and the rail markup are byte-identical to 662b12e~1, so 1.x had the same mobile overflow. Fixing it means redesigning the 1.x mobile rail flow (minmax(0,1fr) would clip icons instead of scrolling the page), which is new design language, out of this lane's scope. Reported to main for the board.
+
+The stuck shot reruns during this set had a plain script bug: the launch line still passed the automatic `$args` (empty) instead of `$chromeArgs` after the profile-path edit, so chrome started argument-less and never exited. Fixed, plus a 120s bound with one retry per shot for the shared box.
 
 ## reading log
 

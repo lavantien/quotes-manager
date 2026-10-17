@@ -5,7 +5,7 @@
   flex-wrap: wrap;
   gap: 0.35rem 0.9rem;
   align-items: baseline;
-  height: var(--nav-h);
+  min-height: var(--nav-h);
   padding: 0 clamp(0.75rem, 1.5vw, 1rem);
   background: var(--nav-bg, var(--paper, #f7f4ef));
   border-bottom: 1px solid var(--nav-rule, var(--rule, #ddd6c8));

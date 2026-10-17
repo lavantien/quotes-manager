@@ -56,18 +56,28 @@ $shots = @(
     @{ n = "text"; u = "/texts/mn1"; w = 1440; h = 900 },
     @{ n = "words"; u = "/words"; w = 1440; h = 900 },
     @{ n = "word"; u = "/words/dhamma"; w = 1440; h = 900 },
-    @{ n = "graph"; u = "/graph"; w = 1440; h = 900 }
+    @{ n = "graph"; u = "/graph"; w = 1440; h = 900 },
+    @{ n = "workspace-375"; u = "/"; w = 375; h = 800 },
+    @{ n = "workspace-scrollbars"; u = "/"; w = 1440; h = 900; scrollbars = $true }
 )
-$profile = Join-Path $runDir "chrome-profile"
+$profile = [System.IO.Path]::GetFullPath((Join-Path $runDir "chrome-profile"))
+New-Item -ItemType Directory -Force -Path $profile | Out-Null
 $spawned = @()
 foreach ($s in $shots) {
-    $out = Join-Path $outAbs ("{0}-{1}.png" -f $Prefix, $s.n)
-    $args = @("--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run", "--no-default-browser-check",
+    $out = [System.IO.Path]::GetFullPath((Join-Path $outAbs ("{0}-{1}.png" -f $Prefix, $s.n)))
+    $chromeArgs = @("--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
         "--window-size=$($s.w),$($s.h)", "--virtual-time-budget=9000", "--user-data-dir=$profile",
         "--screenshot=$out", "$base$($s.u)")
-    $p = Start-Process -FilePath $chrome -ArgumentList $args -PassThru -WindowStyle Hidden
-    $spawned += $p
-    if (-not $p.WaitForExit(60000)) { $p.Kill($true); throw "chrome timed out on $($s.u)" }
+    if (-not $s.scrollbars) { $chromeArgs += "--hide-scrollbars" }
+    $done = $false
+    foreach ($attempt in 1..2) {
+        $p = Start-Process -FilePath $chrome -ArgumentList $chromeArgs -PassThru -WindowStyle Hidden
+        $spawned += $p
+        if ($p.WaitForExit(120000)) { $done = $true; break }
+        $p.Kill($true)
+        Log "shot $($s.u) attempt $attempt timed out, retrying"
+    }
+    if (-not $done) { throw "chrome timed out on $($s.u) after retries" }
     if (-not (Test-Path $out)) { throw "screenshot missing for $($s.u)" }
     Log "shot $($s.u) -> $out ($((Get-Item $out).Length) bytes)"
 }
