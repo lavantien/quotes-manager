@@ -115,6 +115,71 @@ func TestProtectedSetCoversAncestors(t *testing.T) {
 	}
 }
 
+func TestUnderRoot(t *testing.T) {
+	cases := []struct {
+		exe  string
+		root string
+		want bool
+	}{
+		{`C:\repo\qm\dist\tools\jobwrap.exe`, `C:\Repo\QM`, true},
+		{`C:/repo/qm/dist/tools/jobwrap.exe`, `C:\repo\qm`, true},
+		{`C:\repo\qm\dist\qm.exe`, `C:/REPO/QM/`, true},
+		{`C:\repo\qm2\x.exe`, `C:\repo\qm`, false},
+		{`C:\repo\qmutation\x.exe`, `C:\repo\qm`, false},
+		{`C:\repo\qm.exe`, `C:\repo\qm`, false},
+		{`C:\repo\other\x.exe`, `C:\repo\qm`, false},
+		{``, `C:\repo\qm`, false},
+		{`C:\repo\qm\x.exe`, ``, false},
+	}
+	for _, tc := range cases {
+		if got := underRoot(tc.exe, tc.root); got != tc.want {
+			t.Errorf("underRoot(%q, %q) = %v, want %v", tc.exe, tc.root, got, tc.want)
+		}
+	}
+}
+
+func TestRootedSetIncludesDescendantsExcludesForeign(t *testing.T) {
+	root := `C:\repo\qm`
+	snap := map[uint32]*procInfo{
+		100: {pid: 100, ppid: 1, exe: `C:\repo\qm\dist\tools\jobwrap.exe`},
+		101: {pid: 101, ppid: 100, exe: `C:\Go\bin\go.exe`},
+		102: {pid: 102, ppid: 101, exe: `C:\Temp\config.test.exe`},
+		200: {pid: 200, ppid: 1, exe: `C:\Go\bin\go.exe`},
+		300: {pid: 300, ppid: 1, exe: `C:\repo\other\go.exe`},
+		301: {pid: 301, ppid: 300, exe: `C:\repo\other\compile.exe`},
+	}
+	got := rootedSet(snap, root)
+	for _, pid := range []uint32{100, 101, 102} {
+		if !got[pid] {
+			t.Errorf("pid %d must be supervised, got %v", pid, got)
+		}
+	}
+	for _, pid := range []uint32{200, 300, 301} {
+		if got[pid] {
+			t.Errorf("pid %d must not be supervised, got %v", pid, got)
+		}
+	}
+}
+
+func TestSupervisedRootedExcludesSelfChain(t *testing.T) {
+	root := `C:\repo\qm`
+	snap := map[uint32]*procInfo{
+		10: {pid: 10, ppid: 4, exe: `C:\apps\make\make.exe`},
+		20: {pid: 20, ppid: 10, exe: `C:\repo\qm\dist\tools\jobwrap.exe`},
+		30: {pid: 30, ppid: 20, exe: `C:\repo\qm\dist\tools\memcapmon.exe`},
+		40: {pid: 40, ppid: 1, exe: `C:\repo\qm\dist\qm.exe`},
+	}
+	got := supervisedRooted(snap, root, 30)
+	for _, pid := range []uint32{10, 20, 30} {
+		if got[pid] {
+			t.Errorf("self-chain pid %d must be excluded, got %v", pid, got)
+		}
+	}
+	if !got[40] {
+		t.Errorf("unrelated root-origin pid 40 must be supervised, got %v", got)
+	}
+}
+
 func TestKillTreeRemovesDescendants(t *testing.T) {
 	if _, err := exec.LookPath("pwsh"); err != nil {
 		t.Skip("pwsh not on PATH")

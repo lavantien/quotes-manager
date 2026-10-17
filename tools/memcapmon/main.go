@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
@@ -25,6 +26,7 @@ type procInfo struct {
 	ppid  uint32
 	name  string
 	cmd   string
+	exe   string
 	ws    uint64
 	valid bool
 }
@@ -35,21 +37,48 @@ func main() {
 	poll := flag.Duration("poll", 2*time.Second, "sampling interval")
 	runFor := flag.Duration("for", 0, "stop after this duration, 0 means until killed")
 	match := flag.String("match", defaultMatch, "regex over process name or command line")
+	root := flag.String("root", "", "absolute path: supervise only processes whose image lives under it plus their descendants, no name matching")
+	list := flag.Bool("list", false, "print the supervised set once and exit")
 	flag.Parse()
 
 	limit, err := parseCap(*capStr)
 	if err != nil {
 		log.Fatalf("parse -cap %q: %v", *capStr, err)
 	}
-	re, err := regexp.Compile(*match)
-	if err != nil {
-		log.Fatalf("parse -match: %v", err)
+	if *root != "" && !filepath.IsAbs(*root) {
+		log.Fatalf("parse -root %q: want an absolute path", *root)
+	}
+	var re *regexp.Regexp
+	if *root == "" {
+		re, err = regexp.Compile(*match)
+		if err != nil {
+			log.Fatalf("parse -match: %v", err)
+		}
+	}
+	if *root != "" {
+		log.Printf("memcapmon: cap %d bytes, poll %v, root %q", limit, *poll, *root)
+	} else {
+		log.Printf("memcapmon: cap %d bytes, poll %v, match %q", limit, *poll, *match)
+	}
+	if *list {
+		snap, err := snapshot()
+		if err != nil {
+			log.Fatalf("snapshot: %v", err)
+		}
+		hits := collectSupervised(snap, *root, uint32(os.Getpid()), re)
+		sort.Slice(hits, func(i, j int) bool { return hits[i].pid < hits[j].pid })
+		var total uint64
+		for _, p := range hits {
+			total += p.ws
+			fmt.Printf("%d\t%d\t%s\t%s\n", p.pid, p.ws, p.name, p.exe)
+		}
+		log.Printf("memcapmon: %d supervised processes, %d bytes total", len(hits), total)
+		return
 	}
 	deadline := time.Time{}
 	if *runFor > 0 {
 		deadline = time.Now().Add(*runFor)
 	}
-	log.Printf("memcapmon: cap %d bytes, poll %v, match %q", limit, *poll, *match)
 	for {
 		if !deadline.IsZero() && time.Now().After(deadline) {
 			log.Printf("memcapmon: deadline reached, exiting")
@@ -61,14 +90,9 @@ func main() {
 			time.Sleep(*poll)
 			continue
 		}
-		self := protectedSet(snap)
-		var hits []procInfo
+		hits := collectSupervised(snap, *root, uint32(os.Getpid()), re)
 		var total uint64
-		for _, p := range snap {
-			if self[p.pid] || !shouldMatch(*p, re) {
-				continue
-			}
-			hits = append(hits, *p)
+		for _, p := range hits {
 			total += p.ws
 		}
 		if total > limit {
@@ -89,6 +113,75 @@ func main() {
 		}
 		time.Sleep(*poll)
 	}
+}
+
+func collectSupervised(snap map[uint32]*procInfo, root string, selfPid uint32, re *regexp.Regexp) []procInfo {
+	if root != "" {
+		set := supervisedRooted(snap, root, selfPid)
+		out := make([]procInfo, 0, len(set))
+		for pid := range set {
+			out = append(out, *snap[pid])
+		}
+		return out
+	}
+	self := protectedSetWithSelf(snap, selfPid)
+	var out []procInfo
+	for _, p := range snap {
+		if !self[p.pid] && shouldMatch(*p, re) {
+			out = append(out, *p)
+		}
+	}
+	return out
+}
+
+func normalizePath(p string) string {
+	return strings.ToLower(strings.ReplaceAll(p, "\\", "/"))
+}
+
+func underRoot(exe, root string) bool {
+	if exe == "" || root == "" {
+		return false
+	}
+	e := normalizePath(exe)
+	r := strings.TrimSuffix(normalizePath(root), "/") + "/"
+	return strings.HasPrefix(e, r)
+}
+
+func rootedSet(snap map[uint32]*procInfo, root string) map[uint32]bool {
+	children := map[uint32][]uint32{}
+	roots := map[uint32]bool{}
+	for _, p := range snap {
+		children[p.ppid] = append(children[p.ppid], p.pid)
+		if underRoot(p.exe, root) {
+			roots[p.pid] = true
+		}
+	}
+	out := map[uint32]bool{}
+	var walk func(pid uint32)
+	walk = func(pid uint32) {
+		if out[pid] {
+			return
+		}
+		out[pid] = true
+		for _, c := range children[pid] {
+			walk(c)
+		}
+	}
+	for pid := range roots {
+		walk(pid)
+	}
+	return out
+}
+
+func supervisedRooted(snap map[uint32]*procInfo, root string, selfPid uint32) map[uint32]bool {
+	protected := protectedSetWithSelf(snap, selfPid)
+	out := map[uint32]bool{}
+	for pid := range rootedSet(snap, root) {
+		if !protected[pid] {
+			out[pid] = true
+		}
+	}
+	return out
 }
 
 func parseCap(s string) (uint64, error) {
@@ -141,10 +234,6 @@ func pickLargest(hits []procInfo) procInfo {
 	return hits[0]
 }
 
-func protectedSet(snap map[uint32]*procInfo) map[uint32]bool {
-	return protectedSetWithSelf(snap, uint32(os.Getpid()))
-}
-
 func protectedSetWithSelf(snap map[uint32]*procInfo, selfPid uint32) map[uint32]bool {
 	self := map[uint32]bool{selfPid: true}
 	cur, ok := snap[selfPid]
@@ -191,6 +280,11 @@ func snapshot() (map[uint32]*procInfo, error) {
 			if ret != 0 {
 				p.ws = uint64(pmc.workingSetSize)
 				p.valid = true
+			}
+			var buf [1024]uint16
+			size := uint32(len(buf))
+			if err := windows.QueryFullProcessImageName(h, 0, &buf[0], &size); err == nil {
+				p.exe = windows.UTF16ToString(buf[:size])
 			}
 			_ = windows.CloseHandle(h)
 		}
