@@ -1,0 +1,22 @@
+sampler start 01:16:05 scope: every *.test.exe under TEMP go-build, reporting only
+01:16:16 new max 0.1 GB
+01:16:21 new max 0.2 GB
+01:17:08 new max 0.21 GB
+01:17:13 new max 0.29 GB
+01:17:18 new max 0.29 GB
+01:17:24 new max 0.3 GB
+01:17:29 new max 0.3 GB
+01:21:28 new max 0.31 GB
+01:34:22 new max 18.86 GB
+01:34:27 new max 22.17 GB
+sampler relaunch 01:36:26 after silent death, appending
+01:36:26 new max 0.29 GB
+01:36:31 new max 0.3 GB
+01:36:37 new max 0.3 GB
+01:38:26 new max 0.3 GB
+01:38:36 new max 0.3 GB
+01:41:50 new max 4.93 GB
+sampler relaunch 2 01:53:17, prior two died to the reaper on foreign balloons, appending
+01:53:18 new max 0.22 GB
+01:54:05 new max 0.28 GB
+02:03:18 new max 0.3 GB

@@ -1,0 +1,11 @@
+CGO_ENABLED=1 GOMEMLIMIT=2GiB go run ./tools/mutator -packages internal/cli -tags sqlite_fts5 -parallel 2
+progress 10/166
+progress 20/166
+progress 30/166
+progress 40/166
+progress 50/166
+progress 60/166
+progress 70/166
+progress 80/166
+progress 90/166
+progress 100/166
