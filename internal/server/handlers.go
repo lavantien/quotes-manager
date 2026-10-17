@@ -22,16 +22,10 @@ func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "page", data)
 }
 
-// renderQuoteList re-renders the full (char_count-sorted) quote list as an
-// HTMX fragment. Used after a create so the new quote lands in sorted order
-// instead of being appended/prepended to the DOM.
 func (s *Server) renderQuoteList(w http.ResponseWriter) {
 	s.renderQuoteListFlash(w, 0)
 }
 
-// renderQuoteListFlash re-renders the full root list (so a new or edited quote
-// lands in char_count order) and, when flashID is non-zero, marks that quote to
-// be briefly highlighted after the swap.
 func (s *Server) renderQuoteListFlash(w http.ResponseWriter, flashID int64) {
 	qs, err := s.store.List()
 	if err != nil {
@@ -55,8 +49,6 @@ func (s *Server) listFragment(w http.ResponseWriter, r *http.Request) {
 	s.renderQuoteList(w)
 }
 
-// parseQueryID reads an optional positive int64 query parameter, returning 0
-// when it is absent or invalid.
 func parseQueryID(r *http.Request, key string) int64 {
 	v := r.URL.Query().Get(key)
 	if v == "" {
@@ -69,16 +61,10 @@ func parseQueryID(r *http.Request, key string) int64 {
 	return id
 }
 
-// parseQueryStr reads an optional trimmed string query parameter (the search
-// box value), returning "" when absent. Lowercasing/tokenizing happens in
-// search.Parse.
 func parseQueryStr(r *http.Request, key string) string {
 	return strings.TrimSpace(r.URL.Query().Get(key))
 }
 
-// category renders the full dual-pane page with the root column filtered to a
-// category. Kept as a deep-link/refresh-friendly full-page route alongside the
-// in-place htmx pane swaps.
 func (s *Server) category(w http.ResponseWriter, r *http.Request) {
 	ctid, ok := parseID(w, r, "ctid")
 	if !ok {
@@ -147,8 +133,6 @@ func (s *Server) deleteCategory(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// renderLeftRail writes the left-rail fragment (Home + Categories). Active
-// cat/col come from the request query so the highlight survives a rail swap.
 func (s *Server) renderLeftRail(w http.ResponseWriter, r *http.Request) {
 	data, err := s.railData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
 	if err != nil {
@@ -158,7 +142,6 @@ func (s *Server) renderLeftRail(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "rail_left", data)
 }
 
-// renderQuoteChips writes the chip row for a quote from the current memberships.
 func (s *Server) renderQuoteChips(w http.ResponseWriter, id int64) {
 	m, err := s.store.QuoteCategoryMap()
 	if err != nil {
@@ -168,7 +151,6 @@ func (s *Server) renderQuoteChips(w http.ResponseWriter, id int64) {
 	s.render(w, "quote_chips", chipsData{ID: id, Categories: m[id]})
 }
 
-// quoteChips returns a quote's read-only chip row (used to cancel the editor).
 func (s *Server) quoteChips(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseID(w, r, "id")
 	if !ok {
@@ -181,8 +163,6 @@ func (s *Server) quoteChips(w http.ResponseWriter, r *http.Request) {
 	s.renderQuoteChips(w, id)
 }
 
-// editQuoteCategories returns the inline checkbox editor with a quote's current
-// categories pre-checked.
 func (s *Server) editQuoteCategories(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseID(w, r, "id")
 	if !ok {
@@ -213,9 +193,6 @@ func (s *Server) editQuoteCategories(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "quote_category_editor", editorData{ID: id, Items: items})
 }
 
-// resolveCategoryID returns the id of name, creating the category if needed. A
-// name that already exists (case-insensitively) resolves to the existing id so
-// typing a known name simply selects it.
 func (s *Server) resolveCategoryID(name string) (int64, error) {
 	if id, err := s.store.CreateCategory(name); err == nil {
 		return id, nil
@@ -234,9 +211,6 @@ func (s *Server) resolveCategoryID(name string) (int64, error) {
 	return 0, store.ErrDuplicate
 }
 
-// setQuoteCategories replaces a quote's categories from the editor submission
-// (checked ids plus an optional new name) and returns the fresh chip row plus an
-// out-of-band refresh of the left rail so category counts stay in sync.
 func (s *Server) setQuoteCategories(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseID(w, r, "id")
 	if !ok {
@@ -274,10 +248,6 @@ func (s *Server) setQuoteCategories(w http.ResponseWriter, r *http.Request) {
 	s.exec(w, "rail_left_oob", rail)
 }
 
-// applyCreateCategories tags a freshly created quote with the categories chosen
-// on the create form: checked "category" ids plus an optional "new_category"
-// name resolved create-or-find (mirroring setQuoteCategories). A submission with
-// no categories is a no-op so the common path skips the store round-trip.
 func (s *Server) applyCreateCategories(quoteID int64, f url.Values) error {
 	ids := parseIDs(f["category"])
 	if newName := strings.TrimSpace(f.Get("new_category")); newName != "" {
@@ -293,7 +263,6 @@ func (s *Server) applyCreateCategories(quoteID int64, f url.Values) error {
 	return s.store.SetQuoteCategories(quoteID, ids)
 }
 
-// categoryExport renders a category's quotes as the plain-text export format.
 func (s *Server) categoryExport(w http.ResponseWriter, r *http.Request) {
 	ctid, ok := parseID(w, r, "ctid")
 	if !ok {
@@ -355,9 +324,6 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isHTMX(r) {
-		// Re-render the whole list so the new quote is placed in char_count order,
-		// then live-refresh the left rail (Duplicates + category counts) and the
-		// root-zone block count via out-of-band swaps.
 		rail, err := s.railData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
 		if err != nil {
 			serverError(w, err)
@@ -385,10 +351,6 @@ func (s *Server) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isHTMX(r) {
-		// Re-render the whole list: an edit can change char_count and thus the
-		// quote's sorted position, so the block may need to move. Mark the saved
-		// quote to flash at its new spot, then live-refresh the left rail and the
-		// root count.
 		rail, err := s.railData(parseQueryID(r, "cat"), parseQueryID(r, "col"))
 		if err != nil {
 			serverError(w, err)
@@ -412,9 +374,6 @@ func (s *Server) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isHTMX(r) {
-		// hx-swap="delete" removes the block; the response carries out-of-band
-		// refreshes of both rails (category + collection counts) and the root-zone
-		// block count, all of which can change when a quote is removed.
 		cat, col := parseQueryID(r, "cat"), parseQueryID(r, "col")
 		rail, err := s.railData(cat, col)
 		if err != nil {
@@ -475,9 +434,6 @@ func (s *Server) exportAll(w http.ResponseWriter, r *http.Request) {
 	writeText(w, quote.RenderExportFile(quotes))
 }
 
-// buildQuote composes a quote.Quote from the 3-field form: content becomes
-// passages (one per non-empty line), an empty attribution defaults to "the
-// Buddha", and the citation is "<attribution>, <textId>".
 func buildQuote(f url.Values) *quote.Quote {
 	attribution := strings.TrimSpace(f.Get("attribution"))
 	textID := strings.TrimSpace(f.Get("text_id"))
@@ -495,7 +451,6 @@ func buildQuote(f url.Values) *quote.Quote {
 	return quote.New(sutta, citation, splitPassages(f.Get("content")))
 }
 
-// splitPassages breaks body text into one passage per non-empty trimmed line.
 func splitPassages(content string) []string {
 	var out []string
 	for _, line := range strings.Split(content, "\n") {
@@ -506,8 +461,6 @@ func splitPassages(content string) []string {
 	return out
 }
 
-// attributionOf recovers the attribution from a citation by stripping the
-// trailing sutta id. It returns "" when the citation is just the id.
 func attributionOf(citation, sutta string) string {
 	if sutta == "" || citation == sutta {
 		return ""
