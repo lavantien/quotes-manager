@@ -1,0 +1,7 @@
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -race -count=1 ./internal/quote ./internal/search ./internal/store ./internal/server ./internal/cli ./internal/e2e
+ok  	github.com/lavantien/quotes-manager/internal/quote	1.767s
+ok  	github.com/lavantien/quotes-manager/internal/search	1.748s
+ok  	github.com/lavantien/quotes-manager/internal/store	17.305s
+ok  	github.com/lavantien/quotes-manager/internal/server	26.387s
+ok  	github.com/lavantien/quotes-manager/internal/cli	70.309s
+ok  	github.com/lavantien/quotes-manager/internal/e2e	34.659s

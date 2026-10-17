@@ -1,0 +1,4 @@
+CGO_ENABLED=1 go run ./tools/sloc
+SLOC FAIL internal\server\server_test.go: 1552 > 1000
+exit status 1
+make: *** [makefile:123: sloc] Error 1
