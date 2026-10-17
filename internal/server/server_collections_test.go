@@ -332,3 +332,18 @@ func TestRenameCollectionEmptyName(t *testing.T) {
 		t.Errorf("status = %d, want 400", rec.Code)
 	}
 }
+
+func TestCollectionViewInsertGapPositions(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", fmt.Sprintf("/collections/%d", cid), "")
+	body := rec.Body.String()
+	for _, want := range []string{`data-pos="1"`, `data-pos="2"`, `data-pos="3"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("collection view missing insert gap %s", want)
+		}
+	}
+	if strings.Contains(body, `data-pos="-1"`) || strings.Contains(body, `data-pos="0"`) {
+		t.Error("collection view has out-of-range insert gap positions")
+	}
+}

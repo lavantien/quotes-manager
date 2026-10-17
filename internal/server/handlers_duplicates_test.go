@@ -5,7 +5,9 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/lavantien/quotes-manager/internal/quote"
 	"github.com/lavantien/quotes-manager/internal/server"
+	"github.com/lavantien/quotes-manager/internal/store"
 	"github.com/lavantien/quotes-manager/internal/store/storetest"
 )
 
@@ -19,10 +21,14 @@ func focusQuoteID(body string) string {
 	return m[1]
 }
 
-// TestMergeDuplicatesHTTP drives the merge endpoint against the clone-of-main
-// fixture: the seed's MN 22 trio surfaces as one duplicate group, the merge
-// endpoint folds its members into the representative, and the response refreshes
-// the root column and both rails.
+func quoteWithText(id int64, passage string) store.Quote {
+	q := quote.New("MN 10", "the Buddha, MN 10", []string{passage})
+	return store.Quote{
+		ID: id, SuttaID: q.SuttaID, Citation: q.Citation,
+		BodyMD: q.BodyMD(), BodyText: q.BodyText(), LineCount: q.LineCount(), CharCount: q.CharCount(),
+	}
+}
+
 func TestMergeDuplicatesHTTP(t *testing.T) {
 	srv := server.New(storetest.CloneFixture(t))
 
@@ -38,24 +44,17 @@ func TestMergeDuplicatesHTTP(t *testing.T) {
 	}
 	body := rec.Body.String()
 
-	// The root column and both rails are refreshed.
 	containsBody(t, body, `id="root-zone"`)
 	containsBody(t, body, `id="left-rail"`)
 	containsBody(t, body, `id="right-rail"`)
-	// The representative survives; the two merged-away members are gone, so the
-	// corpus is now 109 - 2 = 107 blocks.
 	containsBody(t, body, "id=\"quote-"+rep+"\"")
 	containsBody(t, body, ">107 blocks<")
-	// The trio no longer reads as a 3-member group in the refreshed rail.
 	lacksBody(t, body, `MN 22 <span class="rail__count">3</span>`)
 
-	// A fresh GET / no longer lists the trio as a duplicate group.
 	after := do(t, srv, "GET", "/", "").Body.String()
 	lacksBody(t, after, `MN 22 <span class="rail__count">3</span>`)
 }
 
-// TestMergeDuplicatesUnknownRep returns 404 when the id is not a current
-// duplicate-group representative.
 func TestMergeDuplicatesUnknownRep(t *testing.T) {
 	srv := server.New(storetest.CloneFixture(t))
 	rec := do(t, srv, "POST", "/duplicates/9999/merge", "")
@@ -64,8 +63,34 @@ func TestMergeDuplicatesUnknownRep(t *testing.T) {
 	}
 }
 
-// TestMergeDuplicatesStoreError returns 500 when the store fails to load the
-// corpus for group recomputation.
+func TestMergeDuplicatesSingletonRepNotFound(t *testing.T) {
+	fs := newFake(quoteWithText(1, "one wholly distinct passage"), quoteWithText(2, "two entirely different wording"))
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", "/duplicates/1/merge", "")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", rec.Code)
+	}
+	if len(fs.quotes) != 2 {
+		t.Errorf("store has %d quotes, want 2", len(fs.quotes))
+	}
+}
+
+func TestMergeDuplicatesNonRepresentativeMemberNotFound(t *testing.T) {
+	fs := newFake(
+		quoteWithText(1, "same body text"),
+		quoteWithText(2, "same body text"),
+		quoteWithText(3, "same body text"),
+	)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", "/duplicates/2/merge", "")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", rec.Code)
+	}
+	if len(fs.quotes) != 3 {
+		t.Errorf("store has %d quotes, want 3", len(fs.quotes))
+	}
+}
+
 func TestMergeDuplicatesStoreError(t *testing.T) {
 	assert500(t, newServer(t, failingStore{}), "POST", "/duplicates/1/merge", "")
 }

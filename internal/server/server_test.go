@@ -495,3 +495,27 @@ func TestRenderLeftRailError(t *testing.T) {
 	assert500(t, newServer(t, failListCats{newFake(sampleQuote(1))}),
 		"POST", "/categories", "name=x", "Content-Type", "application/x-www-form-urlencoded")
 }
+
+func TestDeleteHTMXRootCountTracksCategoryFilter(t *testing.T) {
+	fs, cid := fakeWithCategory(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "DELETE", fmt.Sprintf("/quotes/1?cat=%d", cid), "", "HX-Request", "true")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	want := `id="root-count" class="zone__count" hx-swap-oob="outerHTML">1 blocks</span>`
+	if !strings.Contains(rec.Body.String(), want) {
+		t.Errorf("delete response missing category-filtered root count %q", want)
+	}
+}
+
+func TestUpdateRejectsNonPositiveID(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	for _, id := range []string{"0", "-3"} {
+		rec := do(t, srv, "POST", "/quotes/"+id, "content=%22x%22",
+			"Content-Type", "application/x-www-form-urlencoded", "HX-Request", "true")
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("update id %s: status = %d, want 400", id, rec.Code)
+		}
+	}
+}
