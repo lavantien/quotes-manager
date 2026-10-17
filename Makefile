@@ -59,7 +59,7 @@ BIN := dist/qm$(EXE)
 
 FZ := $(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS)
 
-.PHONY: help all build test test-pkg race vet fmt lint lint-pkg typecheck sloc fuzz fuzz-one mutate memtest e2e-hermetic e2e verify vendor-assets diagrams stage run server extract seed tidy clean coverage screenshot fixture monitor
+.PHONY: help all build test test-pkg test-one race vet fmt lint lint-pkg typecheck sloc fuzz fuzz-one mutate memtest e2e-hermetic e2e verify vendor-assets diagrams stage run server extract seed tidy clean coverage screenshot fixture monitor
 
 help: ## show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make <target>\n\nTargets:\n"} \
@@ -78,6 +78,9 @@ test: $(WRAP) ## run the full test suite
 
 test-pkg: $(WRAP) ## run one package's tests: make test-pkg PKG=./internal/config
 	$(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS) $(PKG)
+
+test-one: $(WRAP) ## run one named test: make test-one PKG=./internal/cli TEST=TestLiveEnabled
+	$(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS) -run '^$(TEST)$$' -count=1 -v $(PKG)
 
 race: $(WRAP) ## go test -race over the merged-app core (RACE_PKGS)
 	$(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS) -race -count=1 $(RACE_PKGS)
