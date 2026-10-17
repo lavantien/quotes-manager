@@ -1,0 +1,39 @@
+Sat, Oct 17, 2026 11:39:10 AM
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/mutator -packages internal/server,internal/cli -tags sqlite_fts5 -parallel 8
+progress 10/327
+progress 20/327
+progress 30/327
+progress 40/327
+progress 50/327
+progress 60/327
+progress 70/327
+progress 80/327
+progress 90/327
+progress 100/327
+progress 110/327
+progress 120/327
+progress 130/327
+progress 140/327
+progress 150/327
+progress 160/327
+progress 170/327
+progress 180/327
+progress 190/327
+progress 200/327
+progress 210/327
+progress 220/327
+progress 230/327
+progress 240/327
+progress 250/327
+progress 260/327
+progress 270/327
+progress 280/327
+progress 290/327
+progress 300/327
+progress 310/327
+progress 320/327
+slots=8 mutants=327 killed=318 invalid=9 survived=0
+MUTATE_RC=0
+Sat, Oct 17, 2026 12:43:00 PM
+
+[exited with code 0]
