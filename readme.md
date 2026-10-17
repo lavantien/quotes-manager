@@ -41,7 +41,7 @@ quotes-manager 2.0.0 absorbs the sc-graph canon explorer into the quote workspac
 
 6. ![a canon text page](project-pictures/06-canon-text.png)
 
-   mn 1 at `/texts/mn1`, aligned pali and english segments
+   Middle Discourses 1 at `/texts/mn1`, aligned pali and english segments
 
 7. ![canon word lookup](project-pictures/07-canon-words.png)
 
