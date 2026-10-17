@@ -1,0 +1,14 @@
+2026-10-17T04:15:52 test rc=0 dur=80s
+2026-10-17T04:16:14 memtest rc=0 dur=22s
+2026-10-17T04:16:15 fmt rc=0 dur=1s
+2026-10-17T04:16:37 lint rc=0 dur=22s
+2026-10-17T04:16:50 typecheck rc=0 dur=13s
+2026-10-17T04:16:50 sloc rc=1 dur=0s
+2026-10-17T04:17:37 e2e-hermetic rc=0 dur=47s
+2026-10-17T04:20:15 race rc=0 dur=158s
+2026-10-17T04:24:44 fuzz rc=1 dur=269s
+2026-10-17T04:46:27 mutate rc=1 dur=1303s
+CHAIN_DONE
+2026-10-17T05:44:23 fuzz2 rc=1 dur=576s
+rc=0
+2026-10-17T09:18:01 mutate2 rc=1 dur=6951s

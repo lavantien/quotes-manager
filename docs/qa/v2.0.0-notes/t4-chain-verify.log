@@ -1,0 +1,143 @@
+CGO_ENABLED=1 go test -tags sqlite_fts5 ./...
+ok  	github.com/lavantien/quotes-manager/cmd/qm	10.750s
+?   	github.com/lavantien/quotes-manager/database	[no test files]
+ok  	github.com/lavantien/quotes-manager/internal/canon/analytics	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/export	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/graph	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/jobs	1.096s
+ok  	github.com/lavantien/quotes-manager/internal/canon/model	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/norm	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/pipeline	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/report	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/server	36.848s
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/bilara	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/dpd	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/editions	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/sync	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/triangulate	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/web	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/winjob	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/cli	66.983s
+ok  	github.com/lavantien/quotes-manager/internal/config	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/coverbadge	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/e2e	37.158s
+ok  	github.com/lavantien/quotes-manager/internal/quote	0.632s
+ok  	github.com/lavantien/quotes-manager/internal/search	0.278s
+ok  	github.com/lavantien/quotes-manager/internal/seed	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/server	31.487s
+ok  	github.com/lavantien/quotes-manager/internal/store	24.086s
+ok  	github.com/lavantien/quotes-manager/internal/store/storetest	2.287s
+?   	github.com/lavantien/quotes-manager/playground/serve-smoke	[no test files]
+?   	github.com/lavantien/quotes-manager/playground/stripcomments	[no test files]
+?   	github.com/lavantien/quotes-manager/tools/dpdfixture	[no test files]
+ok  	github.com/lavantien/quotes-manager/tools/jobwrap	(cached)
+ok  	github.com/lavantien/quotes-manager/tools/memcapmon	(cached)
+ok  	github.com/lavantien/quotes-manager/tools/mutator	(cached)
+?   	github.com/lavantien/quotes-manager/tools/sloc	[no test files]
+?   	github.com/lavantien/quotes-manager/web	[no test files]
+CGO_ENABLED=1 GOMEMLIMIT=512MiB go run ./tools/jobwrap go test -tags sqlite_fts5 -count=1 -run 'TestPipelineMemoryBounded|TestE2EHermetic|TestMergedHermeticE2E' ./internal/cli ./internal/e2e -v -timeout 15m
+=== RUN   TestE2EHermetic
+qm triangulate: triangulation reported errors: 14 findings, see report
+qm triangulate: triangulation reported errors: 14 findings, see report
+qm all: triangulate: triangulation reported errors: 14 findings, see report
+--- PASS: TestE2EHermetic (8.00s)
+=== RUN   TestPipelineMemoryBounded
+qm triangulate: triangulation reported errors: 14 findings, see report
+qm triangulate: triangulation reported errors: 14 findings, see report
+--- PASS: TestPipelineMemoryBounded (4.80s)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/cli	13.938s
+=== RUN   TestMergedHermeticE2E
+2026/10/17 06:09:21 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 06:09:21 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:21 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:21 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:21 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:22 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/2 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/2 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/ status=200 duration_ms=20
+2026/10/17 06:09:23 INFO request method=GET path=/dashboard status=200 duration_ms=3
+2026/10/17 06:09:23 INFO request method=GET path=/texts/mn1 status=200 duration_ms=1
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=1
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=1
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/quotes status=400 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/quotes status=400 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/quotes/1 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/quotes/999999 status=404 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/api/v1/quotes/abc status=404 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/texts/mn51 status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=70
+2026/10/17 06:09:23 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=1
+2026/10/17 06:09:23 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/17 06:09:23 INFO request method=POST path=/quotes status=303 duration_ms=9
+2026/10/17 06:09:23 INFO request method=GET path=/ status=200 duration_ms=18
+2026/10/17 06:09:23 INFO request method=GET path=/texts/mn1 status=200 duration_ms=1
+--- PASS: TestMergedHermeticE2E (8.06s)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/e2e	9.215s
+gofumpt -w .
+golangci-lint run
+0 issues.
+CGO_ENABLED=1 go build -tags sqlite_fts5 ./...
+CGO_ENABLED=1 go vet -tags sqlite_fts5 ./...
+CGO_ENABLED=1 go run ./tools/sloc
+sloc ok
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzAnalyticsSQLGate -fuzztime 20s -parallel 4 ./internal/canon/analytics
+fuzz: elapsed: 0s, gathering baseline coverage: 0/230 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 230/230 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 159868 (53284/sec), new interesting: 1 (total: 231)
+fuzz: elapsed: 6s, execs: 310729 (50277/sec), new interesting: 1 (total: 231)
+fuzz: elapsed: 9s, execs: 548085 (79140/sec), new interesting: 2 (total: 232)
+fuzz: elapsed: 12s, execs: 701676 (51194/sec), new interesting: 3 (total: 233)
+fuzz: elapsed: 15s, execs: 875932 (58079/sec), new interesting: 3 (total: 233)
+fuzz: elapsed: 18s, execs: 1064278 (62787/sec), new interesting: 5 (total: 235)
+fuzz: elapsed: 20s, execs: 1156994 (42827/sec), new interesting: 7 (total: 237)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/analytics	21.153s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzEnsureNode -fuzztime 20s -parallel 4 ./internal/canon/graph
+fuzz: elapsed: 0s, gathering baseline coverage: 0/14 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 14/14 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 117 (39/sec), new interesting: 0 (total: 14)
+fuzz: elapsed: 6s, execs: 178 (20/sec), new interesting: 1 (total: 15)

@@ -1,0 +1,169 @@
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/mutator -packages internal/canon/norm,internal/canon/source/bilara,internal/canon/source/editions,internal/canon/source/dpd,internal/canon/triangulate,internal/canon/server,internal/canon/jobs,internal/canon/analytics,internal/canon/export,internal/quote,internal/search,internal/store,internal/server,internal/cli -tags sqlite_fts5 -parallel 8
+progress 10/1504
+progress 20/1504
+progress 30/1504
+progress 40/1504
+progress 50/1504
+progress 60/1504
+progress 70/1504
+progress 80/1504
+progress 90/1504
+progress 100/1504
+progress 110/1504
+progress 120/1504
+progress 130/1504
+progress 140/1504
+progress 150/1504
+progress 160/1504
+progress 170/1504
+progress 180/1504
+progress 190/1504
+progress 200/1504
+progress 210/1504
+progress 220/1504
+progress 230/1504
+progress 240/1504
+progress 250/1504
+progress 260/1504
+progress 270/1504
+progress 280/1504
+progress 290/1504
+progress 300/1504
+progress 310/1504
+progress 320/1504
+progress 330/1504
+progress 340/1504
+progress 350/1504
+progress 360/1504
+progress 370/1504
+progress 380/1504
+progress 390/1504
+progress 400/1504
+progress 410/1504
+progress 420/1504
+progress 430/1504
+progress 440/1504
+progress 450/1504
+progress 460/1504
+progress 470/1504
+progress 480/1504
+progress 490/1504
+progress 500/1504
+progress 510/1504
+progress 520/1504
+progress 530/1504
+progress 540/1504
+progress 550/1504
+progress 560/1504
+progress 570/1504
+progress 580/1504
+progress 590/1504
+progress 600/1504
+progress 610/1504
+progress 620/1504
+progress 630/1504
+progress 640/1504
+progress 650/1504
+progress 660/1504
+progress 670/1504
+progress 680/1504
+progress 690/1504
+progress 700/1504
+progress 710/1504
+progress 720/1504
+progress 730/1504
+progress 740/1504
+progress 750/1504
+progress 760/1504
+progress 770/1504
+progress 780/1504
+progress 790/1504
+progress 800/1504
+progress 810/1504
+progress 820/1504
+progress 830/1504
+progress 840/1504
+progress 850/1504
+progress 860/1504
+progress 870/1504
+progress 880/1504
+progress 890/1504
+progress 900/1504
+progress 910/1504
+progress 920/1504
+progress 930/1504
+progress 940/1504
+progress 950/1504
+progress 960/1504
+progress 970/1504
+progress 980/1504
+progress 990/1504
+progress 1000/1504
+progress 1010/1504
+progress 1020/1504
+progress 1030/1504
+progress 1040/1504
+progress 1050/1504
+progress 1060/1504
+progress 1070/1504
+progress 1080/1504
+progress 1090/1504
+progress 1100/1504
+progress 1110/1504
+progress 1120/1504
+progress 1130/1504
+progress 1140/1504
+progress 1150/1504
+progress 1160/1504
+progress 1170/1504
+progress 1180/1504
+progress 1190/1504
+progress 1200/1504
+progress 1210/1504
+progress 1220/1504
+progress 1230/1504
+progress 1240/1504
+progress 1250/1504
+progress 1260/1504
+progress 1270/1504
+progress 1280/1504
+progress 1290/1504
+progress 1300/1504
+progress 1310/1504
+progress 1320/1504
+progress 1330/1504
+progress 1340/1504
+progress 1350/1504
+progress 1360/1504
+progress 1370/1504
+progress 1380/1504
+progress 1390/1504
+progress 1400/1504
+progress 1410/1504
+progress 1420/1504
+progress 1430/1504
+progress 1440/1504
+progress 1450/1504
+progress 1460/1504
+progress 1470/1504
+progress 1480/1504
+progress 1490/1504
+progress 1500/1504
+SURVIVED internal/server/api_quotes.go:62 - -> +
+SURVIVED internal/server/handlers.go:425 > -> <=
+SURVIVED internal/server/handlers.go:426 == -> !=
+SURVIVED internal/server/handlers.go:521 || -> &&
+SURVIVED internal/server/handlers_duplicates.go:30 && -> ||
+SURVIVED internal/server/server.go:95 != -> ==
+SURVIVED internal/server/templates.go:27 + -> -
+SURVIVED internal/server/views.go:303 != -> ==
+SURVIVED internal/cli/coverage.go:25 > -> <=
+SURVIVED internal/cli/coverage.go:47 && -> ||
+SURVIVED internal/cli/coverage.go:56 != -> ==
+SURVIVED internal/cli/screenshot.go:96 != -> ==
+SURVIVED internal/cli/screenshot.go:111 != -> ==
+SURVIVED internal/cli/screenshot.go:126 == -> !=
+slots=8 mutants=1504 killed=1311 invalid=179 survived=14
+14 mutant(s) survived
+exit status 1
+make: *** [makefile:160: mutate] Error 1

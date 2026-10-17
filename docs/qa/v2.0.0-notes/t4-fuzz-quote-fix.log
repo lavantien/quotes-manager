@@ -1,0 +1,12 @@
+fuzz: elapsed: 0s, gathering baseline coverage: 0/62 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 62/62 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 122725 (40889/sec), new interesting: 58 (total: 120)
+fuzz: elapsed: 6s, execs: 153933 (10402/sec), new interesting: 60 (total: 122)
+fuzz: elapsed: 9s, execs: 153933 (0/sec), new interesting: 60 (total: 122)
+fuzz: elapsed: 12s, execs: 153933 (0/sec), new interesting: 60 (total: 122)
+fuzz: elapsed: 15s, execs: 153933 (0/sec), new interesting: 60 (total: 122)
+fuzz: elapsed: 18s, execs: 153933 (0/sec), new interesting: 60 (total: 122)
+fuzz: elapsed: 21s, execs: 153933 (0/sec), new interesting: 60 (total: 122)
+fuzz: elapsed: 21s, execs: 153933 (0/sec), new interesting: 60 (total: 122)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/quote	21.790s

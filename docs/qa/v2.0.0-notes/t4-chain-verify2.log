@@ -1,0 +1,439 @@
+CGO_ENABLED=1 go test -tags sqlite_fts5 ./...
+ok  	github.com/lavantien/quotes-manager/cmd/qm	(cached)
+?   	github.com/lavantien/quotes-manager/database	[no test files]
+ok  	github.com/lavantien/quotes-manager/internal/canon/analytics	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/export	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/graph	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/jobs	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/model	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/norm	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/pipeline	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/report	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/server	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/bilara	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/dpd	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/editions	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/sync	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/triangulate	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/web	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/winjob	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/cli	77.673s
+ok  	github.com/lavantien/quotes-manager/internal/config	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/coverbadge	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/e2e	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/quote	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/search	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/seed	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/server	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/store	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/store/storetest	(cached)
+?   	github.com/lavantien/quotes-manager/playground/serve-smoke	[no test files]
+?   	github.com/lavantien/quotes-manager/playground/stripcomments	[no test files]
+?   	github.com/lavantien/quotes-manager/tools/dpdfixture	[no test files]
+ok  	github.com/lavantien/quotes-manager/tools/jobwrap	(cached)
+ok  	github.com/lavantien/quotes-manager/tools/memcapmon	(cached)
+ok  	github.com/lavantien/quotes-manager/tools/mutator	(cached)
+?   	github.com/lavantien/quotes-manager/tools/sloc	[no test files]
+?   	github.com/lavantien/quotes-manager/web	[no test files]
+CGO_ENABLED=1 GOMEMLIMIT=512MiB go run ./tools/jobwrap go test -tags sqlite_fts5 -count=1 -run 'TestPipelineMemoryBounded|TestE2EHermetic|TestMergedHermeticE2E' ./internal/cli ./internal/e2e -v -timeout 15m
+=== RUN   TestE2EHermetic
+qm triangulate: triangulation reported errors: 14 findings, see report
+qm triangulate: triangulation reported errors: 14 findings, see report
+qm all: triangulate: triangulation reported errors: 14 findings, see report
+--- PASS: TestE2EHermetic (9.88s)
+=== RUN   TestPipelineMemoryBounded
+qm triangulate: triangulation reported errors: 14 findings, see report
+qm triangulate: triangulation reported errors: 14 findings, see report
+--- PASS: TestPipelineMemoryBounded (8.55s)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/cli	20.346s
+=== RUN   TestMergedHermeticE2E
+2026/10/17 06:47:42 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 06:47:42 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:42 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:42 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:42 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:42 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:42 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:42 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:42 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:42 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/2 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/2 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/ status=200 duration_ms=15
+2026/10/17 06:47:43 INFO request method=GET path=/dashboard status=200 duration_ms=2
+2026/10/17 06:47:43 INFO request method=GET path=/texts/mn1 status=200 duration_ms=1
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=1
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=1
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/quotes status=400 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/quotes status=400 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/quotes/1 status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/quotes/999999 status=404 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/api/v1/quotes/abc status=404 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/texts/mn51 status=200 duration_ms=1
+2026/10/17 06:47:43 INFO request method=GET path=/static/app.css status=200 duration_ms=52
+2026/10/17 06:47:43 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/17 06:47:43 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=1
+2026/10/17 06:47:43 INFO request method=POST path=/quotes status=303 duration_ms=8
+2026/10/17 06:47:43 INFO request method=GET path=/ status=200 duration_ms=15
+2026/10/17 06:47:43 INFO request method=GET path=/texts/mn1 status=200 duration_ms=1
+--- PASS: TestMergedHermeticE2E (9.77s)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/e2e	11.707s
+gofumpt -w .
+golangci-lint run
+0 issues.
+CGO_ENABLED=1 go build -tags sqlite_fts5 ./...
+CGO_ENABLED=1 go vet -tags sqlite_fts5 ./...
+CGO_ENABLED=1 go run ./tools/sloc
+sloc ok
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzAnalyticsSQLGate -fuzztime 20s -parallel 4 ./internal/canon/analytics
+fuzz: elapsed: 0s, gathering baseline coverage: 0/237 completed
+fuzz: elapsed: 1s, gathering baseline coverage: 237/237 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 187586 (62520/sec), new interesting: 0 (total: 237)
+fuzz: elapsed: 6s, execs: 327306 (46352/sec), new interesting: 0 (total: 237)
+fuzz: elapsed: 9s, execs: 413564 (28883/sec), new interesting: 0 (total: 237)
+fuzz: elapsed: 12s, execs: 561800 (49421/sec), new interesting: 0 (total: 237)
+fuzz: elapsed: 15s, execs: 652903 (30364/sec), new interesting: 0 (total: 237)
+fuzz: elapsed: 18s, execs: 790099 (45745/sec), new interesting: 0 (total: 237)
+fuzz: elapsed: 20s, execs: 885897 (47058/sec), new interesting: 0 (total: 237)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/analytics	21.714s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzEnsureNode -fuzztime 20s -parallel 4 ./internal/canon/graph
+fuzz: elapsed: 0s, gathering baseline coverage: 0/16 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 16/16 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 161 (54/sec), new interesting: 0 (total: 16)
+fuzz: elapsed: 6s, execs: 268 (36/sec), new interesting: 0 (total: 16)
+fuzz: elapsed: 9s, execs: 345 (26/sec), new interesting: 0 (total: 16)
+fuzz: elapsed: 12s, execs: 471 (42/sec), new interesting: 0 (total: 16)
+fuzz: elapsed: 15s, execs: 515 (15/sec), new interesting: 0 (total: 16)
+fuzz: elapsed: 18s, execs: 644 (43/sec), new interesting: 0 (total: 16)
+fuzz: elapsed: 21s, execs: 702 (19/sec), new interesting: 0 (total: 16)
+fuzz: elapsed: 21s, execs: 702 (0/sec), new interesting: 0 (total: 16)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/graph	21.815s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzPublishPointer -fuzztime 20s -parallel 4 ./internal/canon/graph
+fuzz: elapsed: 0s, gathering baseline coverage: 0/18 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 18/18 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 106 (35/sec), new interesting: 1 (total: 19)
+fuzz: elapsed: 6s, execs: 106 (0/sec), new interesting: 1 (total: 19)
+fuzz: elapsed: 9s, execs: 227 (40/sec), new interesting: 2 (total: 20)
+fuzz: elapsed: 12s, execs: 305 (26/sec), new interesting: 3 (total: 21)
+fuzz: elapsed: 15s, execs: 505 (67/sec), new interesting: 5 (total: 23)
+fuzz: elapsed: 18s, execs: 505 (0/sec), new interesting: 5 (total: 23)
+fuzz: elapsed: 21s, execs: 566 (20/sec), new interesting: 6 (total: 24)
+fuzz: elapsed: 21s, execs: 566 (0/sec), new interesting: 6 (total: 24)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/graph	21.697s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzSearchFTSText -fuzztime 20s -parallel 4 ./internal/canon/graph
+fuzz: elapsed: 0s, gathering baseline coverage: 0/24 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 24/24 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 63 (21/sec), new interesting: 0 (total: 24)
+fuzz: elapsed: 6s, execs: 239 (59/sec), new interesting: 1 (total: 25)
+fuzz: elapsed: 9s, execs: 278 (13/sec), new interesting: 1 (total: 25)
+fuzz: elapsed: 12s, execs: 337 (20/sec), new interesting: 1 (total: 25)
+fuzz: elapsed: 15s, execs: 340 (1/sec), new interesting: 1 (total: 25)
+fuzz: elapsed: 18s, execs: 529 (63/sec), new interesting: 2 (total: 26)
+fuzz: elapsed: 21s, execs: 670 (47/sec), new interesting: 3 (total: 27)
+fuzz: elapsed: 21s, execs: 670 (0/sec), new interesting: 3 (total: 27)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/graph	21.646s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzSegmentsMuid -fuzztime 20s -parallel 4 ./internal/canon/graph
+fuzz: elapsed: 0s, gathering baseline coverage: 0/11 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 11/11 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 128 (43/sec), new interesting: 0 (total: 11)
+fuzz: elapsed: 6s, execs: 144 (5/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 9s, execs: 144 (0/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 12s, execs: 144 (0/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 15s, execs: 265 (40/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 18s, execs: 269 (1/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 21s, execs: 422 (51/sec), new interesting: 2 (total: 13)
+fuzz: elapsed: 21s, execs: 422 (0/sec), new interesting: 2 (total: 13)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/graph	21.385s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzTreeDivisionKey -fuzztime 20s -parallel 4 ./internal/canon/graph
+fuzz: elapsed: 0s, gathering baseline coverage: 0/10 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 10/10 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 104 (35/sec), new interesting: 1 (total: 11)
+fuzz: elapsed: 6s, execs: 131 (9/sec), new interesting: 1 (total: 11)
+fuzz: elapsed: 9s, execs: 168 (12/sec), new interesting: 1 (total: 11)
+fuzz: elapsed: 12s, execs: 330 (54/sec), new interesting: 2 (total: 12)
+fuzz: elapsed: 15s, execs: 414 (28/sec), new interesting: 2 (total: 12)
+fuzz: elapsed: 18s, execs: 468 (18/sec), new interesting: 4 (total: 14)
+fuzz: elapsed: 21s, execs: 525 (19/sec), new interesting: 5 (total: 15)
+fuzz: elapsed: 21s, execs: 525 (0/sec), new interesting: 5 (total: 15)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/graph	21.511s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzPaliTokenizer -fuzztime 20s -parallel 4 ./internal/canon/norm
+fuzz: elapsed: 0s, gathering baseline coverage: 0/197 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 197/197 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 26878 (8958/sec), new interesting: 1 (total: 198)
+fuzz: elapsed: 6s, execs: 36777 (3287/sec), new interesting: 1 (total: 198)
+fuzz: elapsed: 9s, execs: 36777 (0/sec), new interesting: 1 (total: 198)
+fuzz: elapsed: 12s, execs: 41034 (1419/sec), new interesting: 2 (total: 199)
+fuzz: elapsed: 15s, execs: 61042 (6669/sec), new interesting: 3 (total: 200)
+fuzz: elapsed: 18s, execs: 61042 (0/sec), new interesting: 3 (total: 200)
+fuzz: elapsed: 21s, execs: 61042 (0/sec), new interesting: 3 (total: 200)
+fuzz: elapsed: 21s, execs: 61042 (0/sec), new interesting: 3 (total: 200)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/norm	22.096s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzRenderJSONRoundTrip -fuzztime 20s -parallel 4 ./internal/canon/report
+fuzz: elapsed: 0s, gathering baseline coverage: 0/145 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 145/145 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 4279 (1426/sec), new interesting: 2 (total: 147)
+fuzz: elapsed: 6s, execs: 66491 (20734/sec), new interesting: 6 (total: 151)
+fuzz: elapsed: 9s, execs: 93195 (8891/sec), new interesting: 7 (total: 152)
+fuzz: elapsed: 12s, execs: 119469 (8769/sec), new interesting: 7 (total: 152)
+fuzz: elapsed: 15s, execs: 207150 (29228/sec), new interesting: 10 (total: 155)
+fuzz: elapsed: 18s, execs: 207150 (0/sec), new interesting: 10 (total: 155)
+fuzz: elapsed: 21s, execs: 246408 (13083/sec), new interesting: 11 (total: 156)
+fuzz: elapsed: 21s, execs: 246408 (0/sec), new interesting: 11 (total: 156)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/report	21.846s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzServerGraphCaps -fuzztime 20s -parallel 4 ./internal/canon/server
+fuzz: elapsed: 0s, gathering baseline coverage: 0/240 completed
+fuzz: elapsed: 2s, gathering baseline coverage: 240/240 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 846 (282/sec), new interesting: 6 (total: 246)
+fuzz: elapsed: 6s, execs: 2152 (435/sec), new interesting: 9 (total: 249)
+fuzz: elapsed: 9s, execs: 2547 (132/sec), new interesting: 12 (total: 252)
+fuzz: elapsed: 12s, execs: 3665 (373/sec), new interesting: 12 (total: 252)
+fuzz: elapsed: 15s, execs: 5013 (449/sec), new interesting: 13 (total: 253)
+fuzz: elapsed: 18s, execs: 5490 (159/sec), new interesting: 14 (total: 254)
+fuzz: elapsed: 20s, execs: 6008 (248/sec), new interesting: 14 (total: 254)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/server	22.495s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzServerLimits -fuzztime 20s -parallel 4 ./internal/canon/server
+fuzz: elapsed: 0s, gathering baseline coverage: 0/75 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 75/75 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 10579 (3526/sec), new interesting: 1 (total: 76)
+fuzz: elapsed: 6s, execs: 11467 (294/sec), new interesting: 1 (total: 76)
+fuzz: elapsed: 9s, execs: 11467 (0/sec), new interesting: 1 (total: 76)
+fuzz: elapsed: 12s, execs: 11467 (0/sec), new interesting: 1 (total: 76)
+fuzz: elapsed: 15s, execs: 11467 (0/sec), new interesting: 1 (total: 76)
+fuzz: elapsed: 18s, execs: 11467 (0/sec), new interesting: 1 (total: 76)
+fuzz: elapsed: 21s, execs: 11467 (0/sec), new interesting: 1 (total: 76)
+fuzz: elapsed: 21s, execs: 11467 (0/sec), new interesting: 1 (total: 76)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/server	21.998s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzServerReportPath -fuzztime 20s -parallel 4 ./internal/canon/server
+fuzz: elapsed: 0s, gathering baseline coverage: 0/215 completed
+fuzz: elapsed: 1s, gathering baseline coverage: 215/215 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 16411 (5470/sec), new interesting: 5 (total: 220)
+fuzz: elapsed: 6s, execs: 52261 (11950/sec), new interesting: 11 (total: 226)
+fuzz: elapsed: 9s, execs: 80673 (9471/sec), new interesting: 12 (total: 227)
+fuzz: elapsed: 12s, execs: 125343 (14804/sec), new interesting: 17 (total: 232)
+fuzz: elapsed: 15s, execs: 125343 (0/sec), new interesting: 17 (total: 232)
+fuzz: elapsed: 18s, execs: 125343 (0/sec), new interesting: 17 (total: 232)
+fuzz: elapsed: 21s, execs: 125343 (0/sec), new interesting: 17 (total: 232)
+fuzz: elapsed: 21s, execs: 125343 (0/sec), new interesting: 17 (total: 232)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/server	22.852s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzServerSearch -fuzztime 20s -parallel 4 ./internal/canon/server
+fuzz: elapsed: 0s, gathering baseline coverage: 0/117 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 117/117 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 27421 (9140/sec), new interesting: 4 (total: 121)
+fuzz: elapsed: 6s, execs: 27861 (147/sec), new interesting: 4 (total: 121)
+fuzz: elapsed: 9s, execs: 55600 (9246/sec), new interesting: 5 (total: 122)
+fuzz: elapsed: 12s, execs: 55600 (0/sec), new interesting: 5 (total: 122)
+fuzz: elapsed: 15s, execs: 55600 (0/sec), new interesting: 5 (total: 122)
+fuzz: elapsed: 18s, execs: 55600 (0/sec), new interesting: 5 (total: 122)
+fuzz: elapsed: 21s, execs: 55600 (0/sec), new interesting: 5 (total: 122)
+fuzz: elapsed: 21s, execs: 55600 (0/sec), new interesting: 5 (total: 122)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/server	22.901s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzJobsStage -fuzztime 20s -parallel 4 ./internal/canon/server
+fuzz: elapsed: 0s, gathering baseline coverage: 0/344 completed
+fuzz: elapsed: 2s, gathering baseline coverage: 344/344 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 22458 (7486/sec), new interesting: 7 (total: 351)
+fuzz: elapsed: 6s, execs: 34349 (3963/sec), new interesting: 12 (total: 356)
+fuzz: elapsed: 9s, execs: 70778 (12144/sec), new interesting: 14 (total: 358)
+fuzz: elapsed: 12s, execs: 70778 (0/sec), new interesting: 14 (total: 358)
+fuzz: elapsed: 15s, execs: 70778 (0/sec), new interesting: 14 (total: 358)
+fuzz: elapsed: 18s, execs: 70778 (0/sec), new interesting: 14 (total: 358)
+fuzz: elapsed: 21s, execs: 70778 (0/sec), new interesting: 14 (total: 358)
+fuzz: elapsed: 21s, execs: 70778 (0/sec), new interesting: 14 (total: 358)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/server	22.942s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzBilaraSegmentJSON -fuzztime 20s -parallel 4 ./internal/canon/source/bilara
+fuzz: elapsed: 0s, gathering baseline coverage: 0/77 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 77/77 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 1988 (663/sec), new interesting: 0 (total: 77)
+fuzz: elapsed: 6s, execs: 24873 (7563/sec), new interesting: 8 (total: 85)
+fuzz: elapsed: 9s, execs: 24911 (13/sec), new interesting: 8 (total: 85)
+fuzz: elapsed: 12s, execs: 24911 (0/sec), new interesting: 8 (total: 85)
+fuzz: elapsed: 15s, execs: 24911 (0/sec), new interesting: 8 (total: 85)
+fuzz: elapsed: 18s, execs: 24911 (0/sec), new interesting: 8 (total: 85)
+fuzz: elapsed: 21s, execs: 24911 (0/sec), new interesting: 8 (total: 85)
+fuzz: elapsed: 21s, execs: 24911 (0/sec), new interesting: 8 (total: 85)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/bilara	22.347s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzSegmentKey -fuzztime 20s -parallel 4 ./internal/canon/source/bilara
+fuzz: elapsed: 0s, gathering baseline coverage: 0/159 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 159/159 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 211501 (70499/sec), new interesting: 18 (total: 177)
+fuzz: elapsed: 6s, execs: 277481 (21993/sec), new interesting: 25 (total: 184)
+fuzz: elapsed: 9s, execs: 427632 (50027/sec), new interesting: 33 (total: 192)
+fuzz: elapsed: 12s, execs: 546326 (39583/sec), new interesting: 41 (total: 200)
+fuzz: elapsed: 15s, execs: 679487 (44385/sec), new interesting: 43 (total: 202)
+fuzz: elapsed: 18s, execs: 947430 (89310/sec), new interesting: 47 (total: 206)
+fuzz: elapsed: 20s, execs: 1081258 (65125/sec), new interesting: 52 (total: 211)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/bilara	20.816s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzDpdExtract -fuzztime 20s -parallel 4 ./internal/canon/source/dpd
+fuzz: elapsed: 0s, gathering baseline coverage: 0/6 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 6/6 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 43 (14/sec), new interesting: 1 (total: 7)
+fuzz: elapsed: 6s, execs: 43 (0/sec), new interesting: 1 (total: 7)
+fuzz: elapsed: 9s, execs: 43 (0/sec), new interesting: 1 (total: 7)
+fuzz: elapsed: 12s, execs: 43 (0/sec), new interesting: 1 (total: 7)
+fuzz: elapsed: 15s, execs: 43 (0/sec), new interesting: 1 (total: 7)
+fuzz: elapsed: 18s, execs: 43 (0/sec), new interesting: 1 (total: 7)
+fuzz: elapsed: 21s, execs: 43 (0/sec), new interesting: 1 (total: 7)
+fuzz: elapsed: 21s, execs: 43 (0/sec), new interesting: 1 (total: 7)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/dpd	22.136s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzDpdInflections -fuzztime 20s -parallel 4 ./internal/canon/source/dpd
+fuzz: elapsed: 2s, gathering baseline coverage: 0/352 completed
+fuzz: elapsed: 3s, gathering baseline coverage: 352/352 completed, now fuzzing with 4 workers
+fuzz: elapsed: 5s, execs: 73314 (24437/sec), new interesting: 10 (total: 362)
+fuzz: elapsed: 8s, execs: 149076 (25251/sec), new interesting: 15 (total: 367)
+fuzz: elapsed: 11s, execs: 219021 (23318/sec), new interesting: 25 (total: 377)
+fuzz: elapsed: 14s, execs: 274951 (18636/sec), new interesting: 30 (total: 382)
+fuzz: elapsed: 17s, execs: 363104 (29385/sec), new interesting: 50 (total: 402)
+fuzz: elapsed: 20s, execs: 436616 (24512/sec), new interesting: 52 (total: 404)
+fuzz: elapsed: 22s, execs: 498257 (29300/sec), new interesting: 55 (total: 407)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/dpd	22.490s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzHTMLSegments -fuzztime 20s -parallel 4 ./internal/canon/source/editions
+fuzz: elapsed: 0s, gathering baseline coverage: 0/157 completed
+fuzz: elapsed: 1s, gathering baseline coverage: 157/157 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 51418 (17134/sec), new interesting: 4 (total: 161)
+fuzz: elapsed: 6s, execs: 51418 (0/sec), new interesting: 4 (total: 161)
+fuzz: elapsed: 9s, execs: 51418 (0/sec), new interesting: 4 (total: 161)
+fuzz: elapsed: 12s, execs: 51418 (0/sec), new interesting: 4 (total: 161)
+fuzz: elapsed: 15s, execs: 51418 (0/sec), new interesting: 4 (total: 161)
+fuzz: elapsed: 18s, execs: 51418 (0/sec), new interesting: 4 (total: 161)
+fuzz: elapsed: 21s, execs: 51418 (0/sec), new interesting: 4 (total: 161)
+fuzz: elapsed: 21s, execs: 51418 (0/sec), new interesting: 4 (total: 161)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/editions	22.533s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzDpdKnownForms -fuzztime 20s -parallel 4 ./internal/canon/triangulate
+fuzz: elapsed: 0s, gathering baseline coverage: 0/20 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 20/20 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 295 (98/sec), new interesting: 1 (total: 21)
+fuzz: elapsed: 6s, execs: 295 (0/sec), new interesting: 1 (total: 21)
+fuzz: elapsed: 9s, execs: 295 (0/sec), new interesting: 1 (total: 21)
+fuzz: elapsed: 12s, execs: 1099 (268/sec), new interesting: 5 (total: 25)
+fuzz: elapsed: 15s, execs: 2276 (392/sec), new interesting: 8 (total: 28)
+fuzz: elapsed: 18s, execs: 2806 (177/sec), new interesting: 13 (total: 33)
+fuzz: elapsed: 21s, execs: 4630 (608/sec), new interesting: 18 (total: 38)
+fuzz: elapsed: 21s, execs: 4630 (0/sec), new interesting: 18 (total: 38)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/triangulate	21.564s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzCapJoin -fuzztime 20s -parallel 4 ./internal/canon/triangulate
+fuzz: elapsed: 0s, gathering baseline coverage: 0/8 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 8/8 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 123851 (41282/sec), new interesting: 0 (total: 8)
+fuzz: elapsed: 6s, execs: 308689 (61614/sec), new interesting: 0 (total: 8)
+fuzz: elapsed: 9s, execs: 490435 (60580/sec), new interesting: 0 (total: 8)
+fuzz: elapsed: 12s, execs: 642239 (50595/sec), new interesting: 0 (total: 8)
+fuzz: elapsed: 15s, execs: 897047 (84938/sec), new interesting: 0 (total: 8)
+fuzz: elapsed: 18s, execs: 1133047 (78665/sec), new interesting: 0 (total: 8)
+fuzz: elapsed: 20s, execs: 1238834 (49726/sec), new interesting: 0 (total: 8)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/triangulate	21.374s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzParseDateTolerant -fuzztime 20s -parallel 4 ./internal/canon/triangulate
+fuzz: elapsed: 0s, gathering baseline coverage: 0/173 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 173/173 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 205915 (68634/sec), new interesting: 2 (total: 175)
+fuzz: elapsed: 6s, execs: 340413 (44835/sec), new interesting: 7 (total: 180)
+fuzz: elapsed: 9s, execs: 506373 (55312/sec), new interesting: 8 (total: 181)
+fuzz: elapsed: 12s, execs: 684233 (59289/sec), new interesting: 11 (total: 184)
+fuzz: elapsed: 15s, execs: 825979 (47249/sec), new interesting: 12 (total: 185)
+fuzz: elapsed: 18s, execs: 966314 (46780/sec), new interesting: 13 (total: 186)
+fuzz: elapsed: 20s, execs: 1085144 (56914/sec), new interesting: 13 (total: 186)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/triangulate	20.662s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzSplitEnKey -fuzztime 20s -parallel 4 ./internal/canon/triangulate
+fuzz: elapsed: 0s, gathering baseline coverage: 0/5 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 5/5 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 225132 (75037/sec), new interesting: 0 (total: 5)
+fuzz: elapsed: 6s, execs: 458095 (77650/sec), new interesting: 0 (total: 5)
+fuzz: elapsed: 9s, execs: 753158 (98364/sec), new interesting: 0 (total: 5)
+fuzz: elapsed: 12s, execs: 917363 (54730/sec), new interesting: 0 (total: 5)
+fuzz: elapsed: 15s, execs: 1105794 (62813/sec), new interesting: 0 (total: 5)
+fuzz: elapsed: 18s, execs: 1307853 (67299/sec), new interesting: 0 (total: 5)
+fuzz: elapsed: 20s, execs: 1419740 (53031/sec), new interesting: 0 (total: 5)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/triangulate	20.714s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzWebEscape -fuzztime 20s -parallel 4 ./internal/canon/web
+fuzz: elapsed: 0s, gathering baseline coverage: 0/99 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 99/99 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 18673 (6224/sec), new interesting: 1 (total: 100)
+fuzz: elapsed: 6s, execs: 23472 (1600/sec), new interesting: 1 (total: 100)
+fuzz: elapsed: 9s, execs: 30198 (2242/sec), new interesting: 1 (total: 100)
+fuzz: elapsed: 12s, execs: 48496 (6100/sec), new interesting: 1 (total: 100)
+fuzz: elapsed: 15s, execs: 54003 (1836/sec), new interesting: 1 (total: 100)
+fuzz: elapsed: 18s, execs: 54003 (0/sec), new interesting: 1 (total: 100)
+fuzz: elapsed: 21s, execs: 54003 (0/sec), new interesting: 1 (total: 100)
+fuzz: elapsed: 21s, execs: 54003 (0/sec), new interesting: 1 (total: 100)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/canon/web	22.295s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzParseCanonical -fuzztime 20s -parallel 4 ./internal/quote
+fuzz: elapsed: 0s, gathering baseline coverage: 0/122 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 122/122 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 108715 (35721/sec), new interesting: 33 (total: 155)
+fuzz: elapsed: 6s, execs: 155197 (15719/sec), new interesting: 39 (total: 161)
+fuzz: elapsed: 9s, execs: 181995 (8932/sec), new interesting: 40 (total: 162)
+fuzz: elapsed: 12s, execs: 181995 (0/sec), new interesting: 40 (total: 162)
+fuzz: elapsed: 15s, execs: 214592 (10865/sec), new interesting: 41 (total: 163)
+fuzz: elapsed: 18s, execs: 214592 (0/sec), new interesting: 41 (total: 163)
+fuzz: elapsed: 21s, execs: 214592 (0/sec), new interesting: 41 (total: 163)
+fuzz: elapsed: 21s, execs: 214592 (0/sec), new interesting: 41 (total: 163)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/quote	21.747s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/jobwrap go test -tags sqlite_fts5 -run '^$' -fuzz FuzzSearchParse -fuzztime 20s -parallel 4 ./internal/search
+fuzz: elapsed: 0s, gathering baseline coverage: 0/17 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 17/17 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 72401 (24130/sec), new interesting: 68 (total: 85)
+fuzz: elapsed: 6s, execs: 90143 (5914/sec), new interesting: 74 (total: 91)
+fuzz: elapsed: 9s, execs: 90143 (0/sec), new interesting: 74 (total: 91)
+fuzz: elapsed: 12s, execs: 90143 (0/sec), new interesting: 74 (total: 91)
+fuzz: elapsed: 15s, execs: 90143 (0/sec), new interesting: 74 (total: 91)
+fuzz: elapsed: 18s, execs: 90143 (0/sec), new interesting: 74 (total: 91)
+fuzz: elapsed: 21s, execs: 177994 (29364/sec), new interesting: 77 (total: 94)
+fuzz: elapsed: 21s, execs: 177994 (0/sec), new interesting: 77 (total: 94)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/search	21.800s
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/mutator -packages internal/canon/norm,internal/canon/source/bilara,internal/canon/source/editions,internal/canon/source/dpd,internal/canon/triangulate,internal/canon/server,internal/canon/jobs,internal/canon/analytics,internal/canon/export,internal/quote,internal/search,internal/store,internal/server,internal/cli -tags sqlite_fts5 -parallel 8
+progress 10/1504
+progress 20/1504

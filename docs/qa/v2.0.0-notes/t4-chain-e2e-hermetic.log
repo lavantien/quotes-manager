@@ -1,0 +1,226 @@
+CGO_ENABLED=1 go run ./tools/jobwrap go test -tags sqlite_fts5 -count=1 ./internal/e2e -v -timeout 15m
+=== RUN   TestNoDeadLinksCrawl
+2026/10/17 04:17:02 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/2 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/2 status=200 duration_ms=0
+2026/10/17 04:17:02 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 04:17:02 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/ status=200 duration_ms=20
+2026/10/17 04:17:03 INFO request method=GET path=/dashboard status=200 duration_ms=3
+2026/10/17 04:17:03 INFO request method=GET path=/texts status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/graph status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/analytics status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/pipeline status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/discrepancies status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/rail/left status=200 duration_ms=15
+2026/10/17 04:17:03 INFO request method=GET path=/rail/right status=200 duration_ms=11
+2026/10/17 04:17:03 INFO request method=GET path=/pane/root status=200 duration_ms=18
+2026/10/17 04:17:03 INFO request method=GET path=/pane/check status=200 duration_ms=11
+2026/10/17 04:17:03 INFO request method=GET path=/pane/collection status=200 duration_ms=13
+2026/10/17 04:17:03 INFO request method=GET path=/static/app.css status=200 duration_ms=65
+2026/10/17 04:17:03 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/search status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/categories/2 status=200 duration_ms=15
+2026/10/17 04:17:03 INFO request method=GET path=/categories/3 status=200 duration_ms=14
+2026/10/17 04:17:03 INFO request method=GET path=/categories/1 status=200 duration_ms=12
+2026/10/17 04:17:03 INFO request method=GET path=/backup.json status=200 duration_ms=4
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn51 status=200 duration_ms=2
+2026/10/17 04:17:03 INFO request method=GET path=/collections/1 status=200 duration_ms=15
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn8 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn26 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn87 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn22 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn42.3 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an3.318 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn56 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn22.43 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn117 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an3.107 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an1.328 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn21 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/snp2.14 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/iti25 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an5.177 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an3.163 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn5.2 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an1.320 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an10.46 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an3.31 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an4.77 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/dn16 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn22.59 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an5.129 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an1.278-286 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an8.12 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn82 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an4.159 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an1.316 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn45.24 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an7.49 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn13.11 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/ud8.8 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an3.69 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an8.53 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an5.180 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an1.287-295 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an4.192 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an7.7 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn42.2 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an1.317 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an7.50 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/pli-tv-bu-vb-pj1 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an10.176 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/snp3.12 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn38 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an9.7 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn8.4 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/ud5.5 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn16.13 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn55.5 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an4.180 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn129 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn20.7 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an8.10 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/snp1.3 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn56.11 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/dn27 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn36 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/ud5.3 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an5.57 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn22.101 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an6.13 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an2.33 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an3.61 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/ud1.8 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/snp2.2 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn101 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an8.21 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn55.1 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an1.268-277 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn15.13 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an10.62 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn107 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/an5.55 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/sn12.63 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn75 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn54 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn13 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn1 status=200 duration_ms=2
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn2 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words/eva status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/words/me status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words/suṇāti status=200 duration_ms=1
+    crawl_test.go:78: crawl fetched 122 pages, 122 distinct targets
+--- PASS: TestNoDeadLinksCrawl (4.97s)
+=== RUN   TestContentSecurityPolicyLint
+2026/10/17 04:17:03 INFO request method=GET path=/ status=200 duration_ms=18
+2026/10/17 04:17:03 INFO request method=GET path=/collections/1 status=200 duration_ms=22
+2026/10/17 04:17:03 INFO request method=GET path=/rail/left status=200 duration_ms=14
+2026/10/17 04:17:03 INFO request method=GET path=/search/root status=200 duration_ms=19
+2026/10/17 04:17:03 INFO request method=GET path=/dashboard status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/words status=200 duration_ms=0
+--- PASS: TestContentSecurityPolicyLint (0.09s)
+=== RUN   TestMergedHermeticE2E
+2026/10/17 04:17:03 INFO request method=GET path=/ status=200 duration_ms=19
+2026/10/17 04:17:03 INFO request method=GET path=/dashboard status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn1 status=200 duration_ms=2
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/quotes status=400 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/quotes status=400 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/quotes/1 status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/quotes/999999 status=404 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/api/v1/quotes/abc status=404 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn51 status=200 duration_ms=1
+2026/10/17 04:17:03 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/17 04:17:03 INFO request method=POST path=/quotes status=303 duration_ms=8
+2026/10/17 04:17:03 INFO request method=GET path=/ status=200 duration_ms=19
+2026/10/17 04:17:03 INFO request method=GET path=/texts/mn1 status=200 duration_ms=1
+--- PASS: TestMergedHermeticE2E (0.06s)
+=== RUN   TestMergedOriginPost
+2026/10/17 04:17:08 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=0
+2026/10/17 04:17:08 INFO request method=POST path=/quotes status=303 duration_ms=7
+2026/10/17 04:17:08 INFO request method=GET path=/ status=200 duration_ms=17
+2026/10/17 04:17:08 INFO request method=POST path=/quotes status=403 duration_ms=0
+2026/10/17 04:17:08 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=1
+2026/10/17 04:17:08 INFO request method=GET path=/ status=200 duration_ms=16
+--- PASS: TestMergedOriginPost (4.52s)
+=== RUN   TestMergedRouteInventory
+--- PASS: TestMergedRouteInventory (3.86s)
+=== RUN   TestMergedRouteProbes
+--- PASS: TestMergedRouteProbes (3.74s)
+=== RUN   TestChromedpUISmoke
+2026/10/17 04:17:21 INFO request method=GET path=/ status=200 duration_ms=25
+2026/10/17 04:17:21 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/17 04:17:21 INFO request method=GET path=/static/app.css status=200 duration_ms=1
+2026/10/17 04:17:21 INFO request method=GET path=/static/layout.css status=200 duration_ms=1
+2026/10/17 04:17:21 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=1
+2026/10/17 04:17:21 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/17 04:17:21 INFO request method=GET path=/favicon.ico status=200 duration_ms=21
+2026/10/17 04:17:21 INFO request method=GET path=/quotes/new status=200 duration_ms=1
+2026/10/17 04:17:21 INFO request method=POST path=/quotes status=200 duration_ms=88
+2026/10/17 04:17:22 INFO request method=POST path=/categories/2/rename status=200 duration_ms=113
+2026/10/17 04:17:22 INFO request method=GET path=/pane/root status=200 duration_ms=81
+2026/10/17 04:17:22 INFO request method=GET path=/pane/root status=200 duration_ms=163
+2026/10/17 04:17:22 INFO request method=GET path=/search/root status=200 duration_ms=103
+2026/10/17 04:17:23 INFO request method=GET path=/ status=200 duration_ms=17
+--- PASS: TestChromedpUISmoke (7.86s)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/e2e	26.656s
+CGO_ENABLED=1 go run ./tools/jobwrap go test -tags sqlite_fts5 -count=1 ./internal/cli -run 'TestE2EHermetic' -v -timeout 10m
+=== RUN   TestE2EHermetic
+qm triangulate: triangulation reported errors: 14 findings, see report
+qm triangulate: triangulation reported errors: 14 findings, see report
+qm all: triangulate: triangulation reported errors: 14 findings, see report
+--- PASS: TestE2EHermetic (5.56s)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/cli	7.377s
