@@ -1,0 +1,3 @@
+CGO_ENABLED=1 GOMEMLIMIT=2GiB go run ./tools/mutator -packages internal/canon/source/bilara -tags sqlite_fts5 -parallel 1
+progress 10/60
+progress 20/60

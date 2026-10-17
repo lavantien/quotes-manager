@@ -1,0 +1,2 @@
+CGO_ENABLED=1 GOMEMLIMIT=2GiB go run ./tools/mutator -packages internal/canon/norm,internal/canon/source/bilara,internal/canon/source/editions,internal/canon/source/dpd,internal/canon/triangulate,internal/canon/server,internal/canon/jobs,internal/canon/analytics,internal/canon/export,internal/quote,internal/search,internal/store,internal/server,internal/cli -tags sqlite_fts5 -parallel 2
+progress 10/1505

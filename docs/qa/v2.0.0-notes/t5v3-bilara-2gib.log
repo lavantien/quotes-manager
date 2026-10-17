@@ -1,0 +1,5 @@
+bilara 2GiB validation 23:10:57
+peak 0.047 GB
+exit 0 peak 0.047 GB
+CGO_ENABLED=1 GOMEMLIMIT=2GiB C:/Users/lavantien/dev/github/quotes-manager/dist/tools/jobwrap.exe go test -tags sqlite_fts5 ./internal/canon/source/bilara
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/bilara	0.645s
