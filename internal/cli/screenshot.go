@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -92,29 +93,57 @@ func screenshotRun(out io.Writer, target string, capture func(url string) ([]byt
 }
 
 func captureScreenshot(url string) ([]byte, error) {
-	allocOpts := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("hide-scrollbars", "true"))
-	if bin := browserPath(); bin != "" {
-		allocOpts = append(allocOpts, chromedp.ExecPath(bin))
-	}
-	ctx, cancel := chromedp.NewExecAllocator(context.Background(), allocOpts...)
+	ctx, cancel := browserContext()
 	defer cancel()
-	ctx, cancel = chromedp.NewContext(ctx)
-	defer cancel()
-	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
+	return capturePage(ctx,
+		func(ctx context.Context) error {
+			return chromedp.Do(ctx,
+				chromedp.EmulateViewport(viewportW, viewportH),
+				chromedp.Navigate(url),
+				chromedp.WaitVisible(chromedp.ID("quote-list")),
+				chromedp.Sleep(300*time.Millisecond),
+			)
+		},
+		func(ctx context.Context) ([]byte, error) {
+			return chromedp.Run(ctx, chromedp.CaptureScreenshot())
+		},
+	)
+}
 
-	if err := chromedp.Do(ctx,
-		chromedp.EmulateViewport(viewportW, viewportH),
-		chromedp.Navigate(url),
-		chromedp.WaitVisible(chromedp.ID("quote-list")),
-		chromedp.Sleep(300*time.Millisecond),
-	); err != nil {
+func capturePage(ctx context.Context, navigate func(context.Context) error, shot func(context.Context) ([]byte, error)) ([]byte, error) {
+	if err := navigate(ctx); err != nil {
 		return nil, err
 	}
-	return chromedp.Run(ctx, chromedp.CaptureScreenshot())
+	return shot(ctx)
+}
+
+func browserContext() (context.Context, context.CancelFunc) {
+	allocOpts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("hide-scrollbars", "true"),
+		chromedp.ExecPath(browserPath()),
+	)
+	ctx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), allocOpts...)
+	ctx, cancelBrowser := chromedp.NewContext(ctx)
+	ctx, cancelTimeout := context.WithTimeout(ctx, 60*time.Second)
+	return ctx, func() {
+		cancelTimeout()
+		cancelBrowser()
+		cancelAlloc()
+	}
 }
 
 func browserPath() string {
+	return findBrowserPath(runtime.GOOS, os.Stat)
+}
+
+var windowsBrowserPaths = []string{
+	`C:\Program Files\Google\Chrome\Application\chrome.exe`,
+	`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
+	`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
+	`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
+}
+
+func findBrowserPath(goos string, stat func(string) (fs.FileInfo, error)) string {
 	if bin := os.Getenv("QUOTES_BROWSER"); bin != "" {
 		return bin
 	}
@@ -123,16 +152,12 @@ func browserPath() string {
 			return path
 		}
 	}
-	if runtime.GOOS == "windows" {
-		for _, p := range []string{
-			`C:\Program Files\Google\Chrome\Application\chrome.exe`,
-			`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
-			`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
-			`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
-		} {
-			if _, err := os.Stat(p); err == nil {
-				return p
-			}
+	if goos != "windows" {
+		return ""
+	}
+	for _, p := range windowsBrowserPaths {
+		if _, err := stat(p); err == nil {
+			return p
 		}
 	}
 	return ""

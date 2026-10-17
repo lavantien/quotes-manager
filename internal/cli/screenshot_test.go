@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -129,5 +130,67 @@ func TestRunScreenshotOutDefaultFromPicturesDir(t *testing.T) {
 	}
 	if string(got) != "PNG-FAKE" {
 		t.Errorf("output = %q, want PNG-FAKE", got)
+	}
+}
+
+func TestCapturePageRunsNavigateThenShot(t *testing.T) {
+	var order []string
+	got, err := capturePage(context.Background(),
+		func(context.Context) error {
+			order = append(order, "navigate")
+			return nil
+		},
+		func(context.Context) ([]byte, error) {
+			order = append(order, "shot")
+			return []byte("png"), nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("capturePage: %v", err)
+	}
+	if string(got) != "png" {
+		t.Errorf("capturePage = %q, want png", got)
+	}
+	if len(order) != 2 || order[0] != "navigate" || order[1] != "shot" {
+		t.Errorf("order = %v, want [navigate shot]", order)
+	}
+}
+
+func TestCapturePageNavigateErrorSkipsShot(t *testing.T) {
+	boom := errors.New("navigate failed")
+	shotCalled := false
+	got, err := capturePage(context.Background(),
+		func(context.Context) error { return boom },
+		func(context.Context) ([]byte, error) {
+			shotCalled = true
+			return []byte("png"), nil
+		},
+	)
+	if !errors.Is(err, boom) {
+		t.Fatalf("capturePage err = %v, want %v", err, boom)
+	}
+	if got != nil {
+		t.Errorf("capturePage = %q, want nil", got)
+	}
+	if shotCalled {
+		t.Error("shot ran despite navigate failure")
+	}
+}
+
+func TestFindBrowserPathScansWindowsInstallPaths(t *testing.T) {
+	t.Setenv("QUOTES_BROWSER", "")
+	t.Setenv("PATH", "")
+	edge := `C:\Program Files\Microsoft\Edge\Application\msedge.exe`
+	stat := func(p string) (fs.FileInfo, error) {
+		if p == edge {
+			return nil, nil
+		}
+		return nil, os.ErrNotExist
+	}
+	if got := findBrowserPath("windows", stat); got != edge {
+		t.Errorf("findBrowserPath(windows) = %q, want %q", got, edge)
+	}
+	if got := findBrowserPath("linux", stat); got != "" {
+		t.Errorf("findBrowserPath(linux) = %q, want empty", got)
 	}
 }
