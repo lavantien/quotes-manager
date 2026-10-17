@@ -7,6 +7,7 @@ Task: restore the 1.x quotes workspace identity under one shared slim nav, keep 
 - 2026-10-17 lane opened. Cron a50f31fe pings main every 20 min.
 - 2026-10-17 change set 1 landed as c94689d (nav restyle + grid offset + canon token mapping, evidence committed).
 - 2026-10-17 change set 2: min-height wrap hardening, verified, landed.
+- 2026-10-17 change set 2 landed as 9a042fe. Catalog D1-D7 addressed. Lane idle pending main direction; cron a50f31fe still live.
 - git archaeology done. UI-relevant commits since 1.x: 104be70 merged the servers, 7d51ff4 unified static assets, 662b12e introduced the shared nav (web/templates/nav.html + web/static/nav.css), 8ae72bd htmx node swap fix, f29ddbf vendor pins, 6c2a938 comment strip. Diff 662b12e~1..HEAD over web/templates + web/static touches only nav.css (new), nav.html (new), layout.html (+2 lines: nav.css link + nav template call), canon.css (-15: own .nav block removed), app.js (comment strip). app.css, layout.css, all zone/rail templates unchanged since 1.x: the workspace's own CSS identity is intact, the damage is the injected nav.
 - 1.x workspace layout (662b12e~1 layout.html): body > main.page > .layout grid, no nav element at all. Zone heads sticky at top 0 inside 100vh scroll zones.
 - canon 1.x (sc-graph): own .nav in canon.css styled with canon variables (--card, --border), brand "sc-graph", links texts/search/words/graph/analytics/pipeline/discrepancies. 662b12e deleted that block and moved both shells onto web/templates/nav.html + nav.css with var() fallbacks.
