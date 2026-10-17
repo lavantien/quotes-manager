@@ -1,0 +1,19 @@
+static chain start 20:41:07
+=== make fmt === 20:41:07
+gofumpt -w .
+rc=0
+=== make lint === 20:41:09
+golangci-lint run
+0 issues.
+rc=0
+=== make typecheck === 20:41:14
+CGO_ENABLED=1 go build -tags sqlite_fts5 ./...
+CGO_ENABLED=1 go vet -tags sqlite_fts5 ./...
+rc=0
+=== make sloc === 20:41:32
+CGO_ENABLED=1 go run ./tools/sloc
+sloc ok
+rc=0
+static chain done 20:41:32
+?? docs/qa/v2.0.0-notes/memguard.log
+?? docs/qa/v2.0.0-notes/t5v3-static.log
