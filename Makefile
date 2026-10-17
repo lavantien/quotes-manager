@@ -39,6 +39,11 @@ CYTOSCAPE_SHA256 ?= 081591ab735b2b6a3b31a3c60f8f3a3e2fee8c92939e0c7820ad1208571b
 HTMX_URL ?= $(UNPKG)/htmx.org@$(HTMX_VERSION)/dist/htmx.min.js
 CYTOSCAPE_URL ?= $(UNPKG)/cytoscape@$(CYTOSCAPE_VERSION)/dist/cytoscape.min.js
 
+PLANTUML_VERSION ?= 1.2026.8
+PLANTUML_SHA256 ?= 5e1ecfa8ecd32c90b03bbf3b1eb6f020943f98ab0fcf4032be31a0002ee2c462
+PLANTUML_URL ?= https://github.com/plantuml/plantuml/releases/download/v$(PLANTUML_VERSION)/plantuml-$(PLANTUML_VERSION).jar
+PLANTUML_JAR ?= data/tools/plantuml-$(PLANTUML_VERSION).jar
+
 ifeq ($(OS),Windows_NT)
 GCC_UCRT_BIN ?= $(subst \,/,$(USERPROFILE))/scoop/apps/mingw-winlibs-ucrt/current/bin
 ifneq ($(origin CC),command line)
@@ -54,7 +59,7 @@ BIN := dist/qm$(EXE)
 
 FZ := $(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS)
 
-.PHONY: help all build test test-pkg race vet fmt lint lint-pkg typecheck sloc fuzz fuzz-one mutate memtest e2e-hermetic e2e verify vendor-assets stage run server extract seed tidy clean coverage screenshot fixture monitor
+.PHONY: help all build test test-pkg race vet fmt lint lint-pkg typecheck sloc fuzz fuzz-one mutate memtest e2e-hermetic e2e verify vendor-assets diagrams stage run server extract seed tidy clean coverage screenshot fixture monitor
 
 help: ## show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make <target>\n\nTargets:\n"} \
@@ -179,6 +184,23 @@ vendor-assets: ## verify or refresh the vendored htmx/cytoscape pins in web/stat
 	}; \
 	vendor_one htmx.org '$(HTMX_VERSION)' '$(HTMX_SHA256)' htmx.min.js HTMX_VERSION HTMX_SHA256 '$(HTMX_URL)'; \
 	vendor_one cytoscape '$(CYTOSCAPE_VERSION)' '$(CYTOSCAPE_SHA256)' cytoscape.min.js CYTOSCAPE_VERSION CYTOSCAPE_SHA256 '$(CYTOSCAPE_URL)'
+
+diagrams: ## render every docs/diagrams/*.puml to a committed PNG beside it
+	@set -e; \
+	if [ ! -f "$(PLANTUML_JAR)" ] || ! echo "$(PLANTUML_SHA256)  $(PLANTUML_JAR)" | sha256sum -c --status -; then \
+	  mkdir -p $(patsubst %/,%,$(dir $(PLANTUML_JAR))); \
+	  curl -fsSL "$(PLANTUML_URL)" -o "$(PLANTUML_JAR)"; \
+	fi; \
+	echo "$(PLANTUML_SHA256)  $(PLANTUML_JAR)" | sha256sum -c -; \
+	if ! java -version >/dev/null 2>&1; then \
+	  echo "diagrams: java not found; docker fallback: docker run --rm -v $$(pwd):/w -w /w/docs/diagrams plantuml/plantuml:$(PLANTUML_VERSION) -tpng '*.puml'"; \
+	  exit 1; \
+	fi; \
+	java -jar "$(PLANTUML_JAR)" -failfast2 -overwrite -tpng docs/diagrams/*.puml; \
+	for src in docs/diagrams/*.puml; do \
+	  png="$${src%.puml}.png"; \
+	  if [ ! -f "$$png" ]; then echo "diagrams: render failed for $$src"; exit 1; fi; \
+	done
 
 stage: build ## run one pipeline stage via the built binary: make stage STAGE=parse
 	@if [ -z "$(STAGE)" ]; then echo "STAGE required: sync prune parse load triangulate export report all"; exit 2; fi
