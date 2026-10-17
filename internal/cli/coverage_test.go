@@ -108,3 +108,56 @@ func TestRunCoverageRejectsBadFlag(t *testing.T) {
 		t.Error("coverage must reject unknown flags")
 	}
 }
+
+func TestRunCoverageNoPositionalArgsSucceeds(t *testing.T) {
+	profilePath, readmePath := writeCoverageInputs(t,
+		"mode: set\nfoo.go:1.1,2.2 5 1\n",
+		"<!-- coverage:START -->\nold\n<!-- coverage:END -->\n")
+	oldOut := stdout
+	stdout = io.Discard
+	defer func() { stdout = oldOut }()
+	if err := runCoverage(context.Background(), config.Defaults(),
+		[]string{"-profile", profilePath, "-readme", readmePath}); err != nil {
+		t.Fatalf("runCoverage: %v", err)
+	}
+}
+
+func TestRunCoverageOneSidedMarkerReportsNoMarkers(t *testing.T) {
+	profilePath, readmePath := writeCoverageInputs(t,
+		"mode: set\nfoo.go:1.1,2.2 5 1\n",
+		"<!-- coverage:START -->\nno end marker\n")
+	var buf bytes.Buffer
+	oldOut := stdout
+	stdout = &buf
+	defer func() { stdout = oldOut }()
+	if _, err := coverageRun(profilePath, readmePath); err != nil {
+		t.Fatalf("coverageRun: %v", err)
+	}
+	if !strings.Contains(buf.String(), "no coverage markers") {
+		t.Errorf("output = %q, want no-coverage-markers notice", buf.String())
+	}
+	got, _ := os.ReadFile(readmePath)
+	if string(got) != "<!-- coverage:START -->\nno end marker\n" {
+		t.Errorf("readme changed without both markers: %s", got)
+	}
+}
+
+func TestRunCoverageReportsBadgeUpdated(t *testing.T) {
+	profilePath, readmePath := writeCoverageInputs(t,
+		"mode: set\nfoo.go:1.1,2.2 5 1\n",
+		"<!-- coverage:START -->\nold\n<!-- coverage:END -->\n")
+	var buf bytes.Buffer
+	oldOut := stdout
+	stdout = &buf
+	defer func() { stdout = oldOut }()
+	if _, err := coverageRun(profilePath, readmePath); err != nil {
+		t.Fatalf("coverageRun: %v", err)
+	}
+	if !strings.Contains(buf.String(), "readme badge updated") {
+		t.Errorf("output = %q, want badge-updated notice", buf.String())
+	}
+	got, _ := os.ReadFile(readmePath)
+	if !strings.Contains(string(got), "img.shields.io/badge/coverage") {
+		t.Errorf("badge not written to readme: %s", got)
+	}
+}
