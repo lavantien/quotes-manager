@@ -1,5 +1,3 @@
-# quotes-manager — common commands. The SQLite driver needs CGO, so every Go
-# command runs with CGO_ENABLED=1 and the sqlite_fts5 build tag.
 CGO_ENV := CGO_ENABLED=1
 TAGS := -tags sqlite_fts5
 GO := $(CGO_ENV) go
@@ -7,54 +5,31 @@ GO := $(CGO_ENV) go
 ADDR ?= 127.0.0.1:8080
 DB   ?= database/quotes.db
 
-# Fuzz workers are pinned to 4: the default worker per core (20 here)
-# provokes worker deaths during input minimization on this machine, the
-# same hazard FuzzDpdExtract already documents.
 FUZZ_PARALLEL ?= 4
 FUZZ_TIME ?= 20s
 
-# Mutation scope: the canon pipeline packages plus the merged-app core.
 MUTATE_PKGS ?= internal/canon/norm,internal/canon/source/bilara,internal/canon/source/editions,internal/canon/source/dpd,internal/canon/triangulate,internal/canon/server,internal/canon/jobs,internal/canon/analytics,internal/canon/export,internal/quote,internal/search,internal/store,internal/server,internal/cli
 MUTATE_PARALLEL ?= 8
 
 E2E_TIMEOUT ?= 30m
 
-# Soft per-process ceiling for every spawned test process; the mutator adds
-# a hard 4 GiB job-object cap on top for its whole process tree.
 MEMSOFT ?= 4GiB
 
-# Hard Go runtime ceiling for memtest's bounded-memory run, so runaway
-# allocation fails the build instead of overflowing the machine.
 GOMEMLIMIT ?= 512MiB
 
-# Kill-on-close supervisor for every target that spawns a process tree:
-# Windows does not reparent-kill, so an externally stopped make task would
-# otherwise strand its go test binaries and compilers as orphans. The
-# mutator supervises itself through the same primitive.
-WRAP := go run ./tools/jobwrap
+ifeq ($(OS),Windows_NT)
+EXE := .exe
+endif
 
-# Race detector scope: the merged-app core. The full tree stays on the
-# plain test target.
+WRAP := $(CURDIR)/dist/tools/jobwrap$(EXE)
+
 RACE_PKGS ?= ./internal/quote ./internal/search ./internal/store ./internal/server ./internal/cli ./internal/e2e
 
-# Pipeline stage driven through the built binary: sync, prune, parse,
-# load, triangulate, export, report, or all. No default: a bare
-# `make stage` must not kick off the full live pipeline by accident.
 STAGE ?=
 
-# Combined working-set ceiling the memory monitor enforces over every
-# project process (compilers, test binaries, mutation) while it runs;
-# MONITOR_FOR bounds its runtime for smoke runs, 0 means until killed.
 MEMCAP ?= 16GB
 MONITOR_FOR ?= 0
 
-# Vendored frontend assets, fetched by `make vendor-assets` into web/static
-# and served from there; nothing loads from a CDN at runtime. npm's latest
-# dist-tag still resolves htmx to 2.x, so the 4.x line rides the next tag
-# and the pins are mandatory: latest-first, when a stable dist-tag release
-# publishes above the pin (prerelease tags are ignored) the target fetches
-# it and moves file and pin together; offline it falls back to verifying
-# the pinned bytes.
 NPM_REGISTRY ?= https://registry.npmjs.org
 UNPKG ?= https://unpkg.com
 HTMX_VERSION ?= 4.0.0
@@ -64,9 +39,6 @@ CYTOSCAPE_SHA256 ?= 081591ab735b2b6a3b31a3c60f8f3a3e2fee8c92939e0c7820ad1208571b
 HTMX_URL ?= $(UNPKG)/htmx.org@$(HTMX_VERSION)/dist/htmx.min.js
 CYTOSCAPE_URL ?= $(UNPKG)/cytoscape@$(CYTOSCAPE_VERSION)/dist/cytoscape.min.js
 
-# duckdb-go's prebuilt Windows static libs link against UCRT; the default
-# msvcrt-flavored mingw cannot. go-sqlite3 builds under either. Override
-# via environment (CC/CXX) or GCC_UCRT_BIN on machines with another layout.
 ifeq ($(OS),Windows_NT)
 GCC_UCRT_BIN ?= $(subst \,/,$(USERPROFILE))/scoop/apps/mingw-winlibs-ucrt/current/bin
 ifneq ($(origin CC),command line)
@@ -78,11 +50,6 @@ endif
 export CC CXX
 endif
 
-# Windows binaries carry the .exe suffix; everything below runs the one
-# name that actually exists on this platform.
-ifeq ($(OS),Windows_NT)
-EXE := .exe
-endif
 BIN := dist/qm$(EXE)
 
 FZ := $(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS)
@@ -98,13 +65,16 @@ all: test ## run the full test suite (default)
 build: ## build the qm binary into dist/
 	$(GO) build $(TAGS) -o $(BIN) ./cmd/qm
 
-test: ## run the full test suite
-	$(GO) test $(TAGS) ./...
+$(WRAP): $(wildcard tools/jobwrap/*.go) $(wildcard internal/canon/winjob/*.go)
+	$(GO) build -o $@ ./tools/jobwrap
 
-test-pkg: ## run one package's tests: make test-pkg PKG=./internal/config
-	$(GO) test $(TAGS) $(PKG)
+test: $(WRAP) ## run the full test suite
+	$(CGO_ENV) $(WRAP) go test $(TAGS) ./...
 
-race: ## go test -race over the merged-app core (RACE_PKGS)
+test-pkg: $(WRAP) ## run one package's tests: make test-pkg PKG=./internal/config
+	$(CGO_ENV) $(WRAP) go test $(TAGS) $(PKG)
+
+race: $(WRAP) ## go test -race over the merged-app core (RACE_PKGS)
 	$(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS) -race -count=1 $(RACE_PKGS)
 
 vet: ## go vet
@@ -126,7 +96,7 @@ typecheck: ## compile every package, then go vet
 sloc: ## enforce the 1000-line ceiling on every Go file
 	$(CGO_ENV) go run ./tools/sloc
 
-fuzz: ## fuzz every target in the repo for FUZZ_TIME each
+fuzz: $(WRAP) ## fuzz every target in the repo for FUZZ_TIME each
 	$(FZ) -run '^$$' -fuzz FuzzAnalyticsSQLGate -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/analytics
 	$(FZ) -run '^$$' -fuzz FuzzEnsureNode -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/graph
 	$(FZ) -run '^$$' -fuzz FuzzPublishPointer -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/canon/graph
@@ -153,20 +123,20 @@ fuzz: ## fuzz every target in the repo for FUZZ_TIME each
 	$(FZ) -run '^$$' -fuzz FuzzParseCanonical -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/quote
 	$(FZ) -run '^$$' -fuzz FuzzSearchParse -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) ./internal/search
 
-fuzz-one: ## fuzz one target: make fuzz-one PKG=./internal/quote FUZZ_TARGET=FuzzParseCanonical
+fuzz-one: $(WRAP) ## fuzz one target: make fuzz-one PKG=./internal/quote FUZZ_TARGET=FuzzParseCanonical
 	$(FZ) -run '^$$' -fuzz $(FUZZ_TARGET) -fuzztime $(FUZZ_TIME) -parallel $(FUZZ_PARALLEL) $(PKG)
 
 mutate: ## mutation-test MUTATE_PKGS, every surviving mutant fails the build
 	$(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) go run ./tools/mutator -packages $(MUTATE_PKGS) -tags sqlite_fts5 -parallel $(MUTATE_PARALLEL)
 
-memtest: ## hermetic pipeline + merged e2e under a hard GOMEMLIMIT
+memtest: $(WRAP) ## hermetic pipeline + merged e2e under a hard GOMEMLIMIT
 	$(CGO_ENV) GOMEMLIMIT=$(GOMEMLIMIT) $(WRAP) go test $(TAGS) -count=1 -run 'TestPipelineMemoryBounded|TestE2EHermetic|TestMergedHermeticE2E' ./internal/cli ./internal/e2e -v -timeout 15m
 
-e2e-hermetic: ## merged-app hermetic e2e (internal/e2e + the cli hermetic pass)
+e2e-hermetic: $(WRAP) ## merged-app hermetic e2e (internal/e2e + the cli hermetic pass)
 	$(CGO_ENV) $(WRAP) go test $(TAGS) -count=1 ./internal/e2e -v -timeout 15m
 	$(CGO_ENV) $(WRAP) go test $(TAGS) -count=1 ./internal/cli -run 'TestE2EHermetic' -v -timeout 10m
 
-e2e: ## live end-to-end pipeline (network, QM_E2E_LIVE gate)
+e2e: $(WRAP) ## live end-to-end pipeline (network, QM_E2E_LIVE gate)
 	QM_E2E_LIVE=1 $(CGO_ENV) $(WRAP) go test $(TAGS) -count=1 ./internal/cli -run 'TestE2ELive' -v -timeout $(E2E_TIMEOUT)
 
 verify: test memtest fmt lint typecheck sloc fuzz mutate e2e-hermetic ## run the full quality chain, fail-fast
@@ -243,4 +213,4 @@ fixture: ## regenerate the clone-of-main test fixture (internal/store/storetest/
 	$(GO) run $(TAGS) ./cmd/qm fixture
 
 monitor: ## memory guard over project processes (make monitor MONITOR_FOR=5s)
-	$(CGO_ENV) go run ./tools/memcapmon -cap $(MEMCAP) -poll 2s -for $(MONITOR_FOR)
+	$(CGO_ENV) go run ./tools/memcapmon -cap $(MEMCAP) -poll 2s -for $(MONITOR_FOR) -root $(CURDIR)
