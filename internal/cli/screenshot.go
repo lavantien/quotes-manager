@@ -6,93 +6,114 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"time"
 
 	"github.com/chromedp/chromedp"
 
 	"github.com/lavantien/quotes-manager/internal/config"
-	"github.com/lavantien/quotes-manager/internal/seed"
-	"github.com/lavantien/quotes-manager/internal/server"
-	"github.com/lavantien/quotes-manager/internal/store"
 )
 
 const (
-	viewportW = 1440
-	viewportH = 900
+	viewportW     = 1440
+	viewportH     = 900
+	captureBound  = 120 * time.Second
+	captureSettle = 300 * time.Millisecond
 )
 
-func init() {
-	Register(Command{Name: "screenshot", Usage: "capture the home page: --out", Run: runScreenshot})
+type Shot struct {
+	File string
+	Path string
+	Wait string
 }
 
-var screenshotCapture = captureScreenshot
+func Journey() []Shot { return slices.Clone(journeyShots) }
+
+var journeyShots = []Shot{
+	{File: "01-workspace-home.png", Path: "/", Wait: "#quote-list"},
+	{File: "02-workspace-collection.png", Path: "/?col=1", Wait: "#collection-zone"},
+	{File: "03-workspace-search.png", Path: "/?rq=buddha", Wait: "#quote-list"},
+	{File: "04-canon-dashboard.png", Path: "/dashboard", Wait: "section.stats"},
+	{File: "05-canon-texts.png", Path: "/texts", Wait: "ul.tree"},
+	{File: "06-canon-text.png", Path: "/texts/mn1", Wait: ".segment"},
+	{File: "07-canon-words.png", Path: "/words?form=dhamma", Wait: ".entry"},
+	{File: "08-canon-graph.png", Path: "/graph?dataset=word&param=dhamma", Wait: "#graph-canvas canvas"},
+}
+
+func init() {
+	Register(Command{Name: "screenshot", Usage: "capture the numbered UI journey into project-pictures: --out dir", Run: runScreenshot})
+}
+
+var (
+	screenshotEnv     func(cfg *config.Config) (string, func() error, error)
+	screenshotCapture = captureScreenshot
+)
+
+func SetScreenshotEnv(f func(cfg *config.Config) (string, func() error, error)) {
+	screenshotEnv = f
+}
 
 func runScreenshot(_ context.Context, cfg *config.Config, args []string) error {
 	fs := flag.NewFlagSet("screenshot", flag.ContinueOnError)
-	out := fs.String("out", filepath.Join(cfg.Quotes.PicturesDir, "home.png"), "output PNG path")
+	out := fs.String("out", cfg.Quotes.PicturesDir, "output directory for the numbered journey PNG files")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {
 		return fmt.Errorf("screenshot: unexpected argument %q", fs.Arg(0))
 	}
-	if err := screenshotRun(stdout, *out, screenshotCapture); err != nil {
+	if screenshotEnv == nil {
+		return fmt.Errorf("screenshot: merged server not wired (run via cmd/qm)")
+	}
+	baseURL, closeEnv, err := screenshotEnv(cfg)
+	if err != nil {
+		return fmt.Errorf("screenshot: %w", err)
+	}
+	defer func() { _ = closeEnv() }()
+	if err := writeJourney(stdout, *out, baseURL, screenshotCapture); err != nil {
 		return fmt.Errorf("screenshot: %w", err)
 	}
 	return nil
 }
 
-func screenshotRun(out io.Writer, target string, capture func(url string) ([]byte, error)) error {
-	tmp, err := os.CreateTemp("", "qm-screenshot-*.db")
-	if err != nil {
-		return fmt.Errorf("temp db: %w", err)
+func writeJourney(out io.Writer, dir, baseURL string, capture func(url, wait string) ([]byte, error)) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", dir, err)
 	}
-	tmpPath := tmp.Name()
-	if err := tmp.Close(); err != nil {
-		return err
+	for _, shot := range journeyShots {
+		buf, err := captureRetry(out, shot, baseURL+shot.Path, capture)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dir, shot.File)
+		if err := os.WriteFile(target, buf, 0o644); err != nil {
+			return fmt.Errorf("write %s: %w", target, err)
+		}
+		if _, err := fmt.Fprintf(out, "wrote %s (%d bytes)\n", filepath.ToSlash(target), len(buf)); err != nil {
+			return err
+		}
 	}
-	defer func() { _ = os.Remove(tmpPath) }()
-
-	st, err := store.Open(tmpPath)
-	if err != nil {
-		return fmt.Errorf("open store: %w", err)
-	}
-	defer func() { _ = st.Close() }()
-	if err := seed.EnsureSeeded(st.DB()); err != nil {
-		return fmt.Errorf("seed: %w", err)
-	}
-
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return fmt.Errorf("listen: %w", err)
-	}
-	srv := &http.Server{Handler: server.New(st)}
-	go func() { _ = srv.Serve(ln) }()
-	defer func() { _ = srv.Shutdown(context.Background()) }()
-	url := "http://" + ln.Addr().String() + "/?col=1"
-
-	buf, err := capture(url)
-	if err != nil {
-		return fmt.Errorf("capture: %w", err)
-	}
-
-	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-		return fmt.Errorf("mkdir %s: %w", filepath.Dir(target), err)
-	}
-	if err := os.WriteFile(target, buf, 0o644); err != nil {
-		return fmt.Errorf("write %s: %w", target, err)
-	}
-	_, err = fmt.Fprintf(out, "wrote %s (%d bytes)\n", filepath.ToSlash(target), len(buf))
-	return err
+	return nil
 }
 
-func captureScreenshot(url string) ([]byte, error) {
+func captureRetry(out io.Writer, shot Shot, url string, capture func(url, wait string) ([]byte, error)) ([]byte, error) {
+	buf, err := capture(url, shot.Wait)
+	if err == nil {
+		return buf, nil
+	}
+	_, _ = fmt.Fprintf(out, "capture %s (%s) attempt 1 failed: %v; retrying once\n", shot.File, url, err)
+	buf, err = capture(url, shot.Wait)
+	if err != nil {
+		return nil, fmt.Errorf("capture %s (%s) failed after retry: %w", shot.File, url, err)
+	}
+	return buf, nil
+}
+
+func captureScreenshot(url, wait string) ([]byte, error) {
 	ctx, cancel := browserContext()
 	defer cancel()
 	return capturePage(ctx,
@@ -100,8 +121,8 @@ func captureScreenshot(url string) ([]byte, error) {
 			return chromedp.Do(ctx,
 				chromedp.EmulateViewport(viewportW, viewportH),
 				chromedp.Navigate(url),
-				chromedp.WaitVisible(chromedp.ID("quote-list")),
-				chromedp.Sleep(300*time.Millisecond),
+				chromedp.WaitVisible(chromedp.CSS(wait)),
+				chromedp.Sleep(captureSettle),
 			)
 		},
 		func(ctx context.Context) ([]byte, error) {
@@ -124,7 +145,7 @@ func browserContext() (context.Context, context.CancelFunc) {
 	)
 	ctx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), allocOpts...)
 	ctx, cancelBrowser := chromedp.NewContext(ctx)
-	ctx, cancelTimeout := context.WithTimeout(ctx, 60*time.Second)
+	ctx, cancelTimeout := context.WithTimeout(ctx, captureBound)
 	return ctx, func() {
 		cancelTimeout()
 		cancelBrowser()

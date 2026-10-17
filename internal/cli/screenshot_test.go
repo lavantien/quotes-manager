@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -67,41 +66,160 @@ func TestBrowserPathWindowsScan(t *testing.T) {
 	}
 }
 
-func TestScreenshotRunWithFakeCapture(t *testing.T) {
-	out := filepath.Join(t.TempDir(), "docs", "home.png")
-	var capturedURL string
-	capture := func(url string) ([]byte, error) {
-		capturedURL = url
-		resp, err := http.Get(url)
-		if err != nil {
-			return nil, err
+func TestJourneyShotsNumberingAndCoverage(t *testing.T) {
+	if len(journeyShots) == 0 {
+		t.Fatal("journeyShots must define the canonical journey")
+	}
+	files := map[string]bool{}
+	paths := map[string]bool{}
+	for i, s := range journeyShots {
+		prefix := fmt.Sprintf("%02d-", i+1)
+		if !strings.HasPrefix(s.File, prefix) {
+			t.Errorf("journeyShots[%d].File = %q, want %s* prefix", i, s.File, prefix)
 		}
-		defer func() { _ = resp.Body.Close() }()
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("status %d", resp.StatusCode)
+		if !strings.HasSuffix(s.File, ".png") {
+			t.Errorf("journeyShots[%d].File = %q, want .png suffix", i, s.File)
 		}
-		return []byte("PNG-FAKE"), nil
+		if !strings.HasPrefix(s.Path, "/") {
+			t.Errorf("journeyShots[%d].Path = %q, want an absolute site path", i, s.Path)
+		}
+		if s.Wait == "" {
+			t.Errorf("journeyShots[%d] has no wait selector", i)
+		}
+		if files[s.File] {
+			t.Errorf("duplicate journey file %q", s.File)
+		}
+		files[s.File] = true
+		if paths[s.Path] {
+			t.Errorf("duplicate journey path %q", s.Path)
+		}
+		paths[s.Path] = true
 	}
-	if err := screenshotRun(io.Discard, out, capture); err != nil {
-		t.Fatalf("screenshotRun: %v", err)
+	var home, collection, search, dashboard, texts, text, words, graph bool
+	for _, s := range journeyShots {
+		switch {
+		case s.Path == "/":
+			home = true
+		case s.Path == "/?col=1":
+			collection = true
+		case strings.HasPrefix(s.Path, "/?rq="):
+			search = true
+		case s.Path == "/dashboard":
+			dashboard = true
+		case s.Path == "/texts":
+			texts = true
+		case strings.HasPrefix(s.Path, "/texts/"):
+			text = true
+		case strings.HasPrefix(s.Path, "/words"):
+			words = true
+		case strings.HasPrefix(s.Path, "/graph"):
+			graph = true
+		}
 	}
-	if !strings.Contains(capturedURL, "/?col=1") {
-		t.Errorf("capture URL = %q, want /?col=1", capturedURL)
-	}
-	got, err := os.ReadFile(out)
-	if err != nil {
-		t.Fatalf("output not written: %v", err)
-	}
-	if string(got) != "PNG-FAKE" {
-		t.Errorf("output = %q, want PNG-FAKE", got)
+	for name, ok := range map[string]bool{
+		"workspace home": home, "workspace collection": collection, "workspace search": search,
+		"canon dashboard": dashboard, "canon texts": texts, "canon text page": text,
+		"canon words": words, "canon graph": graph,
+	} {
+		if !ok {
+			t.Errorf("journey missing the %s surface", name)
+		}
 	}
 }
 
-func TestScreenshotRunWithCaptureError(t *testing.T) {
-	out := filepath.Join(t.TempDir(), "docs", "home.png")
-	fail := func(string) ([]byte, error) { return nil, errors.New("no browser") }
-	if err := screenshotRun(io.Discard, out, fail); err == nil {
-		t.Error("screenshotRun should surface the capture error")
+func installScreenshotDeps(t *testing.T, baseURL string, capture func(url, wait string) ([]byte, error)) {
+	t.Helper()
+	oldEnv := screenshotEnv
+	screenshotEnv = func(*config.Config) (string, func() error, error) {
+		return baseURL, func() error { return nil }, nil
+	}
+	oldCapture := screenshotCapture
+	screenshotCapture = capture
+	oldOut := stdout
+	stdout = io.Discard
+	t.Cleanup(func() {
+		screenshotEnv = oldEnv
+		screenshotCapture = oldCapture
+		stdout = oldOut
+	})
+}
+
+func TestRunScreenshotWritesNumberedJourney(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "pics")
+	cfg := config.Defaults()
+	cfg.Quotes.PicturesDir = dir
+	var seen []string
+	installScreenshotDeps(t, "http://127.0.0.1:1", func(url, wait string) ([]byte, error) {
+		seen = append(seen, url+" "+wait)
+		return []byte("PNG-" + wait), nil
+	})
+	if err := runScreenshot(context.Background(), cfg, nil); err != nil {
+		t.Fatalf("runScreenshot: %v", err)
+	}
+	if len(seen) != len(journeyShots) {
+		t.Fatalf("captures = %d, want %d", len(seen), len(journeyShots))
+	}
+	for i, s := range journeyShots {
+		want := "http://127.0.0.1:1" + s.Path + " " + s.Wait
+		if seen[i] != want {
+			t.Errorf("capture %d = %q, want %q", i, seen[i], want)
+		}
+		target := filepath.Join(dir, s.File)
+		raw, err := os.ReadFile(target)
+		if err != nil {
+			t.Errorf("%s not written: %v", s.File, err)
+			continue
+		}
+		if string(raw) != "PNG-"+s.Wait {
+			t.Errorf("%s = %q, want PNG-%s", s.File, raw, s.Wait)
+		}
+	}
+}
+
+func TestRunScreenshotOutFlagOverridesPicturesDir(t *testing.T) {
+	cfg := config.Defaults()
+	cfg.Quotes.PicturesDir = filepath.Join(t.TempDir(), "default-pics")
+	dir := filepath.Join(t.TempDir(), "override-pics")
+	installScreenshotDeps(t, "http://127.0.0.1:1", func(_, wait string) ([]byte, error) {
+		return []byte("PNG-" + wait), nil
+	})
+	if err := runScreenshot(context.Background(), cfg, []string{"--out", dir}); err != nil {
+		t.Fatalf("runScreenshot: %v", err)
+	}
+	for _, s := range journeyShots {
+		if _, err := os.Stat(filepath.Join(dir, s.File)); err != nil {
+			t.Errorf("--out %s missing %s: %v", dir, s.File, err)
+		}
+		if _, err := os.Stat(filepath.Join(cfg.Quotes.PicturesDir, s.File)); !os.IsNotExist(err) {
+			t.Errorf("pictures dir must stay untouched, stat err = %v", err)
+		}
+	}
+}
+
+func TestRunScreenshotUnwiredEnvFails(t *testing.T) {
+	oldEnv := screenshotEnv
+	screenshotEnv = nil
+	defer func() { screenshotEnv = oldEnv }()
+	err := runScreenshot(context.Background(), config.Defaults(), nil)
+	if err == nil || !strings.Contains(err.Error(), "not wired") {
+		t.Errorf("runScreenshot without an env builder = %v, want a not-wired error", err)
+	}
+}
+
+func TestRunScreenshotCaptureErrorStopsJourney(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "pics")
+	installScreenshotDeps(t, "http://127.0.0.1:1", func(string, string) ([]byte, error) {
+		return nil, errors.New("no browser")
+	})
+	err := runScreenshot(context.Background(), &config.Config{Quotes: config.Quotes{PicturesDir: dir}}, nil)
+	if err == nil {
+		t.Fatal("runScreenshot must fail when every capture fails")
+	}
+	if !strings.Contains(err.Error(), journeyShots[0].File) {
+		t.Errorf("error %v must name the failing shot %s", err, journeyShots[0].File)
+	}
+	if _, statErr := os.Stat(filepath.Join(dir, journeyShots[0].File)); !os.IsNotExist(statErr) {
+		t.Errorf("a failed capture must not write %s", journeyShots[0].File)
 	}
 }
 
@@ -111,25 +229,36 @@ func TestRunScreenshotRejectsUnexpectedArg(t *testing.T) {
 	}
 }
 
-func TestRunScreenshotOutDefaultFromPicturesDir(t *testing.T) {
-	cfg := config.Defaults()
-	cfg.Quotes.PicturesDir = filepath.Join(t.TempDir(), "pics")
-	oldStarter := screenshotCapture
-	screenshotCapture = func(url string) ([]byte, error) { return []byte("PNG-FAKE"), nil }
-	defer func() { screenshotCapture = oldStarter }()
-	oldOut := stdout
-	stdout = io.Discard
-	defer func() { stdout = oldOut }()
-	if err := runScreenshot(context.Background(), cfg, nil); err != nil {
-		t.Fatalf("runScreenshot: %v", err)
+func TestCaptureRetrySucceedsOnSecondAttempt(t *testing.T) {
+	calls := 0
+	capture := func(string, string) ([]byte, error) {
+		calls++
+		if calls == 1 {
+			return nil, errors.New("browser hiccup")
+		}
+		return []byte("png"), nil
 	}
-	target := filepath.Join(cfg.Quotes.PicturesDir, "home.png")
-	got, err := os.ReadFile(target)
+	buf, err := captureRetry(io.Discard, Shot{File: "01-x.png", Wait: "#a"}, "http://x/", capture)
 	if err != nil {
-		t.Fatalf("default target %s not written: %v", target, err)
+		t.Fatalf("captureRetry: %v", err)
 	}
-	if string(got) != "PNG-FAKE" {
-		t.Errorf("output = %q, want PNG-FAKE", got)
+	if calls != 2 || string(buf) != "png" {
+		t.Errorf("captureRetry calls = %d buf = %q, want 2 and png", calls, buf)
+	}
+}
+
+func TestCaptureRetryFailsAfterTwoAttempts(t *testing.T) {
+	calls := 0
+	capture := func(string, string) ([]byte, error) {
+		calls++
+		return nil, errors.New("no browser")
+	}
+	_, err := captureRetry(io.Discard, Shot{File: "02-y.png", Wait: "#b"}, "http://x/", capture)
+	if err == nil || !strings.Contains(err.Error(), "02-y.png") {
+		t.Fatalf("captureRetry err = %v, want a failure naming 02-y.png", err)
+	}
+	if calls != 2 {
+		t.Errorf("captureRetry calls = %d, want exactly 2", calls)
 	}
 }
 

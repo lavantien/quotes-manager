@@ -59,7 +59,7 @@ BIN := dist/qm$(EXE)
 
 FZ := $(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS)
 
-.PHONY: help all build test test-pkg test-one race vet fmt lint lint-pkg typecheck sloc fuzz fuzz-one mutate memtest e2e-hermetic e2e verify vendor-assets diagrams stage run server extract seed tidy clean coverage screenshot fixture monitor
+.PHONY: help all build test test-pkg test-one race vet fmt lint lint-pkg typecheck sloc fuzz fuzz-one mutate memtest e2e-hermetic e2e verify vendor-assets diagrams stage run server extract seed tidy clean coverage screenshots fixture monitor
 
 help: ## show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make <target>\n\nTargets:\n"} \
@@ -231,8 +231,8 @@ coverage: ## recompute Go test coverage and refresh the README coverage badge
 	$(GO) run $(TAGS) ./cmd/qm coverage -profile=coverage.out -readme=readme.md
 	rm -f coverage.out
 
-screenshot: ## capture the home page into project-pictures/home.png (needs Chrome or Edge)
-	$(GO) run $(TAGS) ./cmd/qm screenshot
+screenshots: build ## capture the numbered UI journey into project-pictures/ (needs git, Chrome or Edge)
+	./$(BIN) screenshot
 
 fixture: ## regenerate the clone-of-main test fixture (internal/store/storetest/testdata)
 	$(GO) run $(TAGS) ./cmd/qm fixture
