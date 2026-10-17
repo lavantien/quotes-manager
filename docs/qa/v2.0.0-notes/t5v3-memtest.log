@@ -1,0 +1,101 @@
+CGO_ENABLED=1 GOMEMLIMIT=512MiB C:/Users/lavantien/dev/github/quotes-manager/dist/tools/jobwrap.exe go test -tags sqlite_fts5 -count=1 -run 'TestPipelineMemoryBounded|TestE2EHermetic|TestMergedHermeticE2E' ./internal/cli ./internal/e2e -v -timeout 15m
+=== RUN   TestE2EHermetic
+qm triangulate: triangulation reported errors: 14 findings, see report
+qm triangulate: triangulation reported errors: 14 findings, see report
+qm all: triangulate: triangulation reported errors: 14 findings, see report
+--- PASS: TestE2EHermetic (11.16s)
+=== RUN   TestPipelineMemoryBounded
+qm triangulate: triangulation reported errors: 14 findings, see report
+qm triangulate: triangulation reported errors: 14 findings, see report
+--- PASS: TestPipelineMemoryBounded (9.19s)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/cli	21.964s
+=== RUN   TestMergedHermeticE2E
+2026/10/17 20:33:18 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 20:33:18 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:18 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:18 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:18 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:18 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:18 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:19 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/1 status=200 duration_ms=0
+2026/10/17 20:33:20 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 20:33:20 INFO request method=GET path=/api/v1/jobs/2 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/2 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/2 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/3 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/4 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=POST path=/api/v1/jobs status=202 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/jobs/5 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/ status=200 duration_ms=21
+2026/10/17 20:33:21 INFO request method=GET path=/dashboard status=200 duration_ms=6
+2026/10/17 20:33:21 INFO request method=GET path=/texts/mn1 status=200 duration_ms=2
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=2
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=1
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/quotes status=200 duration_ms=1
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/quotes status=400 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/quotes status=400 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/quotes/1 status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/quotes/999999 status=404 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/api/v1/quotes/abc status=404 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/texts/mn51 status=200 duration_ms=3
+2026/10/17 20:33:21 INFO request method=GET path=/static/canon.js status=200 duration_ms=130
+2026/10/17 20:33:21 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=1
+2026/10/17 20:33:21 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/17 20:33:21 INFO request method=POST path=/quotes status=303 duration_ms=8
+2026/10/17 20:33:21 INFO request method=GET path=/ status=200 duration_ms=20
+2026/10/17 20:33:21 INFO request method=GET path=/texts/mn1 status=200 duration_ms=1
+--- PASS: TestMergedHermeticE2E (10.79s)
+PASS
+ok  	github.com/lavantien/quotes-manager/internal/e2e	12.621s
