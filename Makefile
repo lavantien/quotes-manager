@@ -69,10 +69,10 @@ $(WRAP): $(wildcard tools/jobwrap/*.go) $(wildcard internal/canon/winjob/*.go)
 	$(GO) build -o $@ ./tools/jobwrap
 
 test: $(WRAP) ## run the full test suite
-	$(CGO_ENV) $(WRAP) go test $(TAGS) ./...
+	$(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS) ./...
 
 test-pkg: $(WRAP) ## run one package's tests: make test-pkg PKG=./internal/config
-	$(CGO_ENV) $(WRAP) go test $(TAGS) $(PKG)
+	$(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS) $(PKG)
 
 race: $(WRAP) ## go test -race over the merged-app core (RACE_PKGS)
 	$(CGO_ENV) GOMEMLIMIT=$(MEMSOFT) $(WRAP) go test $(TAGS) -race -count=1 $(RACE_PKGS)
