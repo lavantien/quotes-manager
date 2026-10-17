@@ -15,9 +15,7 @@ data/
 # Browser automation scratch (Playwright MCP screenshots / snapshots)
 .playwright-mcp/
 *.png
-# ...but the committed home screenshot for the README is tracked.
-!docs/home.png
-# ...and committed diagram and journey pictures stay tracked.
+# ...but committed diagram and journey pictures stay tracked.
 !docs/diagrams/*.png
 !project-pictures/*.png
 # ...and the committed canon and QA trees stay fully tracked.
