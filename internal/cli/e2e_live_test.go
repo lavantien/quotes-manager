@@ -45,9 +45,43 @@ func writeLiveConfig(t *testing.T) string {
 	return p
 }
 
+func liveEnabled() bool {
+	return os.Getenv(liveEnvVar) == "1"
+}
+
+func TestLiveEnabled(t *testing.T) {
+	old, had := os.LookupEnv(liveEnvVar)
+	t.Cleanup(func() {
+		if had {
+			_ = os.Setenv(liveEnvVar, old)
+			return
+		}
+		_ = os.Unsetenv(liveEnvVar)
+	})
+	for _, tc := range []struct {
+		value  string
+		set    bool
+		expect bool
+	}{
+		{"", false, false},
+		{"0", true, false},
+		{"1", true, true},
+		{"yes", true, false},
+	} {
+		if tc.set {
+			_ = os.Setenv(liveEnvVar, tc.value)
+		} else {
+			_ = os.Unsetenv(liveEnvVar)
+		}
+		if got := liveEnabled(); got != tc.expect {
+			t.Errorf("%s=%q: liveEnabled() = %v, want %v", liveEnvVar, tc.value, got, tc.expect)
+		}
+	}
+}
+
 func TestE2ELive(t *testing.T) {
-	if os.Getenv(liveEnvVar) == "0" {
-		t.Skipf("live e2e disabled via %s=0", liveEnvVar)
+	if !liveEnabled() {
+		t.Skipf("live e2e requires %s=1", liveEnvVar)
 	}
 	cfgPath := writeLiveConfig(t)
 	cfg := readCfg(t, cfgPath)
