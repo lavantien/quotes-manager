@@ -1,21 +1,14 @@
-/* Structural layout for the dual-pane workspace.
-   Four zones in a single grid: left rail | root column | collection column |
-   right rail. Each column owns a thin sticky header (the two headers together
-   read as a split top bar), a slim toolbar, and a scrollable quote list. */
-
-/* .page fills the viewport: no fixed cap, so the workspace uses the full width. */
 .layout {
   display: grid;
   grid-template-columns: 11rem minmax(0, 1fr) minmax(0, 1fr) 11rem;
   align-items: stretch;
 }
 
-/* --- rails --- */
 .rail {
   position: sticky;
-  top: 0;
+  top: var(--nav-h, 0rem);
   align-self: start;
-  max-height: 100vh;
+  max-height: calc(100vh - var(--nav-h, 0rem));
   overflow: auto;
   padding: clamp(0.9rem, 1.8vw, 1.25rem) 0.7rem;
   display: flex;
@@ -33,9 +26,6 @@
   color: var(--ink-soft);
   margin: 0 0 0.4rem 0.4rem;
 }
-/* Top-of-rail toolbar for panel-level actions (Copy ids, Check ids). It wraps
-   so the buttons survive the narrow rail at the 72rem breakpoint and reflow
-   inline at the 60rem mobile row layout. */
 .rail__toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -111,22 +101,17 @@
   color: var(--ink);
 }
 
-/* --- zones (columns) --- */
-/* Each zone is its own viewport-height scroll container, so the root (left)
-   and collection (right) text panels scroll independently of each other while
-   the rails (already sticky) and the sticky zone headers stay pinned. */
 .zone {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  height: 100vh;
-  max-height: 100vh;
+  height: calc(100vh - var(--nav-h, 0rem));
+  max-height: calc(100vh - var(--nav-h, 0rem));
   overflow-y: auto;
   overflow-x: hidden;
 }
 .zone--collection { border-left: 1px solid var(--rule); }
 
-/* Each column's header is one half of the thin split top bar. */
 .zone__head {
   display: flex;
   align-items: baseline;
@@ -178,14 +163,12 @@
   cursor: pointer;
 }
 
-/* Search box at the right edge of a zone toolbar (reuses the rail input pill). */
 .zone__search {
   margin-left: auto;
   max-width: 14rem;
 }
 .zone__search:disabled { opacity: 0.5; }
 
-/* Highlighted search match inside a rendered quote. */
 mark {
   background: var(--accent-soft);
   color: var(--paper);
@@ -193,15 +176,12 @@ mark {
   border-radius: 2px;
 }
 
-/* A read-only block that isn't draggable (e.g. a filtered collection view). */
 .quote--ro:not([draggable]) { cursor: default; }
 
 .zone__empty { padding: 2.5rem clamp(1rem, 2vw, 1.4rem); color: var(--ink-soft); }
 .zone__empty p { margin: 0 0 0.5rem; }
 .zone__hint { font-size: 0.85rem; opacity: 0.85; }
 
-/* --- check-id workspace (replaces #collection-zone when the Check ids button
-   is active) --- */
 .check-form {
   display: flex;
   flex-direction: column;
@@ -246,11 +226,8 @@ mark {
 .check__badge--ok { background: var(--accent-soft); color: var(--paper); }
 .check__badge--no { color: var(--danger); border: 1px solid var(--rule); }
 
-/* quote lists live inside zones and inherit horizontal padding from the zone */
 .zone .quote-list { padding: 0 clamp(1rem, 2vw, 1.4rem); }
 
-/* --- insert-gap affordances (collection column) --- */
-/* Hidden until the user checks at least one root quote; JS adds .is-ready. */
 .insert-gap {
   display: none;
   position: relative;
@@ -290,11 +267,8 @@ mark {
 .insert-gap:hover::before { border-top-color: var(--accent-soft); }
 .insert-gap:hover::after { opacity: 1; }
 
-/* --- collection membership chips on root blocks (their own grid row, so they
-   do not overlap the category chips row) --- */
 .quote__collections { grid-area: cols; margin-top: 0.1rem; }
 
-/* Brief highlight on the quote jumped to from the Duplicates rail. */
 .quote.is-flash {
   box-shadow: 0 0 0 2px var(--accent-soft);
   transition: box-shadow 120ms ease;
@@ -314,7 +288,6 @@ mark {
 }
 .collection-chip:hover { background: var(--accent); border-color: var(--accent); }
 
-/* --- responsive: collapse the four zones on narrow screens --- */
 @media (max-width: 72rem) {
   .layout { grid-template-columns: 9rem minmax(0, 1fr) minmax(0, 1fr) 9rem; }
 }
