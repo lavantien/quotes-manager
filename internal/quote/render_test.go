@@ -1,6 +1,7 @@
 package quote
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -69,18 +70,40 @@ func TestDisplayHTML(t *testing.T) {
 		mustContain(t, got, `href="https://suttacentral.net/knsn22"`)
 		mustContain(t, got, `target="_blank" rel="noopener"`)
 	})
-	t.Run("fragment kept and escaped in muid path", func(t *testing.T) {
-		q := New("AN 5.34#7.9", "the Buddha, AN 5.34#7.9", []string{`"x"`})
+	t.Run("nikaya fragment is a url fragment", func(t *testing.T) {
+		q := New("SN 42.8#3", "the Buddha, SN 42.8#3", []string{`"x"`})
 		got := string(q.DisplayHTML())
-		mustContain(t, got, `href="/texts/an5.34%237.9"`)
+		mustContain(t, got, `href="/texts/sn42.8#3"`)
+		mustNotContain(t, got, `href="/texts/sn42.8%233"`)
 		if strings.Contains(got, `target="_blank"`) {
 			t.Errorf("internal link must not open a new tab: %s", got)
 		}
 	})
-	t.Run("vinaya fragment dropped from muid", func(t *testing.T) {
+	t.Run("an fragment is a url fragment", func(t *testing.T) {
+		q := New("AN 5.34#7.9", "the Buddha, AN 5.34#7.9", []string{`"x"`})
+		got := string(q.DisplayHTML())
+		mustContain(t, got, `href="/texts/an5.34#7.9"`)
+		mustNotContain(t, got, `href="/texts/an5.34%237.9"`)
+		if strings.Contains(got, `target="_blank"`) {
+			t.Errorf("internal link must not open a new tab: %s", got)
+		}
+	})
+	t.Run("kn fragment kept in display and href", func(t *testing.T) {
+		q := New("KN Dhp 5#2", "the Buddha, KN Dhp 5#2", []string{`"x"`})
+		got := string(q.DisplayHTML())
+		mustContain(t, got, `<strong>KN Dhp 5#2</strong>`)
+		mustContain(t, got, `href="/texts/dhp5#2"`)
+	})
+	t.Run("abbreviated vinaya falls back to suttacentral", func(t *testing.T) {
+		q := New("Tv Vi Bu Pj2", "the Buddha, Tv Vi Bu Pj2", []string{`"x"`})
+		got := string(q.DisplayHTML())
+		mustContain(t, got, `href="https://suttacentral.net/tvvibupj2"`)
+		mustContain(t, got, `target="_blank" rel="noopener"`)
+	})
+	t.Run("vinaya fragment appended after the muid", func(t *testing.T) {
 		q := New("pli-tv-bu-vb-pj1#5.11.20", "the Buddha, pli-tv-bu-vb-pj1#5.11.20", []string{`"x"`})
 		got := string(q.DisplayHTML())
-		mustContain(t, got, `href="/texts/pli-tv-bu-vb-pj1"`)
+		mustContain(t, got, `href="/texts/pli-tv-bu-vb-pj1#5.11.20"`)
 	})
 }
 
@@ -205,6 +228,33 @@ func TestDisplayHTMLWithTermsMultiPassageOnlyMatching(t *testing.T) {
 	got := string(q.DisplayHTMLWithTerms([]string{"buddha"}))
 	mustContain(t, got, "<em>first passage</em>")
 	mustContain(t, got, "<em>the <mark>Buddha</mark> spoke</em>")
+}
+
+func TestSeedCorpusCrossLinksInternally(t *testing.T) {
+	data, err := os.ReadFile("../../exports/shortest-first.md")
+	if err != nil {
+		t.Skipf("seed export not present: %v", err)
+	}
+	qs := ParseCanonical(string(data))
+	if len(qs) != 109 {
+		t.Fatalf("corpus = %d quotes, want 109", len(qs))
+	}
+	for _, q := range qs {
+		if CanonicalSuttaID(q.SuttaID) == "" {
+			t.Errorf("%q: corpus citation without a sutta id", q.Citation)
+			continue
+		}
+		if _, err := MuidFromSuttaID(q.SuttaID); err != nil {
+			t.Errorf("%q: corpus citation must map to an internal muid: %v", q.Citation, err)
+		}
+		got := string(q.DisplayHTML())
+		if !strings.Contains(got, `href="/texts/`) {
+			t.Errorf("%q: citation renders no internal /texts/ link", q.Citation)
+		}
+		if strings.Contains(got, "suttacentral.net") {
+			t.Errorf("%q: corpus citation fell back to suttacentral", q.Citation)
+		}
+	}
 }
 
 func TestHighlight(t *testing.T) {

@@ -78,7 +78,14 @@ func suttaHref(id string) (string, bool) {
 	if err != nil {
 		return SuttaURL(id), true
 	}
-	return "/texts/" + url.PathEscape(muid), false
+	return "/texts/" + url.PathEscape(muid) + urlFragment(id), false
+}
+
+func urlFragment(id string) string {
+	if i := strings.IndexByte(id, '#'); i >= 0 {
+		return id[i:]
+	}
+	return ""
 }
 
 func highlight(in string, terms []string) string {

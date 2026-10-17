@@ -9,7 +9,7 @@ import (
 
 const suttaIDPat = `(?:` +
 	`(?:DN|MN|AN|SN)\s+\d+(?:[.-]\d+)*(?:#\d+(?:\.\d+)*)?` +
-	`|KN\s+[A-Za-z]+\s+\d+(?:[.-]\d+)*` +
+	`|KN\s+[A-Za-z]+\s+\d+(?:[.-]\d+)*(?:#\d+(?:\.\d+)*)?` +
 	`|pli-tv[A-Za-z0-9-]+(?:#\d+(?:\.\d+)*)?` +
 	`|Tv\s+Vi\s+Bu\s+Pj\d` +
 	`)`
@@ -28,6 +28,8 @@ var (
 	muidNikayaRe       = regexp.MustCompile(`^(dn|mn|an|sn)(\d.*)$`)
 	muidAbbrevVinayaRe = regexp.MustCompile(`^tvvibu(pj\d)$`)
 	muidSubBookRe      = regexp.MustCompile(`^([a-z]+)(\d.*)$`)
+
+	abbrevVinayaIDRe = regexp.MustCompile(`^Tv Vi Bu Pj\d$`)
 )
 
 func CanonicalSuttaID(s string) string {
@@ -39,17 +41,17 @@ func MuidFromSuttaID(id string) (string, error) {
 	if c == "" {
 		return "", fmt.Errorf("no sutta id in %q", id)
 	}
-	if strings.HasPrefix(c, "pli-tv") {
-		if i := strings.IndexByte(c, '#'); i >= 0 {
-			c = c[:i]
-		}
-		return c, nil
+	if i := strings.IndexByte(c, '#'); i >= 0 {
+		c = c[:i]
 	}
 	if rest, ok := strings.CutPrefix(c, "KN "); ok {
 		if muidNikayaRe.MatchString(compactLower(rest)) {
 			return "", fmt.Errorf("kn sub-book %q aliases a main nikaya muid", rest)
 		}
 		c = rest
+	}
+	if abbrevVinayaIDRe.MatchString(c) {
+		return "", fmt.Errorf("abbreviated vinaya id %q has no bilara muid", c)
 	}
 	return compactLower(c), nil
 }
