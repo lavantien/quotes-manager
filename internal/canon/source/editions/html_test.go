@@ -194,40 +194,6 @@ func TestParseHTMLSegmentsSelfClosing(t *testing.T) {
 	}
 }
 
-func TestParseBuildDate(t *testing.T) {
-	cases := []struct {
-		in      string
-		want    string
-		wantErr bool
-	}{
-		{"Middle-Discourses-sujato-2026-08-26-tex.zip", "2026-08-26", false},
-		{"Vinaya-Brahmali-2026-08-26-hardcover-tex.zip", "2026-08-26", false},
-		{"Name-2025-01-02-and-2025-03-04-tex.zip", "2025-03-04", false},
-		{"no-date-tex.zip", "", true},
-		{"x-2026-13-01-tex.zip", "", true},
-		{"x-2026-02-30-tex.zip", "", true},
-		{"X-12345-01-01-tex.zip", "", true},
-		{"X-2026-01-019-tex.zip", "", true},
-		{"plain.zip", "", true},
-		{"", "", true},
-	}
-	for _, tc := range cases {
-		got, err := ParseBuildDate(tc.in)
-		if tc.wantErr {
-			if err == nil {
-				t.Errorf("ParseBuildDate(%q): expected error, got %q", tc.in, got)
-			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("ParseBuildDate(%q): %v", tc.in, err)
-		}
-		if got != tc.want {
-			t.Errorf("ParseBuildDate(%q) = %q, want %q", tc.in, got, tc.want)
-		}
-	}
-}
-
 func TestReadLastRunDate(t *testing.T) {
 	root := t.TempDir()
 	p := filepath.Join(root, lastRunFile)

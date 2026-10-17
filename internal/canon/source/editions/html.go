@@ -17,10 +17,9 @@ import (
 )
 
 const (
-	langDir      = "en"
-	texZipSuffix = "-tex.zip"
-	lastRunFile  = "last_run_date"
-	htmlDir      = "html"
+	langDir     = "en"
+	lastRunFile = "last_run_date"
+	htmlDir     = "html"
 )
 
 var dateRe = regexp.MustCompile(`[0-9]{4}-[0-9]{2}-[0-9]{2}`)
@@ -189,13 +188,6 @@ func ParseHTMLSegments(r io.Reader, yield func(muid, segkey, text string) error)
 			}
 		}
 	}
-}
-
-func ParseBuildDate(zipName string) (string, error) {
-	if !strings.HasSuffix(zipName, texZipSuffix) {
-		return "", fmt.Errorf("zip name %q lacks %s suffix", zipName, texZipSuffix)
-	}
-	return StemDate(strings.TrimSuffix(zipName, texZipSuffix))
 }
 
 func StemDate(stem string) (string, error) {

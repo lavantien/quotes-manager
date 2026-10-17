@@ -261,22 +261,12 @@ func TestLoadRejectsUnknownKeys(t *testing.T) {
 		`{"canon": {"bilara": {"nope": 1}}}`,
 		`{"canon": {"paths": {"nope": "x"}}}`,
 		`{"canon": {"dpd": {"nope": 1}}}`,
-	}
-	for _, body := range bodies {
-		if _, err := Load(writeConfig(t, body)); err == nil {
-			t.Fatalf("unknown key must be rejected: %s", body)
-		}
-	}
-}
-
-func TestLoadRejectsTexKeys(t *testing.T) {
-	bodies := []string{
-		`{"canon": {"editions": {"tex_zip_suffix": "-tex.zip"}}}`,
+		`{"canon": {"editions": {"nope": 1}}}`,
 		`{"canon": {"paths": {"extracted_dir": "x"}}}`,
 	}
 	for _, body := range bodies {
 		if _, err := Load(writeConfig(t, body)); err == nil {
-			t.Fatalf("tex key must be gone from the canon shape: %s", body)
+			t.Fatalf("unknown key must be rejected: %s", body)
 		}
 	}
 }
