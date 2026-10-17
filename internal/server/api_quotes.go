@@ -59,7 +59,7 @@ func (s *Server) apiQuotesListHandler(w http.ResponseWriter, r *http.Request) {
 	total := len(qs)
 	start := min(offset, total)
 	end := min(start+limit, total)
-	rows := make([]store.Quote, 0, end-start)
+	rows := make([]store.Quote, 0, end)
 	rows = append(rows, qs[start:end]...)
 	writeAPIJSON(w, http.StatusOK, apiQuotesList{Rows: rows, Total: total})
 }
