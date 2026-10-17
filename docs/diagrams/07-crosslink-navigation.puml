@@ -1,0 +1,25 @@
+@startuml 07-crosslink-navigation
+left to right direction
+!pragma layout smetana
+title cross-link navigation: quote citations and pali words
+
+(*) --> "entry"
+if "entry" then
+  -->[quote citation] "rendered quote citation\ncitationHTMLWithTerms"
+  --> "suttaIDRe finds the sutta id\n(DN MN AN SN, KN book, pli-tv, Tv Vi Bu Pj)"
+  --> "MuidFromSuttaID(id)"
+  if "muid resolves" then
+    -->[yes] "strip '#fragment', drop 'KN ' prefix,\nreject sub-books aliasing dn/mn/an/sn,\nreject 'Tv Vi Bu Pj'"
+    --> "href /texts/{muid}#fragment\n(internal link)"
+    --> "canon server GET /texts/{muid}:\npali/en segments from the graph db"
+    --> (*)
+  else
+    -->[no] "SuttaURL fallback:\nhttps://suttacentral.net/{compact-id}\ntarget _blank rel noopener"
+    --> (*)
+  endif
+else
+  -->[pali word] "href /words/{lemma}"
+  --> "canon server GET /words/{lemma}:\ndpd entries (lemma, pos, meaning)\n+ usage refs muid:seg_key"
+  --> (*)
+endif
+@enduml

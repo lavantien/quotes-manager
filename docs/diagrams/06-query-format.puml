@@ -1,0 +1,30 @@
+@startuml 06-query-format
+left to right direction
+!pragma layout smetana
+title qm query with the qm format: segments and search to canonical blocks
+
+(*) --> "qm query <sub>"
+if "sub" then
+  -->[segments] "graph.CurrentDB: read pointer.json\n-> canon-<runid>.db"
+  --> "store.Segments(muid, with-en,\nlimit, offset): pali/en pair rows"
+else
+  if "sub" then
+    -->[search] "graph.CurrentDB: read pointer.json\n-> canon-<runid>.db"
+    --> "store.SearchFTS(text, lang pali|en,\nlimit, offset) over fts_segment"
+  else
+    -->[quotes] "store.Open(quotes.db).List()"
+    --> "search.Filter rows by Pos terms,\nNeg -terms, quoted phrases"
+  endif
+endif
+--> "pairs (segments/search)\nor rows (quotes)"
+if "format" then
+  -->[json] "printJSON pairs or rows"
+  --> (*)
+else
+  -->[qm, default for quotes] "build quote.Quote:\nsegments/search: DisplaySuttaID(muid),\npassage = en else pali\nquotes: sutta_id, citation, body lines"
+  --> "BodyMD: '*line*' joined by\ntwo-space breaks, citation tail"
+  --> "RenderExportFile: blocks joined by\n'.' dot separator lines"
+  --> "stdout: canonical markdown"
+  --> (*)
+endif
+@enduml

@@ -1,0 +1,111 @@
+@startuml 03-data-model
+left to right direction
+!pragma layout smetana
+title data model: quotes db, canon graph db, duckdb sidecar
+
+package "database/quotes.db (sqlite)" {
+  entity "quotes" as quotes {
+    * id : integer pk
+    --
+    sutta_id : text
+    citation : text
+    body_md : text
+    body_text : text
+    line_count : integer
+    char_count : integer
+    sources : text (semicolon-joined)
+  }
+  entity "collections" as collections {
+    * id : integer pk
+    --
+    name : text
+  }
+  entity "collection_items" as colitems {
+    * collection_id
+    * quote_id
+    --
+    position
+  }
+  entity "categories" as categories {
+    * id : integer pk
+    --
+    name : text unique nocase
+  }
+  entity "category_items" as catitems {
+    * category_id
+    * quote_id
+  }
+  collections ||--o{ colitems
+  quotes ||--o{ colitems
+  categories ||--o{ catitems
+  quotes ||--o{ catitems
+}
+
+package "database/canon/canon-<runid>.db (sqlite graph, schema v2)" {
+  entity "node" as node {
+    * id : integer pk
+    --
+    type : collection | division | text\n| segment | edition | source\n| headword | dpd_root | dpd_form
+    key : text unique per type
+    data : json
+  }
+  entity "edge" as edge {
+    * id : integer pk
+    --
+    src : node id
+    dst : node id
+    type : CHILD_OF | TRANSLATES | PART_OF\n| COVERED_BY | DERIVED_FROM | HAS_WORD
+    ord : integer nullable
+    data : json
+  }
+  entity "run" as run {
+    * id : integer pk
+    --
+    bilara_commit
+    editions_commit
+    dpd_tag
+    started
+    finished
+  }
+  entity "discrepancy" as disc {
+    * id : integer pk
+    --
+    run_id : run id
+    check : B001..B007 D001 D002 E101..E104
+    severity : info | warn | error
+    muid nullable
+    node_id nullable
+    detail
+  }
+  entity "fts_segment (fts5, contentless)" as fts {
+    rowid : pali segment node id
+    --
+    pali
+    en
+  }
+  node ||--o{ edge : src
+  node ||--o{ edge : dst
+  run ||--o{ disc
+  node ..> fts : rowid = pali segment id
+}
+
+package "data/canon.duckdb (sidecar, rebuilt by qm export)" {
+  entity "node, edge, run, discrepancy\n(mirrored from the graph db)" as dmirror
+  entity "segment_pairs (pali_id, muid, seg_key,\npali, en, author, html, reference)" as dseg
+  entity "dpd_entries (id, lemma_1, pos,\nmeaning_1, root, family_root)" as ddpd
+  entity "word_occurrences (pali_id, muid, division,\nseg_key, headword, root, family_root, forms)" as dword
+  entity "text_stats (muid, division, name, segments,\ntranslated, has_word_edges, distinct_headwords, covered)" as dstats
+}
+
+node ..> dmirror
+node ..> dseg
+node ..> ddpd
+node ..> dword
+node ..> dstats
+note bottom of dmirror
+  the sidecar is a derived rebuild, never
+  the source of truth; qm export drops and
+  recreates all tables, then writes parquet
+  under data/export/parquet when configured.
+end note
+@enduml

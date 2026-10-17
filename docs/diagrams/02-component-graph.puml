@@ -1,0 +1,104 @@
+@startuml 02-component-graph
+left to right direction
+!pragma layout smetana
+skinparam componentStyle rectangle
+title internal package dependency graph
+
+package "cmd/qm" as cmdqm
+package "internal/cli" as cli
+package "internal/config" as config
+package "internal/server" as qserver
+package "internal/store" as store
+package "internal/quote" as quote
+package "internal/search" as search
+package "internal/seed" as seed
+
+package "internal/canon" as canon {
+  package "canon/server" as cserver
+  package "canon/jobs" as cjobs
+  package "canon/pipeline" as cpipeline
+  package "canon/sync" as csync
+  package "canon/graph" as cgraph
+  package "canon/triangulate" as ctriangulate
+  package "canon/export" as cexport
+  package "canon/analytics" as canalytics
+  package "canon/report" as creport
+  package "canon/web" as cweb
+  package "canon/model" as cmodel
+  package "canon/norm" as cnorm
+  package "canon/source" as csource {
+    package "source/bilara" as sbilara
+    package "source/editions" as seditions
+    package "source/dpd" as sdpd
+  }
+}
+
+cmdqm --> cli
+cmdqm --> config
+cmdqm --> qserver
+cmdqm --> cserver
+cmdqm --> store
+cmdqm --> seed
+
+cli --> config
+cli --> quote
+cli --> search
+cli --> store
+cli --> cpipeline
+cli --> csync
+cli --> cgraph
+cli --> ctriangulate
+cli --> cexport
+cli --> sdpd
+cli --> seditions
+
+qserver --> config
+qserver --> store
+qserver --> quote
+qserver --> search
+qserver --> cweb
+
+store --> quote
+search --> store
+
+cserver --> config
+cserver --> cli
+cserver --> cgraph
+cserver --> cjobs
+cserver --> cexport
+cserver --> canalytics
+cserver --> cweb
+cserver --> cmodel
+cserver --> cnorm
+
+cjobs --> cli
+cjobs --> config
+
+cpipeline --> config
+cpipeline --> cgraph
+cpipeline --> cmodel
+cpipeline --> cnorm
+cpipeline --> creport
+cpipeline --> sbilara
+cpipeline --> seditions
+cpipeline --> sdpd
+
+csync --> config
+cgraph --> config
+cgraph --> cmodel
+cgraph --> cnorm
+ctriangulate --> config
+ctriangulate --> cmodel
+ctriangulate --> cnorm
+cexport --> config
+cexport --> cgraph
+canalytics --> config
+creport --> cmodel
+
+cmdqm ..> cli : SetServeStarter(serveMerged)
+note bottom of cli
+  cli cannot import internal/server or canon/server:
+  canon/server -> canon/jobs -> cli would close the cycle.
+  cmd/qm injects the merged serve starter instead.
+end note
+@enduml

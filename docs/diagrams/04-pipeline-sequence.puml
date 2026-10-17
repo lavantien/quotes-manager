@@ -1,0 +1,50 @@
+@startuml 04-pipeline-sequence
+title canon pipeline: sync to serve, jobs runner, pointer following
+
+participant "maintainer" as dev
+participant "browser\nPOST /api/v1/jobs" as browser
+participant "jobs runner\ncanon/jobs" as runner
+participant "qm stage\n(cli.RunStage)" as stage
+participant "mirrors\ndata/repos, data/dpd" as mirrors
+participant "parsed\ndata/parsed *.ndjson" as parsed
+participant "graph db\ncanon-<runid>.db" as gdb
+participant "pointer.json" as pointer
+participant "duckdb sidecar" as duck
+participant "reports\ndocs/canon/reports" as reports
+participant "server dbState" as dbstate
+
+alt cli
+  dev -> stage : qm sync
+  stage -> mirrors : bilara + editions sparse git update,\nprune, dpd tarball fetch (sha verified) -> dpd.db
+  stage -> stage : write manifests sync.json
+  dev -> stage : qm prune
+  stage -> mirrors : prune unkept files
+  dev -> stage : qm parse
+  stage -> parsed : root, translation, html, reference,\nnames, html-editions, dpd headwords/roots/forms, meta
+  dev -> stage : qm load
+  stage -> gdb : open new canon-<runid>.db, migrate,\nbatched EnsureNode/AddEdge, fts index, run row, checkpoint
+  stage -> pointer : PublishDB: atomic temp+rename,\nretire superseded run dbs
+  dev -> stage : qm triangulate
+  stage -> pointer : CurrentDB (read)
+  stage -> gdb : latest run, checks B* D* E*\n-> discrepancy rows
+  dev -> stage : qm export
+  stage -> pointer : CurrentDB (read)
+  stage -> duck : drop + rebuild 8 tables,\nparquet when enabled
+  dev -> stage : qm report
+  stage -> gdb : stats, coverage, discrepancies
+  stage -> reports : report.md + report.json
+else jobs api
+  browser -> runner : POST /api/v1/jobs {stage}
+  runner -> stage : Start -> goroutine RunStage,\nring log of stage stdout
+  runner --> browser : job id, state, tail logs
+  stage -> pointer : stage writes as above
+  runner -> dbstate : OnFinish hook
+  dbstate -> pointer : Refresh: stat mtime + hash
+  dbstate -> gdb : if changed: OpenRO new run db,\nswap pool, close old
+  dbstate -> duck : Reopen when stage rebuilds it
+end
+
+dev -> dbstate : qm serve / browser GET
+dbstate -> pointer : per request: stat mtime + hash
+dbstate -> gdb : unchanged: reuse pool,\nchanged: swap to new run db
+@enduml

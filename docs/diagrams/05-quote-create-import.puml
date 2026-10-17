@@ -1,0 +1,32 @@
+@startuml 05-quote-create-import
+left to right direction
+!pragma layout smetana
+title quote create and import flows
+
+(*) --> "entry"
+if "entry kind" then
+  -->[ui new form] "POST /quotes"
+  --> "buildQuote(form)\nquote.New(sutta, citation, passages)"
+  --> "store.Create: quotes row\n(body_md, body_text, counts, sources)"
+  --> "applyCreateCategories"
+  --> "listing: store.List\nordered by char_count, sutta_id, body_text"
+else
+  if "entry kind" then
+    -->[ui paste import] "POST /quotes/import"
+    --> "quote.ParseCanonical\n(blocks split on '.' lines,\nbold tail or inline citation)"
+    --> "quote.Dedup (in-paste)"
+    --> "store.Create per quote"
+    --> "listing: store.List\nordered by char_count, sutta_id, body_text"
+  else
+    -->[cli extract] "qm extract: dumps/*.txt"
+    --> "quote.Parse\n(header, divider, inline -citation blocks)"
+    --> "quote.Dedup\nquote.SortByCharCount"
+    --> "write database/seed.sql\n+ exports/shortest-first.md"
+    --> "qm serve: seed.EnsureSeeded\non empty quotes.db"
+    --> "listing: store.List\nordered by char_count, sutta_id, body_text"
+  endif
+endif
+"listing: store.List\nordered by char_count, sutta_id, body_text" --> "render: BodyMD per quote\n'*passage*' lines + ' - **citation**' tail"
+--> "ui listing, /export.txt,\ncollection and category exports"
+--> (*)
+@enduml

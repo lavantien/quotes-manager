@@ -1,0 +1,66 @@
+@startuml 01-system-overview
+left to right direction
+!pragma layout smetana
+skinparam componentStyle rectangle
+title quotes-manager v2.0.0 system overview
+
+actor "maintainer" as dev
+actor "reader" as user
+
+package "dist/qm.exe (single binary, cmd/qm)" {
+  [qm cli\nserve sync prune parse load\ntriangulate export report all\nextract query] as cli
+  [merged http server\n127.0.0.1:8080] as http
+  [config hub\ndefaults + config json + QM_ env] as cfg
+}
+
+package "quotes side" {
+  database "database/quotes.db\nsqlite" as quotesdb
+  file "database/seed.sql" as seed
+  file "exports/shortest-first.md" as exportmd
+  folder "dumps/ (essay txt)" as dumps
+}
+
+package "canon side" {
+  database "database/canon/canon-<runid>.db\nsqlite graph, per run" as graphdb
+  file "database/canon/pointer.json" as pointer
+  database "data/canon.duckdb\nanalytics sidecar" as duck
+  folder "data/export/parquet" as parquet
+  folder "data/repos/bilara-data\n+ data/repos/editions (sparse git mirrors)" as mirrors
+  folder "data/dpd (dpd.db)" as dpd
+  folder "data/parsed (*.ndjson)" as parsed
+  folder "docs/canon/manifests + reports" as reports
+}
+
+folder "web/static\nvendored htmx + cytoscape" as static
+
+cloud "upstream" {
+  [github suttacentral/bilara-data] as up1
+  [github suttacentral/editions] as up2
+  [github dpd-db releases (dpd.db.tar.xz)] as up3
+  [suttacentral.net (fallback quote links)] as scnet
+}
+
+dev --> cli
+cli --> mirrors : sync + prune
+cli --> dpd : sync (sha pinned fetch)
+mirrors --> up1
+mirrors --> up2
+dpd --> up3
+cli --> parsed : parse
+cli --> graphdb : load (new run db)
+cli --> pointer : publish (atomic swap)
+cli --> duck : export (rebuild)
+cli --> parquet : export
+cli --> reports : report (md + json)
+cli --> dumps : extract
+cli --> seed : extract
+cli --> exportmd : extract
+
+cli --> http : serve (SetServeStarter)
+http --> quotesdb : quotes ui + api
+http --> graphdb : canon explorer (via pointer)
+http --> duck : analytics console
+http --> static : vendored assets
+user --> http : browser
+user ..> scnet : citation fallback link
+@enduml
