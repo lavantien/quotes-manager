@@ -90,6 +90,53 @@ func TestServeServesAndShutsDown(t *testing.T) {
 	}
 }
 
+func TestServeMergedUnknownPaths(t *testing.T) {
+	addr, stop := startMerged(t)
+	defer func() {
+		if err := stop(); err != nil {
+			t.Fatalf("serveMerged returned %v on graceful shutdown", err)
+		}
+	}()
+	client := &http.Client{Timeout: 2 * time.Second}
+	base := "http://" + addr
+	waitForServer(t, client, base+"/")
+
+	resp, err := client.Get(base + "/no-such-page")
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("GET /no-such-page = %d, want 404", resp.StatusCode)
+	}
+	if !strings.Contains(string(raw), `href="/dashboard"`) {
+		t.Errorf("404 body missing the dashboard back-link")
+	}
+	if strings.Contains(string(raw), `id="quote-list"`) {
+		t.Errorf("404 body served the quotes home")
+	}
+
+	req, err := http.NewRequest(http.MethodPost, base+"/no-such-page", strings.NewReader(""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("POST /no-such-page = %d, want 405", resp.StatusCode)
+	}
+	if allow := resp.Header.Get("Allow"); !strings.Contains(allow, "GET") {
+		t.Errorf("POST /no-such-page: Allow = %q, want GET listed", allow)
+	}
+}
+
 func TestServeMergedComposition(t *testing.T) {
 	addr, stop := startMerged(t)
 	defer func() {

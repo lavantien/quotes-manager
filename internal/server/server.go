@@ -1,10 +1,12 @@
 package server
 
 import (
+	"bytes"
 	"html/template"
 	"log"
 	"net/http"
 
+	canonweb "github.com/lavantien/quotes-manager/internal/canon/web"
 	"github.com/lavantien/quotes-manager/internal/store"
 )
 
@@ -37,7 +39,7 @@ func (s *Server) routes() *http.ServeMux {
 }
 
 func (s *Server) RegisterRoutes(m *http.ServeMux) {
-	m.HandleFunc("GET /", s.index)
+	m.HandleFunc("GET /", s.rootIndex)
 	m.HandleFunc("GET /quotes", s.listFragment)
 	m.HandleFunc("GET /quotes/new", s.newForm)
 	m.HandleFunc("GET /quotes/import/form", s.importQuotesForm)
@@ -88,6 +90,29 @@ func cacheStatic(h http.Handler) http.Handler {
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		h.ServeHTTP(w, r)
 	})
+}
+
+func (s *Server) rootIndex(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/":
+		s.index(w, r)
+	case "/favicon.ico":
+		w.WriteHeader(http.StatusNoContent)
+	default:
+		s.renderNotFound(w, r)
+	}
+}
+
+func (s *Server) renderNotFound(w http.ResponseWriter, r *http.Request) {
+	var buf bytes.Buffer
+	page := canonweb.NotFoundPage{Page: canonweb.Page{Title: "not found"}, Path: r.URL.Path}
+	if err := canonweb.Render(&buf, canonweb.PageNotFound, page); err != nil {
+		serverError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusNotFound)
+	_, _ = w.Write(buf.Bytes())
 }
 
 func (s *Server) render(w http.ResponseWriter, name string, data any) {
