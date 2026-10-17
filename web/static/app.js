@@ -15,8 +15,6 @@
   function inputValue(name) { var el = document.querySelector('input[name="' + name + '"]'); return el ? el.value : ""; }
   function ctxQuery() { return "?cat=" + currentCat() + "&col=" + currentCol(); }
 
-  // Toggle the bulk/delete/insert affordances based on whether any root quote
-  // is checked.
   function refreshBulk() {
     var any = selectedIds().length > 0;
     document.querySelectorAll('[data-action="bulk-delete"], [data-action="new-collection"]')
@@ -26,12 +24,6 @@
     });
   }
 
-  // Sync the two columns' header rows (.zone__head, .zone__toolbar) to the
-  // taller of the pair so the divider lines stay aligned across columns,
-  // regardless of content or htmx swaps. min-height (not height) so a row may
-  // still grow; the inline value is reset first so the measurement reflects the
-  // natural height. Guarded so the empty-collection state (one toolbar) and any
-  // transient measurement error can never break the rest of the IIFE.
   function equalizeRow(sel) {
     var els = Array.prototype.slice.call(document.querySelectorAll(sel));
     if (els.length < 2) { els.forEach(function (e) { e.style.minHeight = ""; }); return; }
@@ -39,7 +31,7 @@
       els.forEach(function (e) { e.style.minHeight = ""; });
       var max = Math.max.apply(null, els.map(function (e) { return e.offsetHeight; }));
       els.forEach(function (e) { e.style.minHeight = max + "px"; });
-    } catch (err) { /* never break the caller */ }
+    } catch (err) {}
   }
   function equalizeHeaders() {
     equalizeRow(".zone__head");
@@ -53,9 +45,6 @@
     setTimeout(function () { btn.textContent = orig; btn.disabled = false; }, 1200);
   }
 
-  // copyFromUrl writes url's text to the clipboard. The write is started
-  // synchronously (within the user gesture) by handing ClipboardItem a promise
-  // for the data, so transient activation is not lost while the text is fetched.
   function copyFromUrl(url) {
     var data = fetch(url).then(function (r) { return r.text(); })
       .then(function (t) { return new Blob([t], { type: "text/plain" }); });
@@ -66,10 +55,6 @@
       .then(function (t) { return navigator.clipboard.writeText(t); });
   }
 
-  // applyFragments parses an HTML response and replaces every element in the
-  // current document whose id matches a top-level element in the response. Used
-  // for mutation responses that bundle a primary target with out-of-band swaps
-  // (e.g. the refreshed zone plus a rail).
   function applyFragments(html) {
     var tpl = document.createElement("template");
     tpl.innerHTML = html.trim();
@@ -178,8 +163,6 @@
     if (action === "rename-collection") { startRename(btn, "collection"); }
 
     if (action === "focus-quote") {
-      // Jump to the first (representative) duplicate of its group. The link's
-      // href ("/#quote-{id}") is the no-JS fallback; with JS we swap in place.
       e.preventDefault();
       var focusId = btn.dataset.id;
       var reveal = function () { flashQuote(focusId); };
@@ -187,8 +170,6 @@
       if (zone && zone.dataset.cat === "0" && document.getElementById("quote-" + focusId)) {
         reveal();
       } else {
-        // Ensure Home (all quotes) is loaded, dropping any category filter so the
-        // representative is guaranteed to be in the DOM.
         fetch("/pane/root?col=" + currentCol())
           .then(function (r) { return r.ok ? r.text() : ""; })
           .then(function (html) { if (html) { applyFragments(html); reveal(); } });
@@ -196,8 +177,6 @@
     }
   });
 
-  // flashQuote scrolls a quote into view and briefly highlights it, used both by
-  // the duplicate "focus" action and after a re-sorting edit.
   function flashQuote(id) {
     var el = document.getElementById("quote-" + id);
     if (!el) return;
@@ -206,8 +185,6 @@
     setTimeout(function () { el.classList.remove("is-flash"); }, 1600);
   }
 
-  // flashFromList highlights the quote a freshly swapped #quote-list was marked
-  // with (set by an edit that may have re-sorted the block).
   function flashFromList() {
     var list = document.getElementById("quote-list");
     if (!list) return;
@@ -218,9 +195,6 @@
     }
   }
 
-  // Inline rename (category or collection): swap the link for an input, commit
-  // on Enter/blur, then refresh the matching rail (and the collection zone if
-  // the renamed collection is currently active).
   function startRename(btn, kind) {
     var row = btn.closest(".rail__row");
     if (!row || row.querySelector(".rail__rename")) return;
@@ -278,7 +252,6 @@
       .then(function (html) { if (html) applyFragments(html); });
   }
 
-  // Form submissions that return a rail (and possibly an OOB chip/zone).
   document.addEventListener("submit", async function (e) {
     var form = e.target.closest && e.target.closest("form[data-action]");
     if (!form) return;
@@ -317,7 +290,6 @@
     }
   });
 
-  // Clear the create form after a successful add, so several can be added quickly.
   document.body.addEventListener("htmx:afterRequest", function (e) {
     var form = e.detail && e.detail.elt;
     if (form && form.tagName === "FORM" && form.getAttribute("hx-post") === "/quotes" && e.detail.successful) {
@@ -325,15 +297,12 @@
     }
   });
 
-  // After any htmx swap (zone/rail selection), re-evaluate selection state and
-  // re-sync header row heights (a swap may replace a whole .zone section).
   document.body.addEventListener("htmx:afterSwap", function () {
     refreshBulk();
     equalizeHeaders();
     flashFromList();
   });
 
-  // --- drag-and-drop reorder within the active collection ---
   var dragId = null;
 
   document.addEventListener("dragstart", function (e) {
