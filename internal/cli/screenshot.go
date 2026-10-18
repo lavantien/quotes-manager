@@ -70,7 +70,7 @@ var journeyShots = []Shot{
 	{File: "15-canon-graph-word.png", Path: "/graph?dataset=word&param=dhamma", Wait: "#graph-canvas canvas"},
 	{File: "16-canon-graph-coverage.png", Path: "/graph?dataset=coverage&param=mn", Wait: "#graph-canvas canvas"},
 	{File: "17-canon-analytics.png", Path: "/analytics?aggregate=top-headwords", Wait: ".table"},
-	{File: "18-canon-pipeline.png", Path: "/pipeline", Wait: ".log", Steps: []ShotStep{
+	{File: "18-canon-pipeline.png", Path: "/pipeline", Wait: "tr.log-line", Steps: []ShotStep{
 		{Action: "click", Sel: ".stage-button"},
 	}},
 	{File: "19-canon-discrepancies.png", Path: "/discrepancies", Wait: ".table"},
