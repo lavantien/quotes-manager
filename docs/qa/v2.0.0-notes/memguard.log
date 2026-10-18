@@ -1,0 +1,30 @@
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 16GB -poll 2s -for 0
+01:04:22 memcapmon: cap 17179869184 bytes, poll 2s, match "quotes-manager|qm[.]exe|mutation-artifacts|mutator|(^|[\\\\/])(go|compile[0-9a-z]*|link|cgo|gcc|g\\+\\+|make)(\\.exe)?$|[.]test[.]exe$"
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 16GB -poll 2s -for 0
+06:10:49 memcapmon: cap 17179869184 bytes, poll 2s, match "quotes-manager|qm[.]exe|mutation-artifacts|mutator|(^|[\\\\/])(go|compile[0-9a-z]*|link|cgo|gcc|g\\+\\+|make)(\\.exe)?$|[.]test[.]exe$"
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 16GB -poll 2s -for 0
+11:10:50 memcapmon: cap 17179869184 bytes, poll 2s, match "quotes-manager|qm[.]exe|mutation-artifacts|mutator|(^|[\\\\/])(go|compile[0-9a-z]*|link|cgo|gcc|g\\+\\+|make)(\\.exe)?$|[.]test[.]exe$"
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 16GB -poll 2s -for 0
+11:29:18 memcapmon: cap 17179869184 bytes, poll 2s, match "quotes-manager|qm[.]exe|mutation-artifacts|mutator|(^|[\\\\/])(go|compile[0-9a-z]*|link|cgo|gcc|g\\+\\+|make)(\\.exe)?$|[.]test[.]exe$"
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 16GB -poll 2s -for 0
+12:00:45 memcapmon: cap 17179869184 bytes, poll 2s, match "quotes-manager|qm[.]exe|mutation-artifacts|mutator|(^|[\\\\/])(go|compile[0-9a-z]*|link|cgo|gcc|g\\+\\+|make)(\\.exe)?$|[.]test[.]exe$"
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 16GB -poll 2s -for 0
+12:49:15 memcapmon: cap 17179869184 bytes, poll 2s, match "quotes-manager|qm[.]exe|mutation-artifacts|mutator|(^|[\\\\/])(go|compile[0-9a-z]*|link|cgo|gcc|g\\+\\+|make)(\\.exe)?$|[.]test[.]exe$"
+12:49:25 cap breach: total 18853548032 over 17179869184, killing pid 52432 server.test.exe (17770733568 bytes)
+12:49:26 SURVIVOR: pid 52432 still present after kill
+12:49:26 killed 1 processes in offender tree
+12:58:08 cap breach: total 19181707264 over 17179869184, killing pid 27928 server.test.exe (17974996992 bytes)
+12:58:08 SURVIVOR: pid 27928 still present after kill
+12:58:08 killed 1 processes in offender tree
+13:03:56 snapshot: The paging file is too small for this operation to complete.
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 16GB -poll 2s -for 0 -root C:/Users/lavantien/dev/github/quotes-manager
+13:20:39 memcapmon: cap 17179869184 bytes, poll 2s, root "C:/Users/lavantien/dev/github/quotes-manager"
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 16GB -poll 2s -for 0 -root C:/Users/lavantien/dev/github/quotes-manager
+15:15:17 memcapmon: cap 17179869184 bytes, poll 2s, root "C:/Users/lavantien/dev/github/quotes-manager"
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 16GB -poll 2s -for 0 -root C:/Users/lavantien/dev/github/quotes-manager
+16:33:33 memcapmon: cap 17179869184 bytes, poll 2s, root "C:/Users/lavantien/dev/github/quotes-manager"
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 16GB -poll 2s -for 0 -root C:/Users/lavantien/dev/github/quotes-manager
+17:54:46 memcapmon: cap 17179869184 bytes, poll 2s, root "C:/Users/lavantien/dev/github/quotes-manager"
+CGO_ENABLED=1 go run ./tools/memcapmon -cap 8GB -poll 2s -for 0 -root C:/Users/lavantien/dev/github/quotes-manager
+22:57:05 memcapmon: cap 8589934592 bytes, poll 2s, root "C:/Users/lavantien/dev/github/quotes-manager"
+make: *** [makefile:241: monitor] Error 127
