@@ -25,23 +25,55 @@ const (
 	captureSettle = 300 * time.Millisecond
 )
 
-type Shot struct {
-	File string
-	Path string
-	Wait string
+type ShotStep struct {
+	Action string
+	Sel    string
+	Value  string
 }
+
+type Shot struct {
+	File  string
+	Path  string
+	Wait  string
+	Steps []ShotStep
+}
+
+type captureFunc func(url, wait string, steps []ShotStep) ([]byte, error)
 
 func Journey() []Shot { return slices.Clone(journeyShots) }
 
 var journeyShots = []Shot{
 	{File: "01-workspace-home.png", Path: "/", Wait: "#quote-list"},
-	{File: "02-workspace-collection.png", Path: "/?col=1", Wait: "#collection-zone"},
-	{File: "03-workspace-search.png", Path: "/?rq=buddha", Wait: "#quote-list"},
-	{File: "04-canon-dashboard.png", Path: "/dashboard", Wait: "section.stats"},
-	{File: "05-canon-texts.png", Path: "/texts", Wait: "ul.tree"},
-	{File: "06-canon-text.png", Path: "/texts/mn1", Wait: ".segment"},
-	{File: "07-canon-words.png", Path: "/words?form=dhamma", Wait: ".entry"},
-	{File: "08-canon-graph.png", Path: "/graph?dataset=word&param=dhamma", Wait: "#graph-canvas canvas"},
+	{File: "02-workspace-category.png", Path: "/?cat=1", Wait: ".quote"},
+	{File: "03-workspace-collection.png", Path: "/?col=1", Wait: "#collection-zone"},
+	{File: "04-workspace-search.png", Path: "/?rq=buddha", Wait: "#quote-list"},
+	{File: "05-workspace-new-form.png", Path: "/", Wait: ".quote-form", Steps: []ShotStep{
+		{Action: "click", Sel: `button[hx-get="/quotes/new"]`},
+	}},
+	{File: "06-workspace-import-form.png", Path: "/", Wait: "#import-form", Steps: []ShotStep{
+		{Action: "click", Sel: `button[hx-get="/quotes/import/form"]`},
+	}},
+	{File: "07-workspace-check-ids.png", Path: "/", Wait: ".check__list", Steps: []ShotStep{
+		{Action: "click", Sel: `button[hx-get^="/pane/check"]`},
+		{Action: "fill", Sel: "#check-input", Value: "MN 22\nMN 51\nXX 9.9"},
+		{Action: "click", Sel: `.check-form button[type="submit"]`},
+	}},
+	{File: "08-workspace-edit-form.png", Path: "/", Wait: ".quote-form", Steps: []ShotStep{
+		{Action: "click", Sel: `button[hx-get$="/edit"]`},
+	}},
+	{File: "09-canon-dashboard.png", Path: "/dashboard", Wait: "section.stats"},
+	{File: "10-canon-texts.png", Path: "/texts", Wait: "ul.tree"},
+	{File: "11-canon-text.png", Path: "/texts/mn1", Wait: ".segment"},
+	{File: "12-canon-search.png", Path: "/search?text=deep&lang=en", Wait: ".hit"},
+	{File: "13-canon-words.png", Path: "/words?form=dhamma", Wait: ".entry"},
+	{File: "14-canon-word.png", Path: "/words/eva", Wait: ".entry"},
+	{File: "15-canon-graph-word.png", Path: "/graph?dataset=word&param=dhamma", Wait: "#graph-canvas canvas"},
+	{File: "16-canon-graph-coverage.png", Path: "/graph?dataset=coverage", Wait: "#graph-canvas canvas"},
+	{File: "17-canon-analytics.png", Path: "/analytics?aggregate=top-headwords", Wait: ".table"},
+	{File: "18-canon-pipeline.png", Path: "/pipeline", Wait: ".log", Steps: []ShotStep{
+		{Action: "click", Sel: ".stage-button"},
+	}},
+	{File: "19-canon-discrepancies.png", Path: "/discrepancies", Wait: ".table"},
 }
 
 func init() {
@@ -50,7 +82,7 @@ func init() {
 
 var (
 	screenshotEnv     func(cfg *config.Config) (string, func() error, error)
-	screenshotCapture = captureScreenshot
+	screenshotCapture captureFunc = captureScreenshot
 )
 
 func SetScreenshotEnv(f func(cfg *config.Config) (string, func() error, error)) {
@@ -80,7 +112,7 @@ func runScreenshot(_ context.Context, cfg *config.Config, args []string) error {
 	return nil
 }
 
-func writeJourney(out io.Writer, dir, baseURL string, capture func(url, wait string) ([]byte, error)) error {
+func writeJourney(out io.Writer, dir, baseURL string, capture captureFunc) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("mkdir %s: %w", dir, err)
 	}
@@ -100,30 +132,47 @@ func writeJourney(out io.Writer, dir, baseURL string, capture func(url, wait str
 	return nil
 }
 
-func captureRetry(out io.Writer, shot Shot, url string, capture func(url, wait string) ([]byte, error)) ([]byte, error) {
-	buf, err := capture(url, shot.Wait)
+func captureRetry(out io.Writer, shot Shot, url string, capture captureFunc) ([]byte, error) {
+	buf, err := capture(url, shot.Wait, shot.Steps)
 	if err == nil {
 		return buf, nil
 	}
 	_, _ = fmt.Fprintf(out, "capture %s (%s) attempt 1 failed: %v; retrying once\n", shot.File, url, err)
-	buf, err = capture(url, shot.Wait)
+	buf, err = capture(url, shot.Wait, shot.Steps)
 	if err != nil {
 		return nil, fmt.Errorf("capture %s (%s) failed after retry: %w", shot.File, url, err)
 	}
 	return buf, nil
 }
 
-func captureScreenshot(url, wait string) ([]byte, error) {
+func stepActions(steps []ShotStep) ([]chromedp.Action[chromedp.Void], error) {
+	acts := make([]chromedp.Action[chromedp.Void], 0, len(steps))
+	for _, st := range steps {
+		switch st.Action {
+		case "click":
+			acts = append(acts, chromedp.Click(chromedp.CSS(st.Sel)))
+		case "fill":
+			acts = append(acts, chromedp.SendKeys(chromedp.CSS(st.Sel), st.Value))
+		default:
+			return nil, fmt.Errorf("screenshot step %q: unsupported action", st.Action)
+		}
+	}
+	return acts, nil
+}
+
+func captureScreenshot(url, wait string, steps []ShotStep) ([]byte, error) {
 	ctx, cancel := browserContext()
 	defer cancel()
+	acts, err := stepActions(steps)
+	if err != nil {
+		return nil, err
+	}
 	return capturePage(ctx,
 		func(ctx context.Context) error {
-			return chromedp.Do(ctx,
-				chromedp.EmulateViewport(viewportW, viewportH),
-				chromedp.Navigate(url),
-				chromedp.WaitVisible(chromedp.CSS(wait)),
-				chromedp.Sleep(captureSettle),
-			)
+			run := []chromedp.Action[chromedp.Void]{chromedp.EmulateViewport(viewportW, viewportH), chromedp.Navigate(url)}
+			run = append(run, acts...)
+			run = append(run, chromedp.WaitVisible(chromedp.CSS(wait)), chromedp.Sleep(captureSettle))
+			return chromedp.Do(ctx, run...)
 		},
 		func(ctx context.Context) ([]byte, error) {
 			return chromedp.Run(ctx, chromedp.CaptureScreenshot())

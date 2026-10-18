@@ -8,12 +8,16 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/lavantien/quotes-manager/internal/config"
 )
+
+var readmePictureRe = regexp.MustCompile(`project-pictures/([0-9]{2}-[a-z0-9-]+\.png)`)
 
 func TestBrowserPathEnvOverride(t *testing.T) {
 	t.Setenv("QUOTES_BROWSER", "/custom/browser")
@@ -90,16 +94,22 @@ func TestJourneyShotsNumberingAndCoverage(t *testing.T) {
 			t.Errorf("duplicate journey file %q", s.File)
 		}
 		files[s.File] = true
+		if len(s.Steps) > 0 {
+			continue
+		}
 		if paths[s.Path] {
-			t.Errorf("duplicate journey path %q", s.Path)
+			t.Errorf("duplicate plain journey path %q", s.Path)
 		}
 		paths[s.Path] = true
 	}
-	var home, collection, search, dashboard, texts, text, words, graph bool
+	var home, category, collection, search, dashboard, texts, text, canonSearch, words, word bool
+	var wordGraph, coverageGraph, analytics, pipeline, discrepancies bool
 	for _, s := range journeyShots {
 		switch {
 		case s.Path == "/":
 			home = true
+		case strings.HasPrefix(s.Path, "/?cat="):
+			category = true
 		case s.Path == "/?col=1":
 			collection = true
 		case strings.HasPrefix(s.Path, "/?rq="):
@@ -110,16 +120,34 @@ func TestJourneyShotsNumberingAndCoverage(t *testing.T) {
 			texts = true
 		case strings.HasPrefix(s.Path, "/texts/"):
 			text = true
+		case strings.HasPrefix(s.Path, "/search"):
+			canonSearch = true
 		case strings.HasPrefix(s.Path, "/words"):
-			words = true
-		case strings.HasPrefix(s.Path, "/graph"):
-			graph = true
+			if strings.HasPrefix(s.Path, "/words/") {
+				word = true
+			} else {
+				words = true
+			}
+		case strings.HasPrefix(s.Path, "/graph?dataset=word"):
+			wordGraph = true
+		case strings.HasPrefix(s.Path, "/graph?dataset=coverage"):
+			coverageGraph = true
+		case strings.HasPrefix(s.Path, "/analytics"):
+			analytics = true
+		case s.Path == "/pipeline":
+			pipeline = true
+		case s.Path == "/discrepancies":
+			discrepancies = true
 		}
 	}
 	for name, ok := range map[string]bool{
-		"workspace home": home, "workspace collection": collection, "workspace search": search,
+		"workspace home": home, "workspace category": category,
+		"workspace collection": collection, "workspace search": search,
 		"canon dashboard": dashboard, "canon texts": texts, "canon text page": text,
-		"canon words": words, "canon graph": graph,
+		"canon search": canonSearch, "canon words": words, "canon word page": word,
+		"canon word graph": wordGraph, "canon coverage graph": coverageGraph,
+		"canon analytics": analytics, "canon pipeline": pipeline,
+		"canon discrepancies": discrepancies,
 	} {
 		if !ok {
 			t.Errorf("journey missing the %s surface", name)
@@ -127,7 +155,72 @@ func TestJourneyShotsNumberingAndCoverage(t *testing.T) {
 	}
 }
 
-func installScreenshotDeps(t *testing.T, baseURL string, capture func(url, wait string) ([]byte, error)) {
+func TestJourneyShotsMatchReadmePictures(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "readme.md"))
+	if err != nil {
+		t.Fatalf("read readme: %v", err)
+	}
+	matches := readmePictureRe.FindAllStringSubmatch(string(raw), -1)
+	if len(matches) == 0 {
+		t.Fatal("readme references no project-pictures PNG")
+	}
+	if len(matches) != len(journeyShots) {
+		t.Fatalf("readme pictures = %d, journeyShots = %d, want equal counts", len(matches), len(journeyShots))
+	}
+	for i, m := range matches {
+		if journeyShots[i].File != m[1] {
+			t.Errorf("journeyShots[%d].File = %q, readme wants %q", i, journeyShots[i].File, m[1])
+		}
+	}
+}
+
+func TestJourneyInteractiveShotsCarrySteps(t *testing.T) {
+	interactive := map[string]bool{
+		"05-workspace-new-form.png":    true,
+		"06-workspace-import-form.png": true,
+		"07-workspace-check-ids.png":   true,
+		"08-workspace-edit-form.png":   true,
+		"18-canon-pipeline.png":        true,
+	}
+	seen := 0
+	for _, s := range journeyShots {
+		if interactive[s.File] {
+			seen++
+			if len(s.Steps) == 0 {
+				t.Errorf("%s must define interaction steps", s.File)
+			}
+			continue
+		}
+		if len(s.Steps) != 0 {
+			t.Errorf("%s must navigate and wait only, got %d steps", s.File, len(s.Steps))
+		}
+	}
+	if seen != len(interactive) {
+		t.Errorf("interactive frames found = %d, want %d", seen, len(interactive))
+	}
+}
+
+func TestJourneyCheckIdsSteps(t *testing.T) {
+	var shot *Shot
+	for i := range journeyShots {
+		if journeyShots[i].File == "07-workspace-check-ids.png" {
+			shot = &journeyShots[i]
+		}
+	}
+	if shot == nil {
+		t.Fatal("journey missing 07-workspace-check-ids.png")
+	}
+	want := []ShotStep{
+		{Action: "click", Sel: `button[hx-get^="/pane/check"]`},
+		{Action: "fill", Sel: "#check-input", Value: "MN 22\nMN 51\nXX 9.9"},
+		{Action: "click", Sel: `.check-form button[type="submit"]`},
+	}
+	if !reflect.DeepEqual(shot.Steps, want) {
+		t.Errorf("07-workspace-check-ids steps = %#v, want %#v", shot.Steps, want)
+	}
+}
+
+func installScreenshotDeps(t *testing.T, baseURL string, capture captureFunc) {
 	t.Helper()
 	oldEnv := screenshotEnv
 	screenshotEnv = func(*config.Config) (string, func() error, error) {
@@ -149,8 +242,8 @@ func TestRunScreenshotWritesNumberedJourney(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.Quotes.PicturesDir = dir
 	var seen []string
-	installScreenshotDeps(t, "http://127.0.0.1:1", func(url, wait string) ([]byte, error) {
-		seen = append(seen, url+" "+wait)
+	installScreenshotDeps(t, "http://127.0.0.1:1", func(url, wait string, steps []ShotStep) ([]byte, error) {
+		seen = append(seen, url+" "+wait+" "+fmt.Sprint(len(steps)))
 		return []byte("PNG-" + wait), nil
 	})
 	if err := runScreenshot(context.Background(), cfg, nil); err != nil {
@@ -160,7 +253,7 @@ func TestRunScreenshotWritesNumberedJourney(t *testing.T) {
 		t.Fatalf("captures = %d, want %d", len(seen), len(journeyShots))
 	}
 	for i, s := range journeyShots {
-		want := "http://127.0.0.1:1" + s.Path + " " + s.Wait
+		want := "http://127.0.0.1:1" + s.Path + " " + s.Wait + " " + fmt.Sprint(len(s.Steps))
 		if seen[i] != want {
 			t.Errorf("capture %d = %q, want %q", i, seen[i], want)
 		}
@@ -180,7 +273,7 @@ func TestRunScreenshotOutFlagOverridesPicturesDir(t *testing.T) {
 	cfg := config.Defaults()
 	cfg.Quotes.PicturesDir = filepath.Join(t.TempDir(), "default-pics")
 	dir := filepath.Join(t.TempDir(), "override-pics")
-	installScreenshotDeps(t, "http://127.0.0.1:1", func(_, wait string) ([]byte, error) {
+	installScreenshotDeps(t, "http://127.0.0.1:1", func(_, wait string, _ []ShotStep) ([]byte, error) {
 		return []byte("PNG-" + wait), nil
 	})
 	if err := runScreenshot(context.Background(), cfg, []string{"--out", dir}); err != nil {
@@ -208,7 +301,7 @@ func TestRunScreenshotUnwiredEnvFails(t *testing.T) {
 
 func TestRunScreenshotCaptureErrorStopsJourney(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "pics")
-	installScreenshotDeps(t, "http://127.0.0.1:1", func(string, string) ([]byte, error) {
+	installScreenshotDeps(t, "http://127.0.0.1:1", func(string, string, []ShotStep) ([]byte, error) {
 		return nil, errors.New("no browser")
 	})
 	err := runScreenshot(context.Background(), &config.Config{Quotes: config.Quotes{PicturesDir: dir}}, nil)
@@ -231,7 +324,7 @@ func TestRunScreenshotRejectsUnexpectedArg(t *testing.T) {
 
 func TestCaptureRetrySucceedsOnSecondAttempt(t *testing.T) {
 	calls := 0
-	capture := func(string, string) ([]byte, error) {
+	capture := func(string, string, []ShotStep) ([]byte, error) {
 		calls++
 		if calls == 1 {
 			return nil, errors.New("browser hiccup")
@@ -249,7 +342,7 @@ func TestCaptureRetrySucceedsOnSecondAttempt(t *testing.T) {
 
 func TestCaptureRetryFailsAfterTwoAttempts(t *testing.T) {
 	calls := 0
-	capture := func(string, string) ([]byte, error) {
+	capture := func(string, string, []ShotStep) ([]byte, error) {
 		calls++
 		return nil, errors.New("no browser")
 	}
@@ -259,6 +352,31 @@ func TestCaptureRetryFailsAfterTwoAttempts(t *testing.T) {
 	}
 	if calls != 2 {
 		t.Errorf("captureRetry calls = %d, want exactly 2", calls)
+	}
+}
+
+func TestStepActionsBuildsClickAndFill(t *testing.T) {
+	acts, err := stepActions([]ShotStep{
+		{Action: "click", Sel: "button.a"},
+		{Action: "fill", Sel: "#b", Value: "MN 22\nMN 51"},
+		{Action: "click", Sel: "button.c"},
+	})
+	if err != nil {
+		t.Fatalf("stepActions: %v", err)
+	}
+	if len(acts) != 3 {
+		t.Errorf("stepActions len = %d, want 3", len(acts))
+	}
+}
+
+func TestStepActionsRejectsUnknownAction(t *testing.T) {
+	_, err := stepActions([]ShotStep{{Action: "hover", Sel: "#a"}})
+	if err == nil || !strings.Contains(err.Error(), "hover") {
+		t.Errorf("stepActions unknown action err = %v, want an error naming hover", err)
+	}
+	acts, err := stepActions(nil)
+	if err != nil || len(acts) != 0 {
+		t.Errorf("stepActions(nil) = %v, %v, want empty and nil", acts, err)
 	}
 }
 
