@@ -231,7 +231,7 @@ coverage: ## recompute Go test coverage and refresh the README coverage badge
 	$(GO) run $(TAGS) ./cmd/qm coverage -profile=coverage.out -readme=readme.md
 	rm -f coverage.out
 
-screenshots: build ## capture the numbered UI journey into project-pictures/ (needs git, Chrome or Edge)
+screenshots: build ## capture the UI journey into project-pictures/ (needs git, Chrome or Edge)
 	./$(BIN) screenshot
 
 fixture: ## regenerate the clone-of-main test fixture (internal/store/storetest/testdata)

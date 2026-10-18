@@ -13,7 +13,6 @@
 5. [Surfaces](#surfaces)
 6. [Data and formats](#data-and-formats)
 7. [QA harness](#qa-harness)
-8. [Build logs](#build-logs)
 
 ## Pictures
 
@@ -93,43 +92,43 @@
 
     the discrepancy browser at `/discrepancies`, triangulation findings by severity
 
-`make screenshots` regenerates all nineteen files. It builds `dist/qm.exe`, serves the seeded quotes app plus a hermetic canon instance in-process, and captures each page at 1440x900 through Chrome or Edge (`QUOTES_BROWSER` overrides the binary).
+`make screenshots` regenerates the whole set. It builds `dist/qm.exe`, serves the seeded quotes app plus a hermetic canon instance in-process, and captures each page at 1440x900 through Chrome or Edge (`QUOTES_BROWSER` overrides the binary).
 
 ## Architecture and flows
 
-All seven diagrams lay out left to right. `make diagrams` regenerates them from the committed `docs/diagrams/*.puml` sources with the sha256-pinned plantuml 1.2026.8 jar, java required, and prints a docker fallback command when java is missing.
+All diagrams lay out left to right. `make diagrams` regenerates them from the committed `docs/diagrams/*.puml` sources, java required, and prints a docker fallback command when java is missing.
 
 ![system overview](docs/diagrams/01-system-overview.png)
 
-01 the system overview, one binary over two UIs and three stores
+the system overview, one binary over two UIs and three stores
 
 ![component graph](docs/diagrams/02-component-graph.png)
 
-02 the internal package dependency graph
+the internal package dependency graph
 
 ![data model](docs/diagrams/03-data-model.png)
 
-03 the data model, quotes db, canon graph db, duckdb sidecar
+the data model, quotes db, canon graph db, duckdb sidecar
 
 ![pipeline sequence](docs/diagrams/04-pipeline-sequence.png)
 
-04 the canon pipeline from sync to serve, the jobs runner, pointer following
+the canon pipeline from sync to serve, the jobs runner, pointer following
 
 ![quote create and import](docs/diagrams/05-quote-create-import.png)
 
-05 the quote create and import flows through the workspace
+the quote create and import flows through the workspace
 
 ![query format](docs/diagrams/06-query-format.png)
 
-06 qm query with the qm format, segments and search to canonical blocks
+qm query with the qm format, segments and search to canonical blocks
 
 ![cross-link navigation](docs/diagrams/07-crosslink-navigation.png)
 
-07 cross-link navigation, quote citations and pali words into canon pages
+cross-link navigation, quote citations and pali words into canon pages
 
 ## Local development
 
-Prerequisites: Go 1.27 (`go.mod` pins 1.27.2), a C toolchain for CGO (on Windows the Makefile pins the scoop mingw-winlibs UCRT gcc and exports `CC`/`CXX`), git, Chrome or Edge for screenshots, and Java or Docker for the plantuml diagrams.
+Prerequisites: Go (the toolchain pin lives in `go.mod`), a C toolchain for CGO (on Windows the Makefile pins the scoop mingw-winlibs UCRT gcc and exports `CC`/`CXX`), git, Chrome or Edge for screenshots, and Java or Docker for the plantuml diagrams.
 
 1. Clone and build:
 
@@ -171,7 +170,7 @@ make diagrams
 
 ## Production environment setup
 
-1. Config file. `qm` layers built-in defaults, then an optional JSON file (`--config file`, unknown fields rejected), then environment variables. The sections: `quotes` (db_path, dumps_dir, seed_file, export_file, pictures_dir), `server` (addr, default_limit, max_limit, graph_max_nodes, graph_max_edges, job_log_lines, sql_console, analytics_threads, analytics_memory_gb, read, write, idle, and shutdown timeouts), `canon.repos.bilara` and `canon.repos.editions` (url, branch, dir each), `canon.bilara` (root_lang, root_edition, trans_lang, authors, sparse_dirs, keep_regexes, max_range_expansion), `canon.editions` (authors, sparse_dirs, keep_regexes), `canon.dpd` (url, sha256, max_tarball_bytes, max_db_bytes, timeout_seconds, min_token_length, unknown_warn_per_muid), `canon.paths` (data_dir, e2e_dir, dist_dir, db_dir, manifests_dir, reports_dir), `canon.load` (batch_size), `canon.triangulate` (severity map over the 13 check ids, empty_warn_per_muid, similarity_min, detail_sample_max), `canon.e2e` (muids), `canon.export` (parquet).
+1. Config file. `qm` layers built-in defaults, then an optional JSON file (`--config file`, unknown fields rejected), then environment variables. The sections: `quotes` (db_path, dumps_dir, seed_file, export_file, pictures_dir), `server` (addr, default_limit, max_limit, graph_max_nodes, graph_max_edges, job_log_lines, sql_console, analytics_threads, analytics_memory_gb, read, write, idle, and shutdown timeouts), `canon.repos.bilara` and `canon.repos.editions` (url, branch, dir each), `canon.bilara` (root_lang, root_edition, trans_lang, authors, sparse_dirs, keep_regexes, max_range_expansion), `canon.editions` (authors, sparse_dirs, keep_regexes), `canon.dpd` (url, sha256, max_tarball_bytes, max_db_bytes, timeout_seconds, min_token_length, unknown_warn_per_muid), `canon.paths` (data_dir, e2e_dir, dist_dir, db_dir, manifests_dir, reports_dir), `canon.load` (batch_size), `canon.triangulate` (severity map over the triangulation check ids, empty_warn_per_muid, similarity_min, detail_sample_max), `canon.e2e` (muids), `canon.export` (parquet).
 
 2. Environment overrides, the complete set the loader honors:
 
@@ -234,7 +233,7 @@ Root flags: `--config file` and `-v` (verbose). `qm` with no command prints the 
 | qm serve | --addr --db | serve the api and frontend |
 | qm extract | none | dumps to seed sql plus the shortest-first export |
 | qm fixture | --db --out | regenerate the clone-of-main test fixture |
-| qm screenshot | --out dir | capture the numbered UI journey |
+| qm screenshot | --out dir | capture the UI journey pictures |
 | qm coverage | --profile --readme | refresh the readme coverage badge |
 | qm version | none | print version and schema version |
 
@@ -376,7 +375,7 @@ seed          delete the database so the next 'make run' re-seeds it
 tidy          go mod tidy
 clean         remove generated artifacts (database, binaries)
 coverage      recompute Go test coverage and refresh the README coverage badge
-screenshots   capture the numbered UI journey into project-pictures/ (needs git, Chrome or Edge)
+screenshots   capture the UI journey into project-pictures/ (needs git, Chrome or Edge)
 fixture       regenerate the clone-of-main test fixture (internal/store/storetest)
 monitor       memory guard over project processes (make monitor MONITOR_FOR=5s)
 ```
@@ -422,33 +421,4 @@ Attribution. The mirrors and the dpd database carry their own licenses and autho
 
 ## QA harness
 
-The verification chain runs through make in order, committing at each green step. The numbers below ran on code HEAD 197c975, recorded in [docs/qa/baselines.md](docs/qa/baselines.md) with the logs beside it in `docs/qa/notes/`.
-
-| gate | command | result |
-|---|---|---|
-| full suite | make test | 30/30 test packages, 956 top-level + 678 subtest passes, 0 fail, 45s |
-| memory | make memtest | 3/3 targeted tests under GOMEMLIMIT=512MiB, 77s |
-| format | make fmt | green |
-| lint | make lint | green |
-| types | make typecheck | green |
-| size | make sloc | green |
-| fuzz | make fuzz | 25/25 targets, 0 FAIL, 8,937,664 execs, 10m16s |
-| mutation | make mutate | zero survivors across the 14 mutated packages (norm, bilara, editions, dpd, triangulate, canon server, jobs, analytics, export, quote, search, store, server, cli) |
-| hermetic e2e | make e2e-hermetic | internal/e2e 7/7 top-level including the crawl and the chromedp ui smoke, cli TestE2EHermetic, 0 fail 0 skip, 45s |
-| live e2e | make e2e | TestE2ELive, 7041 findings matching the C1 reference, live graph 3344 segments, 18s |
-| full chain | make verify | every stage above green |
-
-## Build logs
-
-```text
-quality chain, 2026-10-17, code HEAD 197c975
-test          30/30 packages, 956 + 678 passes, 0 fail     45s
-memtest       3/3 under GOMEMLIMIT=512MiB                  77s
-static        fmt, lint, typecheck, sloc all green         25s
-fuzz          25/25 targets, 8,937,664 execs, 0 FAIL       10m16s
-mutate        zero survivors across 14 packages            see baselines
-e2e-hermetic  7/7 internal/e2e + cli hermetic pass         45s
-e2e live      7041 findings matching the C1 reference      18s
-```
-
-Full stage history in `docs/qa/notes/t5v3.md`, per-stage logs as `t5v3-*.log` in the same directory.
+Every change runs the verification chain through make, committing at each green step. The gates in order: `make test` (full suite), `make race`, `make fmt`, `make lint`, `make typecheck`, `make sloc`, `make fuzz`, `make mutate`, `make e2e-hermetic`, then `make e2e` for the live network pass gated by `QM_E2E_LIVE`. `make verify` chains the whole sequence, and `make memtest` re-runs the hermetic passes under a hard memory limit. Stage baselines and per-run logs are recorded under [docs/qa](docs/qa/baselines.md).
