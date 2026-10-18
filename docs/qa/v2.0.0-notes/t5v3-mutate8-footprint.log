@@ -1,0 +1,17 @@
+sampler start 06:13:12 scope: every *.test.exe under TEMP go-build, reporting only
+06:13:33 new max 0.1 GB
+06:13:38 new max 0.13 GB
+06:13:48 new max 0.25 GB
+06:14:04 new max 0.29 GB
+06:14:09 new max 0.31 GB
+06:21:18 new max 0.32 GB
+06:26:17 new max 0.32 GB
+06:31:59 new max 0.43 GB
+06:32:30 new max 2.37 GB
+06:32:35 new max 2.74 GB
+06:32:40 new max 2.88 GB
+06:32:45 new max 3.12 GB
+06:32:51 new max 3.25 GB
+06:33:17 new max 3.3 GB
+06:33:22 new max 3.39 GB
+sampler end 07:24:58 max observed 3.39 GB
