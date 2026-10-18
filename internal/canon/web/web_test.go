@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -512,11 +513,36 @@ func TestCanonPaperTheme(t *testing.T) {
 		t.Fatal(err)
 	}
 	css := string(raw)
-	if !strings.Contains(css, "var(--paper)") {
-		t.Error("canon.css must alias the shared paper tokens instead of redefining colors")
+	for _, alias := range []string{
+		"--bg: var(--paper)",
+		"--fg: var(--ink)",
+		"--muted: var(--ink-soft)",
+		"--border: var(--rule)",
+		"--card: var(--paper-tint)",
+		"--err: var(--danger)",
+	} {
+		if !strings.Contains(css, alias) {
+			t.Errorf("canon.css must alias %s onto the shared paper tokens", alias)
+		}
+	}
+	if strings.Contains(css, "--accent:") {
+		t.Error("canon.css must inherit --accent from app.css, not redefine it")
 	}
 	if strings.Contains(css, "prefers-color-scheme") {
 		t.Error("canon.css must not ship a dark mode block")
+	}
+	appRaw, err := fs.ReadFile(sub, "app.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defined := map[string]bool{}
+	for _, m := range regexp.MustCompile(`--[a-z-]+:`).FindAllString(css+string(appRaw), -1) {
+		defined[strings.TrimRight(m, ":")] = true
+	}
+	for _, m := range regexp.MustCompile(`var\((--[a-z-]+)\)`).FindAllStringSubmatch(css, -1) {
+		if !defined[m[1]] {
+			t.Errorf("canon.css consumes %s which neither canon.css nor app.css defines", m[1])
+		}
 	}
 }
 

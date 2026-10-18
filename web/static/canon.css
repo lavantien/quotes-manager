@@ -5,7 +5,7 @@
   --border: var(--rule);
   --card: var(--paper-tint);
   --ok: #4a7c59;
-  --warn: #a05f00;
+  --warn: #8a5100;
   --err: var(--danger);
 }
 
