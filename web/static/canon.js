@@ -1,31 +1,24 @@
-// sc-graph frontend: cytoscape rendering, node click-through routing, and
-// the append-only job log poller. Everything else on the pages is
-// server-rendered HTML plus htmx attributes; this file only adds what the
-// server cannot render.
 (function () {
   'use strict';
 
-  // Fixed palette per node data.type (model.NodeType values).
   var TYPE_COLORS = {
-    collection: '#8e8ef2',
-    division: '#6ea8fe',
-    text: '#4ec9b0',
-    segment: '#c586c0',
-    edition: '#b8b8b8',
-    source: '#b8b8b8',
-    headword: '#d7ba7d',
-    dpd_root: '#f2a8a8',
-    dpd_form: '#9e9e9e'
+    collection: '#9a6b3f',
+    division: '#b25a2a',
+    text: '#4a7c59',
+    segment: '#8a5a7f',
+    edition: '#9c9384',
+    source: '#9c9384',
+    headword: '#a8842c',
+    dpd_root: '#9a3b2f',
+    dpd_form: '#7a7268'
   };
 
   var TERMINAL_STATES = { done: true, error: true, canceled: true };
 
   function colorFor(type) {
-    return TYPE_COLORS[type] || '#8a8a8a';
+    return TYPE_COLORS[type] || '#a89f8d';
   }
 
-  // Segment node keys look like "pli:<muid>:<segkey>"; text node keys are
-  // the bare muid.
   function muidFromSegmentKey(key) {
     if (key.indexOf('pli:') !== 0) return null;
     var rest = key.slice(4);
@@ -41,8 +34,6 @@
       case 'text':
         return '/texts/' + encodeURIComponent(data.id);
       case 'headword':
-        // Labels carry display decorations ("lemma (count)" in root
-        // families); the id is the citation form.
         return '/words/' + encodeURIComponent(data.id.replace(/^dpd:/, ''));
       case 'dpd_root':
         return '/graph?dataset=root&param=' + encodeURIComponent(data.label || data.id);
@@ -68,7 +59,7 @@
         style: {
           'background-color': function (ele) { return colorFor(ele.data('type')); },
           'label': 'data(label)',
-          'color': '#e6e6e6',
+          'color': '#1c1a17',
           'font-size': 9,
           'text-valign': 'bottom',
           'text-wrap': 'ellipsis',
@@ -82,7 +73,7 @@
         style: {
           'width': 2,
           'opacity': 0.55,
-          'line-color': '#8a8a8a',
+          'line-color': '#a89f8d',
           'target-arrow-shape': 'triangle',
           'arrow-scale': 0.6,
           'curve-style': 'bezier'
@@ -95,13 +86,9 @@
     if (name === 'breadthfirst') {
       return { name: 'breadthfirst', directed: true, padding: 20, spacingFactor: 1.3, animate: false };
     }
-    // The concentric layout calls levelWidth as a function; a bare number
-    // crashes the layout ("levelWidth is not a function").
     return { name: 'concentric', padding: 20, levelWidth: function () { return 2; }, animate: false };
   }
 
-  // renderGraph mounts a cytoscape instance on container from a
-  // {elements, meta} payload and wires node click-through.
   function renderGraph(container, payload, layoutName) {
     if (typeof cytoscape === 'undefined') return null;
     var elements = (payload && payload.elements) || {};
@@ -129,7 +116,6 @@
     }
   }
 
-  // The /graph page: dataset picker drives a fetch of the JSON graph API.
   function initGraphPage() {
     var form = document.getElementById('graph-form');
     var canvas = document.getElementById('graph-canvas');
@@ -189,22 +175,16 @@
     if (initial) draw(initial, activeOption().getAttribute('data-layout'));
   }
 
-  // Mini graphs (word page neighborhood) render from data-graph-url.
   function initMiniGraphs() {
     var canvases = document.querySelectorAll('.graph-canvas[data-graph-url]');
     Array.prototype.forEach.call(canvases, function (el) {
       if (el.id === 'graph-canvas') return;
       fetchJSON(el.getAttribute('data-graph-url'))
         .then(function (payload) { renderGraph(el, payload, el.getAttribute('data-layout')); })
-        .catch(function () { /* leave the canvas empty */ });
+        .catch(function () {});
     });
   }
 
-  // The job status partial polls itself via htmx while queued or running;
-  // this loop keeps the log growing with after=<seq> and stops once the
-  // status element reports a terminal state. The tick is guarded by an
-  // in-flight flag so a slow response cannot double-append when the next
-  // interval fires before it resolves.
   function initJobLog() {
     var log = document.getElementById('job-log');
     if (!log || log.getAttribute('data-polling') !== 'true') return;
@@ -252,7 +232,7 @@
           });
           log.setAttribute('data-next-seq', String(next));
         })
-        .catch(function () { busy = false; /* retried on the next tick */ });
+        .catch(function () { busy = false; });
     }, 2000);
   }
 
@@ -262,7 +242,6 @@
     initJobLog();
   }
 
-  // A swapped-in pipeline panel brings a fresh log container; bind it.
   document.body.addEventListener('htmx:afterSwap', function () {
     initJobLog();
   });
