@@ -45,6 +45,8 @@ func buildScreenshotEnv(_ *config.Config) (string, func() error, error) {
 		{"sync", nil},
 		{"parse", nil},
 		{"load", nil},
+		{"triangulate", nil},
+		{"export", nil},
 	} {
 		if err := cli.RunStage(context.Background(), canonCfg, st.name, st.args, io.Discard); err != nil {
 			_ = cleanup()
@@ -108,6 +110,7 @@ func hermeticCanonConfig(tmp string) (*config.Config, error) {
 	cfg.Canon.Paths.ReportsDir = filepath.Join(work, "docs", "reports")
 	cfg.Canon.Dpd.URL = fileURL(dpdTar)
 	cfg.Canon.E2E.Muids = []string{}
+	cfg.Server.SQLConsole = true
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("hermetic canon config: %w", err)
 	}

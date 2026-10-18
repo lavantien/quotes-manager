@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -36,6 +37,9 @@ func TestScreenshotEnvServesEveryJourneyShot(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("%s status = %d, body:\n%s", shot.Path, resp.StatusCode, body)
 		}
+		if len(shot.Steps) > 0 {
+			continue
+		}
 		token := waitToken(shot.Wait)
 		if token != "" &&
 			!strings.Contains(body, `id="`+token+`"`) &&
@@ -48,6 +52,11 @@ func TestScreenshotEnvServesEveryJourneyShot(t *testing.T) {
 		{"/texts/mn1", "So I have heard."},
 		{"/words?form=dhamma", "the teaching"},
 		{"/api/v1/graph/word?token=dhamma", "dpd-root:dh"},
+		{"/quotes/new", `class="quote-form"`},
+		{"/quotes/import/form", `id="import-form"`},
+		{"/quotes/1/edit", `class="quote-form"`},
+		{"/analytics?aggregate=top-headwords", "download csv"},
+		{"/analytics?aggregate=top-headwords", "sql console"},
 	} {
 		resp, err := client.Get(baseURL + tc.path)
 		if err != nil {
@@ -64,6 +73,34 @@ func TestScreenshotEnvServesEveryJourneyShot(t *testing.T) {
 		if !strings.Contains(string(raw), tc.marker) {
 			t.Errorf("%s missing marker %q", tc.path, tc.marker)
 		}
+	}
+	checkResp, err := client.PostForm(baseURL+"/check", url.Values{
+		"ids": {"MN 22\nMN 51\nXX 9.9"},
+	})
+	if err != nil {
+		t.Fatalf("/check: %v", err)
+	}
+	checkRaw, err := io.ReadAll(checkResp.Body)
+	_ = checkResp.Body.Close()
+	if err != nil {
+		t.Fatalf("/check read: %v", err)
+	}
+	for _, marker := range []string{"2 of 3 found.", "is-found", "is-missing"} {
+		if !strings.Contains(string(checkRaw), marker) {
+			t.Errorf("/check missing marker %q:\n%s", marker, string(checkRaw))
+		}
+	}
+	dresp, err := client.Get(baseURL + "/discrepancies")
+	if err != nil {
+		t.Fatalf("/discrepancies: %v", err)
+	}
+	draw, err := io.ReadAll(dresp.Body)
+	_ = dresp.Body.Close()
+	if err != nil {
+		t.Fatalf("/discrepancies read: %v", err)
+	}
+	if !strings.Contains(string(draw), `<tr class="sev-`) {
+		t.Errorf("/discrepancies renders no finding rows:\n%s", string(draw))
 	}
 }
 
