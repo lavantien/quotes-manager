@@ -9,6 +9,7 @@
   --danger: #9a3b2f;
   --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -24,7 +25,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* buttons */
 .btn {
   font: inherit;
   font-size: 0.92rem;
@@ -44,7 +44,6 @@ body {
 .btn--danger { color: var(--danger); border-color: var(--rule); }
 .btn--danger:hover { background: #f3e4e1; }
 
-/* quote list */
 .quote-list { display: flex; flex-direction: column; }
 
 .quote {
@@ -86,7 +85,6 @@ body {
 
 .empty { color: var(--ink-soft); font-style: italic; padding: 1.5rem 0; }
 
-/* category chips + inline editor */
 .quote__chips,
 .category-editor { grid-area: chips; margin-top: 0.3rem; }
 .category-chip {
@@ -136,7 +134,6 @@ body {
 .category-editor__new:focus { outline: 2px solid var(--accent-soft); outline-offset: 1px; border-color: var(--accent-soft); }
 .category-editor .btn { font-size: 0.82rem; padding: 0.25rem 0.65rem; }
 
-/* forms */
 .form-slot { margin-bottom: 0.75rem; }
 .quote-form {
   background: var(--paper-tint);

@@ -496,6 +496,30 @@ func TestCanonAssetBudgets(t *testing.T) {
 	}
 }
 
+func TestCanonPaperTheme(t *testing.T) {
+	out := render(t, PageDashboard, repDashboard())
+	appIdx := strings.Index(out, `href="/static/app.css"`)
+	canonIdx := strings.Index(out, `href="/static/canon.css"`)
+	if appIdx < 0 || canonIdx < 0 || appIdx > canonIdx {
+		t.Fatalf("layout must link app.css before canon.css (app=%d canon=%d):\n%s", appIdx, canonIdx, out)
+	}
+	sub, err := fs.Sub(web.Static, "static")
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := fs.ReadFile(sub, "canon.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	css := string(raw)
+	if !strings.Contains(css, "var(--paper)") {
+		t.Error("canon.css must alias the shared paper tokens instead of redefining colors")
+	}
+	if strings.Contains(css, "prefers-color-scheme") {
+		t.Error("canon.css must not ship a dark mode block")
+	}
+}
+
 func TestRenderConcurrent(t *testing.T) {
 	reps := []struct {
 		name string

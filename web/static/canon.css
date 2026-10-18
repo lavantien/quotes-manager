@@ -1,34 +1,12 @@
 :root {
-  --bg: #ffffff;
-  --fg: #1b1b1b;
-  --muted: #6b6b6b;
-  --accent: #0b5fff;
-  --border: #d9d9d9;
-  --card: #f5f5f5;
-  --ok: #0a7d33;
+  --bg: var(--paper);
+  --fg: var(--ink);
+  --muted: var(--ink-soft);
+  --border: var(--rule);
+  --card: var(--paper-tint);
+  --ok: #4a7c59;
   --warn: #a05f00;
-  --err: #b3261e;
-  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  --serif: Georgia, "Times New Roman", serif;
-  --nav-bg: var(--card);
-  --nav-rule: var(--border);
-  --nav-link: var(--accent);
-  --nav-link-hover: var(--fg);
-  --nav-brand: var(--accent);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14161a;
-    --fg: #e6e6e6;
-    --muted: #9a9a9a;
-    --accent: #7aa7ff;
-    --border: #3a3f47;
-    --card: #1e2126;
-    --ok: #5ad07f;
-    --warn: #e0a34e;
-    --err: #ff7b72;
-  }
+  --err: var(--danger);
 }
 
 * { box-sizing: border-box; }
@@ -37,13 +15,18 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 15px;
+  font-family: var(--sans);
+  font-size: 100%;
   line-height: 1.5;
 }
 
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-soft);
+  text-underline-offset: 0.15em;
+}
+a:hover { color: #6f4a28; }
 code { font-family: var(--mono); font-size: 0.9em; }
 h1 { font-size: 1.5rem; margin: 0.4rem 0 0.8rem; }
 h2 { font-size: 1.1rem; margin: 1.2rem 0 0.5rem; }
@@ -69,7 +52,7 @@ p { margin: 0.4rem 0; }
   flex-direction: column;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 0.5rem 0.7rem;
 }
 
@@ -110,19 +93,29 @@ p { margin: 0.4rem 0; }
 
 form { margin: 0.5rem 0; }
 
-input, select, textarea, button {
+input, select, textarea {
   font: inherit;
-  color: inherit;
-  background: var(--bg);
+  color: var(--fg);
+  background: var(--paper);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 8px;
   padding: 0.3rem 0.55rem;
 }
 
 textarea { width: 100%; font-family: var(--mono); }
 
-button { cursor: pointer; }
-button:hover { border-color: var(--accent); }
+button {
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+button:hover { background: var(--paper-tint); }
+input:focus, select:focus, textarea:focus, button:focus { outline: 2px solid var(--accent-soft); }
 
 .search-form, .word-form, .analytics-form, .filters, .graph-form {
   display: flex;
@@ -153,7 +146,7 @@ button:hover { border-color: var(--accent); }
 
 .segments { display: flex; flex-direction: column; gap: 0.9rem; }
 
-.segment { border-left: 3px solid var(--border); padding-left: 0.8rem; }
+.segment { border-left: 3px solid var(--accent-soft); padding-left: 0.8rem; }
 
 .pali { font-family: var(--serif); font-size: 1.12rem; margin: 0.15rem 0; }
 
@@ -171,7 +164,7 @@ button:hover { border-color: var(--accent); }
 .entry {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 0.6rem 0.9rem;
 }
 
@@ -205,7 +198,7 @@ button:hover { border-color: var(--accent); }
   max-height: 320px;
   overflow: auto;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   margin: 0.5rem 0;
 }
 
@@ -217,14 +210,15 @@ button:hover { border-color: var(--accent); }
 .pager { display: flex; gap: 0.9rem; align-items: baseline; margin: 0.6rem 0; }
 .pager-info { color: var(--muted); font-variant-numeric: tabular-nums; }
 
-.graph-canvas { border: 1px solid var(--border); border-radius: 6px; }
+.graph-canvas { border: 1px solid var(--border); border-radius: 8px; background: var(--paper); }
 .graph-canvas-main { height: 540px; }
 .graph-canvas-mini { height: 320px; }
 
 .banner {
   padding: 0.4rem 0.7rem;
   border: 1px solid var(--warn);
-  border-radius: 6px;
+  border-radius: 8px;
+  background: var(--card);
   color: var(--warn);
   margin: 0.5rem 0;
 }
