@@ -4,54 +4,128 @@
 ![coverage](https://img.shields.io/badge/coverage-90.3%25-brightgreen)
 <!-- coverage:END -->
 
-quotes-manager 2.0.0 absorbs the sc-graph canon explorer into the quote workspace as one Go 1.27 binary, `dist/qm.exe`, over SQLite, DuckDB, and vendored htmx 4.0.0 and cytoscape. The 1.x dual-pane manager keeps its surface at `/`: rune-sorted editable blocks, collections, categories, near-duplicate merge, scoped search, canonical import, and JSON backup and restore. Around it the canon pipeline (`qm all`: sync, parse, load, triangulate, export, report) mirrors bilara, editions, and the dpd dictionary into a published graph database that `qm serve` follows through an atomic pointer swap. A shared nav fronts both UIs, quote citations cross-link into `/texts/{muid}` with a suttacentral fallback, and a `/api/v1` JSON surface covers quotes and canon alike. The server now binds `127.0.0.1:8080` by default instead of `:8080`, the editions source is html-only now that the tex and zip artifact paths are gone, and `qm query --format qm` prints canonical quote blocks straight from the graph. The 1.1.0 tree stays at [v1.1.0](https://github.com/lavantien/quotes-manager/tree/v1.1.0).
-
 ## Table of contents
 
 1. [Pictures](#pictures)
-2. [Local development](#local-development)
-3. [Production environment setup](#production-environment-setup)
-4. [Surfaces](#surfaces)
-5. [Data and formats](#data-and-formats)
-6. [QA harness](#qa-harness)
-7. [Build logs](#build-logs)
-8. [Architecture and flows](#architecture-and-flows)
+2. [Architecture and flows](#architecture-and-flows)
+3. [Local development](#local-development)
+4. [Production environment setup](#production-environment-setup)
+5. [Surfaces](#surfaces)
+6. [Data and formats](#data-and-formats)
+7. [QA harness](#qa-harness)
+8. [Build logs](#build-logs)
 
 ## Pictures
 
 1. ![the quote workspace home](project-pictures/01-workspace-home.png)
 
-   the quote workspace at `/`, category rail left, rune-sorted corpus in the middle, collections rail right
+   the quote workspace at `/`, category and duplicates rail left, rune-sorted corpus middle, collections rail right
 
-2. ![a collection active](project-pictures/02-workspace-collection.png)
+2. ![workspace category view](project-pictures/02-workspace-category.png)
 
-   collection 1 active in the right column, same corpus on the left
+   the renunciation category view filtering the corpus at `/?cat=1`
 
-3. ![workspace search](project-pictures/03-workspace-search.png)
+3. ![workspace collection](project-pictures/03-workspace-collection.png)
+
+   collection 1 active in the right column at `/?col=1`
+
+4. ![workspace search](project-pictures/04-workspace-search.png)
 
    live search over the corpus with `?rq=buddha`, hits marked in place
 
-4. ![canon dashboard](project-pictures/04-canon-dashboard.png)
+5. ![workspace new form](project-pictures/05-workspace-new-form.png)
 
-   the canon dashboard, stats grid, coverage by division, latest run and job state
+   the new quote form open in the form slot, categories pickable at create time
 
-5. ![canon texts tree](project-pictures/05-canon-texts.png)
+6. ![workspace import form](project-pictures/06-workspace-import-form.png)
 
-   the text tree at `/texts`
+   the canonical import form open for pasting quote blocks
 
-6. ![a canon text page](project-pictures/06-canon-text.png)
+7. ![workspace check ids](project-pictures/07-workspace-check-ids.png)
 
-   Middle Discourses 1 at `/texts/mn1`, aligned pali and english segments
+   the check ids pane with pasted text ids checked against the corpus
 
-7. ![canon word lookup](project-pictures/07-canon-words.png)
+8. ![workspace edit form](project-pictures/08-workspace-edit-form.png)
 
-   word lookup at `/words?form=dhamma`, dpd entries with usage refs
+   a quote's edit form swapped in place over its block
 
-8. ![canon word graph](project-pictures/08-canon-graph.png)
+9. ![canon dashboard](project-pictures/09-canon-dashboard.png)
 
-   the word graph at `/graph?dataset=word&param=dhamma`, drawn by cytoscape
+   the dashboard at `/dashboard`, stats grid, coverage by division, latest run and job state
 
-`make screenshots` regenerates all eight files. It builds `dist/qm.exe`, serves the seeded quotes app plus a hermetic canon instance in-process, and captures each page at 1440x900 through Chrome or Edge (`QUOTES_BROWSER` overrides the binary). The 1.x `docs/home.png` single shot is retired.
+10. ![canon texts](project-pictures/10-canon-texts.png)
+
+    the text tree at `/texts`
+
+11. ![canon text](project-pictures/11-canon-text.png)
+
+    a text page at `/texts/mn1`, aligned pali and english segments
+
+12. ![canon search](project-pictures/12-canon-search.png)
+
+    canon search at `/search?text=deep&lang=en`, hits with muid refs
+
+13. ![canon words](project-pictures/13-canon-words.png)
+
+    word lookup at `/words?form=dhamma`, dictionary entries with usage refs
+
+14. ![canon word](project-pictures/14-canon-word.png)
+
+    a headword page at `/words/eva`, senses and occurrence refs
+
+15. ![canon word graph](project-pictures/15-canon-graph-word.png)
+
+    the word graph at `/graph?dataset=word&param=dhamma`, drawn by cytoscape
+
+16. ![canon coverage graph](project-pictures/16-canon-graph-coverage.png)
+
+    the coverage graph at `/graph?dataset=coverage`
+
+17. ![canon analytics](project-pictures/17-canon-analytics.png)
+
+    analytics at `/analytics`, aggregate tables, chart bars and the sql console
+
+18. ![canon pipeline](project-pictures/18-canon-pipeline.png)
+
+    the pipeline runner at `/pipeline`, stage buttons and a live job log
+
+19. ![canon discrepancies](project-pictures/19-canon-discrepancies.png)
+
+    the discrepancy browser at `/discrepancies`, triangulation findings by severity
+
+`make screenshots` regenerates all nineteen files. It builds `dist/qm.exe`, serves the seeded quotes app plus a hermetic canon instance in-process, and captures each page at 1440x900 through Chrome or Edge (`QUOTES_BROWSER` overrides the binary).
+
+## Architecture and flows
+
+All seven diagrams lay out left to right. `make diagrams` regenerates them from the committed `docs/diagrams/*.puml` sources with the sha256-pinned plantuml 1.2026.8 jar, java required, and prints a docker fallback command when java is missing.
+
+![system overview](docs/diagrams/01-system-overview.png)
+
+01 the system overview, one binary over two UIs and three stores
+
+![component graph](docs/diagrams/02-component-graph.png)
+
+02 the internal package dependency graph
+
+![data model](docs/diagrams/03-data-model.png)
+
+03 the data model, quotes db, canon graph db, duckdb sidecar
+
+![pipeline sequence](docs/diagrams/04-pipeline-sequence.png)
+
+04 the canon pipeline from sync to serve, the jobs runner, pointer following
+
+![quote create and import](docs/diagrams/05-quote-create-import.png)
+
+05 the quote create and import flows through the workspace
+
+![query format](docs/diagrams/06-query-format.png)
+
+06 qm query with the qm format, segments and search to canonical blocks
+
+![cross-link navigation](docs/diagrams/07-crosslink-navigation.png)
+
+07 cross-link navigation, quote citations and pali words into canon pages
 
 ## Local development
 
@@ -135,7 +209,7 @@ make diagrams
 | QM_CANON_EMPTY_WARN_PER_MUID | int | canon.triangulate.empty_warn_per_muid |
 | QM_CANON_E2E_MUIDS | csv | canon.e2e.muids |
 
-3. Loopback default. `server.addr` defaults to `127.0.0.1:8080`. Version 1.x bound `:8080` on every interface, 2.0.0 binds the loopback only, a deliberate behavior change for the merged app. Override with `--addr`, `QM_SERVER_ADDR`, or the `ADDR` make variable.
+3. Loopback default. `server.addr` defaults to `127.0.0.1:8080`, the loopback only. Override with `--addr`, `QM_SERVER_ADDR`, or the `ADDR` make variable.
 
 4. Pipeline and publish. `qm all` (or `make stage STAGE=all`) runs sync, parse, load, triangulate, export, report in order, and `make stage STAGE=parse` runs any single stage through the built binary. `load` writes `database/canon/canon-<runid>.db` then publishes it: `pointer.json` is written to a temp file, fsynced, and renamed over the old pointer, so `serve` follows the new run on the next request without a restart. Superseded `canon-*.db` files and their wal, shm, and journal sidecars are retired, with a retry window when a Windows reader still holds the old file: the pointer already references the new run and a lagging retirement is reported, never silently dropped.
 
@@ -170,7 +244,7 @@ Root flags: `--config file` and `-v` (verbose). `qm` with no command prints the 
 
 One mux serves everything. The inventory below is pinned by the route-registration test in `internal/e2e`.
 
-Workspace routes, the 1.x quote manager:
+Workspace routes:
 
 | method | path | purpose |
 |---|---|---|
@@ -348,9 +422,9 @@ Attribution. The mirrors and the dpd database carry their own licenses and autho
 
 ## QA harness
 
-The verification chain runs through make in order, committing at each green step. The 2.0.0 numbers below ran on code HEAD 197c975, recorded in [docs/qa/v2.0.0-baselines.md](docs/qa/v2.0.0-baselines.md) with the logs beside it in `docs/qa/v2.0.0-notes/`.
+The verification chain runs through make in order, committing at each green step. The numbers below ran on code HEAD 197c975, recorded in [docs/qa/baselines.md](docs/qa/baselines.md) with the logs beside it in `docs/qa/notes/`.
 
-| gate | command | 2.0.0 result |
+| gate | command | result |
 |---|---|---|
 | full suite | make test | 30/30 test packages, 956 top-level + 678 subtest passes, 0 fail, 45s |
 | memory | make memtest | 3/3 targeted tests under GOMEMLIMIT=512MiB, 77s |
@@ -362,12 +436,12 @@ The verification chain runs through make in order, committing at each green step
 | mutation | make mutate | zero survivors across the 14 mutated packages (norm, bilara, editions, dpd, triangulate, canon server, jobs, analytics, export, quote, search, store, server, cli) |
 | hermetic e2e | make e2e-hermetic | internal/e2e 7/7 top-level including the crawl and the chromedp ui smoke, cli TestE2EHermetic, 0 fail 0 skip, 45s |
 | live e2e | make e2e | TestE2ELive, 7041 findings matching the C1 reference, live graph 3344 segments, 18s |
-| full chain | make verify | every stage above green on the 2.0.0 tree |
+| full chain | make verify | every stage above green |
 
 ## Build logs
 
 ```text
-2.0.0 quality chain, 2026-10-17, code HEAD 197c975
+quality chain, 2026-10-17, code HEAD 197c975
 test          30/30 packages, 956 + 678 passes, 0 fail     45s
 memtest       3/3 under GOMEMLIMIT=512MiB                  77s
 static        fmt, lint, typecheck, sloc all green         25s
@@ -377,41 +451,4 @@ e2e-hermetic  7/7 internal/e2e + cli hermetic pass         45s
 e2e live      7041 findings matching the C1 reference      18s
 ```
 
-Full stage history in `docs/qa/v2.0.0-notes/t5v3.md`, per-stage logs as `t5v3-*.log` in the same directory.
-
-## Architecture and flows
-
-<details>
-<summary>architecture and flows</summary>
-
-All seven diagrams lay out left to right. `make diagrams` regenerates them from the committed `docs/diagrams/*.puml` sources with the sha256-pinned plantuml 1.2026.8 jar, java required, and prints a docker fallback command when java is missing.
-
-![system overview](docs/diagrams/01-system-overview.png)
-
-01 the v2.0.0 system overview, one binary over two UIs and three stores
-
-![component graph](docs/diagrams/02-component-graph.png)
-
-02 the internal package dependency graph
-
-![data model](docs/diagrams/03-data-model.png)
-
-03 the data model, quotes db, canon graph db, duckdb sidecar
-
-![pipeline sequence](docs/diagrams/04-pipeline-sequence.png)
-
-04 the canon pipeline from sync to serve, the jobs runner, pointer following
-
-![quote create and import](docs/diagrams/05-quote-create-import.png)
-
-05 the quote create and import flows through the workspace
-
-![query format](docs/diagrams/06-query-format.png)
-
-06 qm query with the qm format, segments and search to canonical blocks
-
-![cross-link navigation](docs/diagrams/07-crosslink-navigation.png)
-
-07 cross-link navigation, quote citations and pali words into canon pages
-
-</details>
+Full stage history in `docs/qa/notes/t5v3.md`, per-stage logs as `t5v3-*.log` in the same directory.
