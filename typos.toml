@@ -10,4 +10,4 @@ gam = "gam"
 # original spelling kept), and web/static holds vendored minified assets:
 # both are machine-generated or immutable, meaningless to a spellchecker.
 [files]
-extend-exclude = ["dumps/**", "web/static/*.min.js", "internal/canon/web/assets/*.min.js", "docs/qa/v2.0.0-notes/**", "docs/qa/v2.0.0-task-board.md"]
+extend-exclude = ["dumps/**", "web/static/*.min.js", "internal/canon/web/assets/*.min.js", "docs/qa/notes/**", "docs/qa/v2.0.0-task-board.md"]
