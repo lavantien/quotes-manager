@@ -68,7 +68,7 @@ var journeyShots = []Shot{
 	{File: "13-canon-words.png", Path: "/words?form=dhamma", Wait: ".entry"},
 	{File: "14-canon-word.png", Path: "/words/eva", Wait: ".entry"},
 	{File: "15-canon-graph-word.png", Path: "/graph?dataset=word&param=dhamma", Wait: "#graph-canvas canvas"},
-	{File: "16-canon-graph-coverage.png", Path: "/graph?dataset=coverage", Wait: "#graph-canvas canvas"},
+	{File: "16-canon-graph-coverage.png", Path: "/graph?dataset=coverage&param=mn", Wait: "#graph-canvas canvas"},
 	{File: "17-canon-analytics.png", Path: "/analytics?aggregate=top-headwords", Wait: ".table"},
 	{File: "18-canon-pipeline.png", Path: "/pipeline", Wait: ".log", Steps: []ShotStep{
 		{Action: "click", Sel: ".stage-button"},

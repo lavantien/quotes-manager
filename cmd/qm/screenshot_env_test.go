@@ -52,6 +52,7 @@ func TestScreenshotEnvServesEveryJourneyShot(t *testing.T) {
 		{"/texts/mn1", "So I have heard."},
 		{"/words?form=dhamma", "the teaching"},
 		{"/api/v1/graph/word?token=dhamma", "dpd-root:dh"},
+		{"/api/v1/graph/coverage?division=mn", "mn1"},
 		{"/quotes/new", `class="quote-form"`},
 		{"/quotes/import/form", `id="import-form"`},
 		{"/quotes/1/edit", `class="quote-form"`},
