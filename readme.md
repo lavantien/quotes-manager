@@ -7,11 +7,11 @@
 ## Table of contents
 
 1. [Pictures](#pictures)
-2. [Architecture and flows](#architecture-and-flows)
-3. [Local development](#local-development)
-4. [Production environment setup](#production-environment-setup)
-5. [Surfaces](#surfaces)
-6. [Data and formats](#data-and-formats)
+2. [Data and formats](#data-and-formats)
+3. [Architecture and flows](#architecture-and-flows)
+4. [Local development](#local-development)
+5. [Production environment setup](#production-environment-setup)
+6. [Surfaces](#surfaces)
 7. [QA harness](#qa-harness)
 
 ## Pictures
@@ -92,11 +92,46 @@
 
     the discrepancy browser at `/discrepancies`, triangulation findings by severity
 
-`make screenshots` regenerates the whole set. It builds `dist/qm.exe`, serves the seeded quotes app plus a hermetic canon instance in-process, and captures each page at 1440x900 through Chrome or Edge (`QUOTES_BROWSER` overrides the binary).
+## Data and formats
+
+Canonical quote block, exactly as `exports/shortest-first.md` renders it:
+
+```text
+*"Human beings are shady, while beasts are obvious."* - **the Buddha to layman Pessa, MN 51**
+```
+
+Every passage line is wrapped in italics, each line but the last carries two trailing spaces as the markdown break, and the final line ends with ` - **citation**` outside the italics. Source curly quotes and pali diacritics are preserved. Consecutive blocks in the export are divided by a three-dot block with two blank lines around it, the first two dots carrying trailing spaces:
+
+```text
+.  
+.  
+.
+```
+
+The qm output format. `qm query` takes `--format qm` or `--format json`. The qm format prints the canonical block above, one quote after another with the dot divider, produced by the same renderer as the export. The json format prints raw rows. `query quotes` defaults to qm, the graph subcommands default to json. After a pipeline run:
+
+```sh
+dist/qm.exe query segments --muid mn1 --with-en --format qm --limit 6
+```
+
+prints:
+
+```text
+*Middle Discourses 1 *  
+*The Root of All Things *  
+*So I have heard. *  
+*At one time the Buddha was staying near Ukkaṭṭhā in the Subhaga Forest at the root of a magnificent sal tree. *  
+*There the Buddha addressed the mendicants, *  
+*“Mendicants!” * - **MN 1**
+```
+
+Mirrors and pruning. bilara (`suttacentral/bilara-data`, branch `published`) and editions (`suttacentral/editions`, branch `main`) are git mirrors under `data/repos`. `qm sync` updates each mirror then prunes it in the same pass down to `sparse_dirs` plus `keep_regexes`, and writes the manifest to `docs/canon/manifests/sync.json`. `qm prune` prunes without updating. The dpd source is a tarball, `dpd.db.tar.xz` from the dpd-db latest release or a `file:` url for hermetic runs, fetched under a timeout, checked against the sha256 pin when one is set, capped by `max_tarball_bytes` and `max_db_bytes`, and extracted once into `data/dpd`.
+
+Generated files. `database/seed.sql` and `exports/shortest-first.md` come from `qm extract` over `dumps/`, `database/quotes.db` is gitignored and created on first serve. Never hand-edit generated files.
+
+Attribution. The mirrors and the dpd database carry their own licenses and authors. [docs/attribution.md](docs/attribution.md) records each upstream project and what ships where.
 
 ## Architecture and flows
-
-All diagrams lay out left to right. `make diagrams` regenerates them from the committed `docs/diagrams/*.puml` sources, java required, and prints a docker fallback command when java is missing.
 
 ![system overview](docs/diagrams/01-system-overview.png)
 
@@ -241,7 +276,7 @@ Root flags: `--config file` and `-v` (verbose). `qm` with no command prints the 
 
 ### http routes
 
-One mux serves everything. The inventory below is pinned by the route-registration test in `internal/e2e`.
+One mux serves everything.
 
 Workspace routes:
 
@@ -379,45 +414,6 @@ screenshots   capture the UI journey into project-pictures/ (needs git, Chrome o
 fixture       regenerate the clone-of-main test fixture (internal/store/storetest)
 monitor       memory guard over project processes (make monitor MONITOR_FOR=5s)
 ```
-
-## Data and formats
-
-Canonical quote block, exactly as `exports/shortest-first.md` renders it:
-
-```text
-*"Human beings are shady, while beasts are obvious."* - **the Buddha to layman Pessa, MN 51**
-```
-
-Every passage line is wrapped in italics, each line but the last carries two trailing spaces as the markdown break, and the final line ends with ` - **citation**` outside the italics. Source curly quotes and pali diacritics are preserved. Consecutive blocks in the export are divided by a three-dot block with two blank lines around it, the first two dots carrying trailing spaces:
-
-```text
-.  
-.  
-.
-```
-
-The qm output format. `qm query` takes `--format qm` or `--format json`. The qm format prints the canonical block above, one quote after another with the dot divider, produced by the same renderer as the export. The json format prints raw rows. `query quotes` defaults to qm, the graph subcommands default to json. After a pipeline run:
-
-```sh
-dist/qm.exe query segments --muid mn1 --with-en --format qm --limit 6
-```
-
-prints:
-
-```text
-*Middle Discourses 1 *  
-*The Root of All Things *  
-*So I have heard. *  
-*At one time the Buddha was staying near Ukkaṭṭhā in the Subhaga Forest at the root of a magnificent sal tree. *  
-*There the Buddha addressed the mendicants, *  
-*“Mendicants!” * - **MN 1**
-```
-
-Mirrors and pruning. bilara (`suttacentral/bilara-data`, branch `published`) and editions (`suttacentral/editions`, branch `main`) are git mirrors under `data/repos`. `qm sync` updates each mirror then prunes it in the same pass down to `sparse_dirs` plus `keep_regexes`, and writes the manifest to `docs/canon/manifests/sync.json`. `qm prune` prunes without updating. The dpd source is a tarball, `dpd.db.tar.xz` from the dpd-db latest release or a `file:` url for hermetic runs, fetched under a timeout, checked against the sha256 pin when one is set, capped by `max_tarball_bytes` and `max_db_bytes`, and extracted once into `data/dpd`.
-
-Generated files. `database/seed.sql` and `exports/shortest-first.md` come from `qm extract` over `dumps/`, `database/quotes.db` is gitignored and created on first serve. Never hand-edit generated files.
-
-Attribution. The mirrors and the dpd database carry their own licenses and authors. [docs/attribution.md](docs/attribution.md) records each upstream project and what ships where.
 
 ## QA harness
 
