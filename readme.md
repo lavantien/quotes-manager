@@ -348,28 +348,36 @@ Attribution. The mirrors and the dpd database carry their own licenses and autho
 
 ## QA harness
 
-The verification chain runs through make in order, committing at each green step.
+The verification chain runs through make in order, committing at each green step. The 2.0.0 numbers below ran on code HEAD 197c975, recorded in [docs/qa/v2.0.0-baselines.md](docs/qa/v2.0.0-baselines.md) with the logs beside it in `docs/qa/v2.0.0-notes/`.
 
-| gate | command | 2.0.0 baseline |
+| gate | command | 2.0.0 result |
 |---|---|---|
-| full suite | make test | |
-| memory | make memtest | |
-| format | make fmt | |
-| lint | make lint | |
-| types | make typecheck | |
-| size | make sloc | |
-| fuzz | make fuzz | |
-| mutation | make mutate | |
-| hermetic e2e | make e2e-hermetic | |
-| full chain | make verify | |
-
-pending the 2.0.0 baseline run
+| full suite | make test | 30/30 test packages, 956 top-level + 678 subtest passes, 0 fail, 45s |
+| memory | make memtest | 3/3 targeted tests under GOMEMLIMIT=512MiB, 77s |
+| format | make fmt | green |
+| lint | make lint | green |
+| types | make typecheck | green |
+| size | make sloc | green |
+| fuzz | make fuzz | 25/25 targets, 0 FAIL, 8,937,664 execs, 10m16s |
+| mutation | make mutate | zero survivors across the 14 mutated packages (norm, bilara, editions, dpd, triangulate, canon server, jobs, analytics, export, quote, search, store, server, cli) |
+| hermetic e2e | make e2e-hermetic | internal/e2e 7/7 top-level including the crawl and the chromedp ui smoke, cli TestE2EHermetic, 0 fail 0 skip, 45s |
+| live e2e | make e2e | TestE2ELive, 7041 findings matching the C1 reference, live graph 3344 segments, 18s |
+| full chain | make verify | every stage above green on the 2.0.0 tree |
 
 ## Build logs
 
 ```text
-pending the 2.0.0 baseline run
+2.0.0 quality chain, 2026-10-17, code HEAD 197c975
+test          30/30 packages, 956 + 678 passes, 0 fail     45s
+memtest       3/3 under GOMEMLIMIT=512MiB                  77s
+static        fmt, lint, typecheck, sloc all green         25s
+fuzz          25/25 targets, 8,937,664 execs, 0 FAIL       10m16s
+mutate        zero survivors across 14 packages            see baselines
+e2e-hermetic  7/7 internal/e2e + cli hermetic pass         45s
+e2e live      7041 findings matching the C1 reference      18s
 ```
+
+Full stage history in `docs/qa/v2.0.0-notes/t5v3.md`, per-stage logs as `t5v3-*.log` in the same directory.
 
 ## Architecture and flows
 
