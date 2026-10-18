@@ -23,7 +23,7 @@
 
 2. ![workspace category view](project-pictures/02-workspace-category.png)
 
-   the renunciation category view filtering the corpus at `/?cat=1`
+   the suffering category view filtering the corpus at `/?cat=1`
 
 3. ![workspace collection](project-pictures/03-workspace-collection.png)
 
@@ -51,7 +51,7 @@
 
 9. ![canon dashboard](project-pictures/09-canon-dashboard.png)
 
-   the dashboard at `/dashboard`, stats grid, coverage by division, latest run and job state
+   the dashboard at `/dashboard`, stats grid, coverage by division, latest run
 
 10. ![canon texts](project-pictures/10-canon-texts.png)
 
@@ -79,11 +79,11 @@
 
 16. ![canon coverage graph](project-pictures/16-canon-graph-coverage.png)
 
-    the coverage graph at `/graph?dataset=coverage`
+    the coverage graph at `/graph?dataset=coverage&param=mn`
 
 17. ![canon analytics](project-pictures/17-canon-analytics.png)
 
-    analytics at `/analytics`, aggregate tables, chart bars and the sql console
+    analytics at `/analytics?aggregate=top-headwords`, aggregate tables, chart bars and the sql console
 
 18. ![canon pipeline](project-pictures/18-canon-pipeline.png)
 

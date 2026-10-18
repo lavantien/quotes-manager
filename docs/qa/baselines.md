@@ -1,6 +1,6 @@
 # v2.0.0 quality baselines
 
-Full-chain quality baseline for the v2.0.0 absorption: code HEAD 197c975, docs-only commits after, date 2026-10-17. Every stage ran through its make target on the remediated tree (post t6a/t6b wave, live-gate fix, UI restoration, E2 screenshots). Logs live in docs/qa/v2.0.0-notes/, full stage history in t5v3.md. Test targets run wrapped with GOMEMLIMIT bounds and the jobwrap supervisor.
+Full-chain quality baseline for the v2.0.0 absorption: code HEAD 197c975, docs-only commits after, date 2026-10-17. Every stage ran through its make target on the remediated tree (post t6a/t6b wave, live-gate fix, UI restoration, E2 screenshots). Logs live in docs/qa/notes/, full stage history in t5v3.md. Test targets run wrapped with GOMEMLIMIT bounds and the jobwrap supervisor.
 
 ## stage results
 

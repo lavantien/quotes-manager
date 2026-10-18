@@ -2,7 +2,7 @@
 left to right direction
 !pragma layout smetana
 skinparam componentStyle rectangle
-title quotes-manager v2.0.0 system overview
+title quotes-manager system overview
 
 actor "maintainer" as dev
 actor "reader" as user

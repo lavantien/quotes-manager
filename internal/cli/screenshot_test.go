@@ -174,6 +174,41 @@ func TestJourneyShotsMatchReadmePictures(t *testing.T) {
 	}
 }
 
+func TestJourneyShotsMatchDiskPictures(t *testing.T) {
+	entries, err := os.ReadDir(filepath.Join("..", "..", "project-pictures"))
+	if err != nil {
+		t.Fatalf("read project-pictures: %v", err)
+	}
+	want := map[string]bool{}
+	for _, s := range journeyShots {
+		want[s.File] = true
+	}
+	onDisk := map[string]bool{}
+	for _, e := range entries {
+		if e.IsDir() || filepath.Ext(e.Name()) != ".png" {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			t.Fatalf("stat %s: %v", e.Name(), err)
+		}
+		if info.Size() == 0 {
+			t.Errorf("project-pictures/%s is zero bytes", e.Name())
+		}
+		onDisk[e.Name()] = true
+	}
+	for name := range onDisk {
+		if !want[name] {
+			t.Errorf("project-pictures holds orphan %s not in journeyShots", name)
+		}
+	}
+	for name := range want {
+		if !onDisk[name] {
+			t.Errorf("journeyShots wants %s missing from project-pictures", name)
+		}
+	}
+}
+
 func TestJourneyInteractiveShotsCarrySteps(t *testing.T) {
 	interactive := map[string]bool{
 		"05-workspace-new-form.png":    true,
