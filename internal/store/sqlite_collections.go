@@ -145,15 +145,42 @@ func (s *SQLiteStore) ReorderCollectionGroups(id int64, orderedGroupIDs []int64)
 		}
 		return rollback(tx, err)
 	}
-	for i, gid := range orderedGroupIDs {
-		res, err := tx.Exec(
-			"UPDATE collection_groups SET position = ? WHERE collection_id = ? AND id = ?",
-			i+1, id, gid)
-		if err != nil {
+	current := make(map[int64]bool)
+	rows, err := tx.Query("SELECT id FROM collection_groups WHERE collection_id = ?", id)
+	if err != nil {
+		return rollback(tx, err)
+	}
+	for rows.Next() {
+		var gid int64
+		if err := rows.Scan(&gid); err != nil {
+			_ = rows.Close()
 			return rollback(tx, err)
 		}
-		if n, _ := res.RowsAffected(); n == 0 {
+		current[gid] = true
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return rollback(tx, err)
+	}
+	_ = rows.Close()
+	seen := make(map[int64]bool, len(orderedGroupIDs))
+	for _, gid := range orderedGroupIDs {
+		if !current[gid] {
 			return rollback(tx, fmt.Errorf("%w: group %d not in collection %d", ErrNotFound, gid, id))
+		}
+		if seen[gid] {
+			return rollback(tx, fmt.Errorf("%w: collection %d group %d", ErrReorderMismatch, id, gid))
+		}
+		seen[gid] = true
+	}
+	if len(orderedGroupIDs) != len(current) {
+		return rollback(tx, fmt.Errorf("%w: collection %d groups: got %d of %d", ErrReorderMismatch, id, len(orderedGroupIDs), len(current)))
+	}
+	for i, gid := range orderedGroupIDs {
+		if _, err := tx.Exec(
+			"UPDATE collection_groups SET position = ? WHERE collection_id = ? AND id = ?",
+			i+1, id, gid); err != nil {
+			return rollback(tx, err)
 		}
 	}
 	return tx.Commit()
@@ -323,15 +350,42 @@ func (s *SQLiteStore) ReorderCollectionSuttas(id int64, orderedMuids []string) e
 		}
 		return rollback(tx, err)
 	}
-	for i, muid := range orderedMuids {
-		res, err := tx.Exec(
-			"UPDATE collection_sutta_items SET position = ? WHERE collection_id = ? AND muid = ?",
-			i+1, id, muid)
-		if err != nil {
+	current := make(map[string]bool)
+	rows, err := tx.Query("SELECT muid FROM collection_sutta_items WHERE collection_id = ?", id)
+	if err != nil {
+		return rollback(tx, err)
+	}
+	for rows.Next() {
+		var muid string
+		if err := rows.Scan(&muid); err != nil {
+			_ = rows.Close()
 			return rollback(tx, err)
 		}
-		if n, _ := res.RowsAffected(); n == 0 {
+		current[muid] = true
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return rollback(tx, err)
+	}
+	_ = rows.Close()
+	seen := make(map[string]bool, len(orderedMuids))
+	for _, muid := range orderedMuids {
+		if !current[muid] {
 			return rollback(tx, fmt.Errorf("%w: sutta %q not in collection %d", ErrNotFound, muid, id))
+		}
+		if seen[muid] {
+			return rollback(tx, fmt.Errorf("%w: collection %d sutta %q", ErrReorderMismatch, id, muid))
+		}
+		seen[muid] = true
+	}
+	if len(orderedMuids) != len(current) {
+		return rollback(tx, fmt.Errorf("%w: collection %d suttas: got %d of %d", ErrReorderMismatch, id, len(orderedMuids), len(current)))
+	}
+	for i, muid := range orderedMuids {
+		if _, err := tx.Exec(
+			"UPDATE collection_sutta_items SET position = ? WHERE collection_id = ? AND muid = ?",
+			i+1, id, muid); err != nil {
+			return rollback(tx, err)
 		}
 	}
 	return tx.Commit()

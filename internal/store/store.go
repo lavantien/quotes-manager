@@ -80,6 +80,8 @@ const MaxGroupNameChars = 100
 
 var ErrNameTooLong = errors.New("name too long")
 
+var ErrReorderMismatch = errors.New("reorder list does not match the collection")
+
 var ErrUnsupportedDump = errors.New("unsupported dump version")
 
 type Store interface {

@@ -315,6 +315,24 @@ func TestReorderCollectionSuttas(t *testing.T) {
 	}
 }
 
+func TestReorderCollectionSuttasRejectsMismatch(t *testing.T) {
+	s := newTestStore(t)
+	cid := mustCollection(t, s)
+	for _, muid := range []string{"mn1", "mn2"} {
+		_ = s.AddSuttaToCollection(cid, muid, muid, muid)
+	}
+	if err := s.ReorderCollectionSuttas(cid, []string{"mn2"}); !errors.Is(err, ErrReorderMismatch) {
+		t.Errorf("partial: err = %v, want ErrReorderMismatch", err)
+	}
+	if err := s.ReorderCollectionSuttas(cid, []string{"mn1", "mn1"}); !errors.Is(err, ErrReorderMismatch) {
+		t.Errorf("duplicate: err = %v, want ErrReorderMismatch", err)
+	}
+	items, _ := s.CollectionSuttaItems(cid)
+	if len(items) != 2 || items[0].Muid != "mn1" || items[1].Muid != "mn2" {
+		t.Errorf("items after rejected reorders = %+v, want original order", items)
+	}
+}
+
 func TestReorderCollectionSuttasNotFound(t *testing.T) {
 	s := newTestStore(t)
 	cid := mustCollection(t, s)

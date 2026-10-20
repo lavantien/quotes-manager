@@ -606,10 +606,15 @@ func (f *fakeStore) ReorderCollectionGroups(cid int64, ordered []int64) error {
 		return store.ErrNotFound
 	}
 	if len(ordered) != len(f.groups[cid]) {
-		return store.ErrNotFound
+		return store.ErrReorderMismatch
 	}
+	seen := make(map[int64]bool, len(ordered))
 	reordered := make([]fakeGroup, 0, len(ordered))
 	for _, gid := range ordered {
+		if seen[gid] {
+			return store.ErrReorderMismatch
+		}
+		seen[gid] = true
 		var found fakeGroup
 		ok := false
 		for _, g := range f.groups[cid] {
@@ -718,8 +723,16 @@ func (f *fakeStore) ReorderCollectionSuttas(cid int64, ordered []string) error {
 	if !f.collectionExists(cid) {
 		return store.ErrNotFound
 	}
+	if len(ordered) != len(f.sitems[cid]) {
+		return store.ErrReorderMismatch
+	}
+	seen := make(map[string]bool, len(ordered))
 	reordered := make([]fakeSuttaItem, 0, len(ordered))
 	for _, muid := range ordered {
+		if seen[muid] {
+			return store.ErrReorderMismatch
+		}
+		seen[muid] = true
 		found := false
 		for _, it := range f.sitems[cid] {
 			if it.Muid == muid {
@@ -731,9 +744,6 @@ func (f *fakeStore) ReorderCollectionSuttas(cid int64, ordered []string) error {
 		if !found {
 			return store.ErrNotFound
 		}
-	}
-	if len(reordered) != len(f.sitems[cid]) {
-		return store.ErrNotFound
 	}
 	for i := range reordered {
 		reordered[i].Position = i + 1

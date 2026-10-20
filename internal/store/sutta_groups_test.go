@@ -311,6 +311,23 @@ func TestReorderCollectionGroups(t *testing.T) {
 	}
 }
 
+func TestReorderCollectionGroupsRejectsMismatch(t *testing.T) {
+	s := newTestStore(t)
+	cid := mustCollection(t, s)
+	g1, _ := s.CreateCollectionGroup(cid, "one")
+	g2, _ := s.CreateCollectionGroup(cid, "two")
+	if err := s.ReorderCollectionGroups(cid, []int64{g2}); !errors.Is(err, ErrReorderMismatch) {
+		t.Errorf("partial: err = %v, want ErrReorderMismatch", err)
+	}
+	if err := s.ReorderCollectionGroups(cid, []int64{g1, g1}); !errors.Is(err, ErrReorderMismatch) {
+		t.Errorf("duplicate: err = %v, want ErrReorderMismatch", err)
+	}
+	groups, _ := s.ListCollectionGroups(cid)
+	if len(groups) != 2 || groups[0].ID != g1 || groups[1].ID != g2 {
+		t.Errorf("groups after rejected reorders = %+v, want original order", groups)
+	}
+}
+
 func TestReorderCollectionGroupsNotFound(t *testing.T) {
 	s := newTestStore(t)
 	cid := mustCollection(t, s)
