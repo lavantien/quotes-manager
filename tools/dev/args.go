@@ -87,10 +87,17 @@ func guardPkg(pkg string) error {
 	if filepath.IsAbs(pkg) || strings.HasPrefix(pkg, "/") || strings.HasPrefix(pkg, `\`) {
 		return errors.New("PKG must be a repo-relative package path: " + pkg)
 	}
+	if len(pkg) >= 2 && pkg[1] == ':' && isDriveLetter(pkg[0]) {
+		return errors.New("PKG must be a repo-relative package path: " + pkg)
+	}
 	for _, part := range strings.FieldsFunc(pkg, func(r rune) bool { return r == '/' || r == '\\' }) {
 		if part == ".." {
 			return errors.New("PKG must not traverse upward: " + pkg)
 		}
 	}
 	return nil
+}
+
+func isDriveLetter(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
 }
