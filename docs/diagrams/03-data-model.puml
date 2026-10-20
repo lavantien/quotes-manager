@@ -25,6 +25,28 @@ package "database/quotes.db (sqlite)" {
     * quote_id
     --
     position
+    group_id nullable
+  }
+  entity "suttas" as suttas {
+    * muid : text pk
+    --
+    display : text
+    link : text
+    length : integer nullable
+  }
+  entity "collection_groups" as cgroups {
+    * id : integer pk
+    --
+    collection_id
+    name : text
+    position
+  }
+  entity "collection_sutta_items" as csuttas {
+    * collection_id
+    * muid
+    --
+    position
+    group_id nullable
   }
   entity "categories" as categories {
     * id : integer pk
@@ -37,6 +59,11 @@ package "database/quotes.db (sqlite)" {
   }
   collections ||--o{ colitems
   quotes ||--o{ colitems
+  collections ||--o{ cgroups
+  cgroups ||--o{ colitems : group_id
+  collections ||--o{ csuttas
+  suttas ||--o{ csuttas
+  cgroups ||--o{ csuttas : group_id
   categories ||--o{ catitems
   quotes ||--o{ catitems
 }
