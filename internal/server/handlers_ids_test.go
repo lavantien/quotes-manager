@@ -83,6 +83,30 @@ func TestCollectionIDsExport(t *testing.T) {
 	}
 }
 
+func TestCollectionIDsIncludeSuttaMuids(t *testing.T) {
+	fs := newFake(
+		mkQuote(1, "MN 22", "a"),
+		mkQuote(2, "AN 5", "b"),
+	)
+	cid, err := fs.CreateCollection([]int64{1, 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, su := range []struct{ muid, display string }{
+		{"mn2", "MN 2"},
+		{"mn1", "MN 1"},
+	} {
+		if err := fs.AddSuttaToCollection(cid, su.muid, su.display, "https://suttacentral.net/"+su.muid); err != nil {
+			t.Fatal(err)
+		}
+	}
+	srv := newServer(t, fs)
+	rec := do(t, srv, "GET", fmt.Sprintf("/collections/%d/ids.txt", cid), "")
+	if want := "AN 5\nMN 22\nmn1\nmn2\n"; rec.Body.String() != want {
+		t.Errorf("collection ids body = %q, want %q", rec.Body.String(), want)
+	}
+}
+
 func TestCollectionIDsExportUnknownCollection(t *testing.T) {
 	// Mirrors /collections/{id}/export.txt: an unknown collection yields an empty
 	// 200, not a 404.
