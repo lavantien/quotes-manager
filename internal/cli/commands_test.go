@@ -8,7 +8,7 @@ import (
 func TestPipelineCommandsRegistered(t *testing.T) {
 	want := []string{
 		"all", "coverage", "discrepancies", "export", "extract", "fixture", "load", "parse", "prune",
-		"query", "report", "screenshot", "serve", "sync", "triangulate", "version",
+		"query", "report", "screenshot", "serve", "suttas", "sync", "triangulate", "version",
 	}
 	got := Names()
 	sort.Strings(got)
