@@ -76,6 +76,30 @@ func idListHas(body, id string) bool {
 	return false
 }
 
+func TestGrouplessCollectionRendersSuttas(t *testing.T) {
+	app := mergedAppFor(t, true)
+	origin := app.server().URL
+	created := app.postForm(t, "/collections", url.Values{}, origin)
+	if created.status != http.StatusOK {
+		t.Fatalf("create collection = %d (%s)", created.status, clip(created.body))
+	}
+	added := app.postForm(t, "/collections/2/suttas", url.Values{"muid": {"mn26"}}, origin)
+	if added.status != http.StatusOK {
+		t.Fatalf("add sutta to groupless collection = %d (%s)", added.status, clip(added.body))
+	}
+	page := app.get(t, "/collections/2")
+	if !strings.Contains(page.body, `id="group-0"`) {
+		t.Errorf("groupless collection must render the ungrouped section: %s", clip(page.body))
+	}
+	if !strings.Contains(page.body, "https://suttacentral.net/mn26/") {
+		t.Errorf("groupless collection must render its sutta rows: %s", clip(page.body))
+	}
+	ids := app.get(t, "/collections/2/ids.txt")
+	if !idListHas(ids.body, "mn26") {
+		t.Errorf("ids.txt = %q, want mn26", ids.body)
+	}
+}
+
 func TestCollectionGroupsUserFlow(t *testing.T) {
 	app := mergedAppFor(t, true)
 	origin := app.server().URL

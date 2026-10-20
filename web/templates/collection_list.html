@@ -1,6 +1,6 @@
 {{define "collection_list"}}
 <div id="collection-list" class="quote-list collection-list"{{if not .Collection.Searching}} data-reorder="/collections/{{.Collection.ID}}/reorder"{{end}}>
-  {{if .Collection.HasGroups}}{{template "collection_grouped" .}}{{else}}{{template "collection_flat" .}}{{end}}
+  {{if .Collection.HasSections}}{{template "collection_grouped" .}}{{else}}{{template "collection_flat" .}}{{end}}
 </div>
 {{end}}
 

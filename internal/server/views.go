@@ -45,19 +45,19 @@ type rootPane struct {
 }
 
 type collectionPane struct {
-	Active     bool
-	ID         int64
-	Name       string
-	Count      int
-	QuoteCount int
-	Quotes     []store.Quote
-	Groups     []store.Group
-	HasGroups  bool
-	Sections   []groupSection
-	ExportURL  string
-	Query      string
-	Terms      []string
-	Searching  bool
+	Active      bool
+	ID          int64
+	Name        string
+	Count       int
+	QuoteCount  int
+	Quotes      []store.Quote
+	Groups      []store.Group
+	HasSections bool
+	Sections    []groupSection
+	ExportURL   string
+	Query       string
+	Terms       []string
+	Searching   bool
 }
 
 type groupSection struct {
@@ -178,9 +178,9 @@ func (s *Server) buildPageData(catID, colID int64, rq, cq string) (pageData, err
 				Terms:      search.HighlightTerms(cQuery),
 				Searching:  !cQuery.IsZero(),
 			}
-			if len(groups) > 0 {
+			if len(groups) > 0 || len(sItems) > 0 {
 				pane.Groups = groups
-				pane.HasGroups = true
+				pane.HasSections = true
 				pane.Sections = buildGroupSections(groups, qItems, sItems)
 			} else {
 				pane.Quotes = quoteItemsToQuotes(qItems)

@@ -201,6 +201,25 @@ func TestFlatViewWithoutGroupsUnchanged(t *testing.T) {
 	}
 }
 
+func TestGrouplessCollectionRendersSuttas(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	if err := fs.AddSuttaToCollection(cid, "mn26", "MN 26", "https://suttacentral.net/mn26"); err != nil {
+		t.Fatal(err)
+	}
+	srv := newServer(t, fs)
+	body := do(t, srv, "GET", fmt.Sprintf("/collections/%d", cid), "").Body.String()
+	s0 := sectionSlice(t, body, `id="group-0"`, "")
+	if !strings.Contains(s0, ">MN 26<") {
+		t.Error("groupless collection must render sutta display ids in the ungrouped section")
+	}
+	if !strings.Contains(s0, "https://suttacentral.net/mn26") {
+		t.Error("groupless collection must link its suttas")
+	}
+	if !strings.Contains(s0, `hx-delete="/collections/`) {
+		t.Error("groupless sutta rows must keep the remove control")
+	}
+}
+
 const (
 	formCT  = "Content-Type"
 	formEnc = "application/x-www-form-urlencoded"
