@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -59,6 +60,34 @@ func TestKillOnClose(t *testing.T) {
 		if !waitGone(pid, deadline) {
 			t.Fatalf("pid %d survived the job close, want death-with-parent", pid)
 		}
+	}
+}
+
+func TestSetJobMemoryLimitRoundTrips(t *testing.T) {
+	job, err := New(0)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() { _ = windows.CloseHandle(job) })
+	if err := SetJobMemoryLimit(job, 2<<30); err != nil {
+		t.Fatalf("SetJobMemoryLimit: %v", err)
+	}
+	var info windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+	if err := windows.QueryInformationJobObject(job, windows.JobObjectExtendedLimitInformation,
+		uintptr(unsafe.Pointer(&info)), uint32(unsafe.Sizeof(info)), nil); err != nil {
+		t.Fatalf("query job: %v", err)
+	}
+	if info.BasicLimitInformation.LimitFlags&windows.JOB_OBJECT_LIMIT_JOB_MEMORY == 0 {
+		t.Fatalf("job memory flag missing: %d", info.BasicLimitInformation.LimitFlags)
+	}
+	if info.JobMemoryLimit != uintptr(2<<30) {
+		t.Fatalf("job memory limit = %d, want %d", info.JobMemoryLimit, 2<<30)
+	}
+}
+
+func TestSetJobMemoryLimitRejectsInvalidHandle(t *testing.T) {
+	if err := SetJobMemoryLimit(0, 2<<30); err == nil {
+		t.Fatal("SetJobMemoryLimit on null handle = nil error")
 	}
 }
 

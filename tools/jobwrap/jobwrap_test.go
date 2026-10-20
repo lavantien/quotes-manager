@@ -79,6 +79,36 @@ func TestJobwrapKillsTreeWhenKilled(t *testing.T) {
 	}
 }
 
+func TestParseJobMemArgs(t *testing.T) {
+	cases := []struct {
+		in      []string
+		mem     uint64
+		wantCmd []string
+	}{
+		{[]string{"cmd", "/c", "exit"}, 0, []string{"cmd", "/c", "exit"}},
+		{[]string{"-jobmem", "1024", "cmd"}, 1024, []string{"cmd"}},
+		{[]string{"-jobmem", "0", "go", "version"}, 0, []string{"go", "version"}},
+	}
+	for _, c := range cases {
+		mem, cmd := parseJobMemArgs(c.in)
+		if mem != c.mem || !equalStrings(cmd, c.wantCmd) {
+			t.Fatalf("parseJobMemArgs(%v) = %d %v, want %d %v", c.in, mem, cmd, c.mem, c.wantCmd)
+		}
+	}
+}
+
+func TestJobwrapJobMemCapAllowsFitAndRejectsExcess(t *testing.T) {
+	bin := buildJobwrap(t)
+	fits := exec.Command(bin, "-jobmem", "1073741824", "cmd", "/c", "exit 0")
+	if out, err := fits.CombinedOutput(); err != nil {
+		t.Fatalf("1GiB cap wrapping cmd exit 0: %v %s", err, out)
+	}
+	tooSmall := exec.Command(bin, "-jobmem", "1048576", "go", "version")
+	if out, err := tooSmall.CombinedOutput(); err == nil {
+		t.Fatalf("1MiB cap wrapping go version = clean exit: %s", out)
+	}
+}
+
 func TestJobwrapHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_JOBWRAP_HELPER") != "1" {
 		t.Skip()
@@ -98,6 +128,18 @@ func TestJobwrapSleeperProcess(t *testing.T) {
 		t.Skip()
 	}
 	time.Sleep(10 * time.Minute)
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func waitGone(pid uint32, deadline time.Time) bool {

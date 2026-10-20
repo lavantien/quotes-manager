@@ -28,6 +28,17 @@ func New(memCapBytes uint64) (windows.Handle, error) {
 	return job, nil
 }
 
+func SetJobMemoryLimit(job windows.Handle, memCapBytes uint64) error {
+	var info windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+	info.BasicLimitInformation.LimitFlags = windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | windows.JOB_OBJECT_LIMIT_JOB_MEMORY
+	info.JobMemoryLimit = uintptr(memCapBytes)
+	if _, err := windows.SetInformationJobObject(job, windows.JobObjectExtendedLimitInformation,
+		uintptr(unsafe.Pointer(&info)), uint32(unsafe.Sizeof(info))); err != nil {
+		return fmt.Errorf("set job memory limit: %w", err)
+	}
+	return nil
+}
+
 func AssignSelf(job windows.Handle) error {
 	if err := windows.AssignProcessToJobObject(job, windows.CurrentProcess()); err != nil {
 		return fmt.Errorf("assign job object: %w", err)
