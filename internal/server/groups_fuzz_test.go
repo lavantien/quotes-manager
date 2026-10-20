@@ -4,6 +4,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/lavantien/quotes-manager/internal/sutta"
 )
 
 func FuzzSuttaRef(f *testing.F) {
@@ -18,6 +20,7 @@ func FuzzSuttaRef(f *testing.F) {
 	f.Add("KN Dhp 5")
 	f.Add("tvvibupj1")
 	f.Add("%00%1b[mn1")
+	f.Add("zz9")
 	f.Fuzz(func(t *testing.T, muid string) {
 		got, display, link, err := suttaRef(muid)
 		if err != nil {
@@ -25,6 +28,9 @@ func FuzzSuttaRef(f *testing.F) {
 		}
 		if got == "" || display == "" || link == "" {
 			t.Fatalf("suttaRef(%q) = %q %q %q, want all non-empty", muid, got, display, link)
+		}
+		if !sutta.KnownMuid(got) {
+			t.Fatalf("suttaRef(%q) = %q, want a known family", muid, got)
 		}
 		if strings.ContainsAny(got, " \t\r\n") {
 			t.Fatalf("suttaRef(%q) muid = %q, want compact", muid, got)

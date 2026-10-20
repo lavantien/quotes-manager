@@ -11,6 +11,7 @@ import (
 
 	"github.com/lavantien/quotes-manager/internal/quote"
 	"github.com/lavantien/quotes-manager/internal/store"
+	"github.com/lavantien/quotes-manager/internal/sutta"
 )
 
 func (s *Server) createGroup(w http.ResponseWriter, r *http.Request) {
@@ -260,6 +261,9 @@ func suttaRef(muid string) (string, string, string, error) {
 	}
 	if strings.ContainsAny(muid, " \t\r\n") {
 		return "", "", "", fmt.Errorf("sutta reference %q is not a muid", muid)
+	}
+	if !sutta.KnownMuid(muid) {
+		return "", "", "", fmt.Errorf("unknown sutta family in %q", muid)
 	}
 	display, err := quote.DisplaySuttaID(muid)
 	if err != nil {

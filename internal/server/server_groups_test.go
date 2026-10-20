@@ -631,6 +631,27 @@ func TestAddSuttaEmptyMuid(t *testing.T) {
 	}
 }
 
+func TestAddSuttaUnknownFamily(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/suttas", cid), "muid=zz9", formCT, formEnc)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400 for an unknown family", rec.Code)
+	}
+	items, _ := fs.CollectionSuttaItems(cid)
+	for _, it := range items {
+		if it.Muid == "zz9" {
+			t.Error("zz9 must not enter the collection")
+		}
+	}
+	suttas, _ := fs.ListSuttas()
+	for _, su := range suttas {
+		if su.Muid == "zz9" {
+			t.Error("zz9 must not enter the registry")
+		}
+	}
+}
+
 func TestAddSuttaUnknownCollection(t *testing.T) {
 	srv := newServer(t, newFake(sampleQuote(1)))
 	rec := do(t, srv, "POST", "/collections/999/suttas", "muid=mn7", formCT, formEnc)

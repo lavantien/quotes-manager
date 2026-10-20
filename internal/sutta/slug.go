@@ -98,6 +98,14 @@ func parseSuttacentralPath(path, raw string) (suttaRef, bool, error) {
 	return suttaRef{muids: muids, link: raw, expanded: true}, true, nil
 }
 
+func KnownMuid(muid string) bool {
+	if pliTvRe.MatchString(muid) {
+		return true
+	}
+	m := slugRe.FindStringSubmatch(muid)
+	return m != nil && families[m[1]]
+}
+
 func decodeEntities(s string) string {
 	return strings.NewReplacer("&lt;", "<", "&gt;", ">", "&amp;", "&").Replace(s)
 }
