@@ -26,7 +26,7 @@
 
 3. ![workspace collection](project-pictures/03-workspace-collection.png)
 
-   collection 1 active in the right column at `/?col=1`
+   the AriyaSavaka collection at `/?col=1`, named groups in order, suttas shortest-first inside each group
 
 4. ![workspace search](project-pictures/04-workspace-search.png)
 
@@ -127,7 +127,17 @@ prints:
 
 Mirrors and pruning. bilara (`suttacentral/bilara-data`, branch `published`) and editions (`suttacentral/editions`, branch `main`) are git mirrors under `data/repos`. `qm sync` updates each mirror then prunes it in the same pass down to `sparse_dirs` plus `keep_regexes`, and writes the manifest to `docs/canon/manifests/sync.json`. `qm prune` prunes without updating. The dpd source is a tarball, `dpd.db.tar.xz` from the dpd-db latest release or a `file:` url for hermetic runs, fetched under a timeout, checked against the sha256 pin when one is set, capped by `max_tarball_bytes` and `max_db_bytes`, and extracted once into `data/dpd`.
 
-Generated files. `database/seed.sql` and `exports/shortest-first.md` come from `qm extract` over `dumps/`, `database/quotes.db` is gitignored and created on first serve. Never hand-edit generated files.
+Sutta collections. `qm query suttas --collection 1 --format qm` walks a collection's groups in position order with a blank line between groups, one line per sutta with the display id, the link in parentheses, and the english segment count as a suffix when known:
+
+```text
+AN 2.131 (https://suttacentral.net/an2.130-140/en/sujato?lang=en&layout=plain&reference=none&notes=none&highlight=true&script=latin) 4
+
+MN 26 (https://suttacentral.net/mn26/en/sujato?lang=en&layout=plain&reference=none&notes=none&highlight=true&script=latin) 365
+```
+
+Inside a group suttas with a known length come shortest first, unknown lengths keep document order after them. `qm suttas --lengths` fills the lengths offline from the published graph db, suttas the mirror never translated keep no suffix. Without `--collection` the same subcommand lists the whole registry by muid.
+
+Generated files. `database/seed.sql` and `exports/shortest-first.md` come from `qm extract` over `dumps/`, with the seed also rendering the curated sutta table in `dumps/` into the suttas registry, the AriyaSavaka collection, and its 16 named groups. `database/quotes.db` is gitignored and created on first serve. Never hand-edit generated files.
 
 Attribution. The mirrors and the dpd database carry their own licenses and authors. [docs/attribution.md](docs/attribution.md) records each upstream project and what ships where.
 
@@ -181,7 +191,7 @@ make build
 make run
 ```
 
-That is `qm serve --addr 127.0.0.1:8080 --db database/quotes.db`. The first run creates and seeds `database/quotes.db` (109 quotes, three sample categories, one sample collection), the seed is never reapplied, edits persist. The workspace is at http://127.0.0.1:8080/ and the canon pages sit beside it. Canon pages answer `503 not ready` until a pipeline run publishes a graph database (next section).
+That is `qm serve --addr 127.0.0.1:8080 --db database/quotes.db`. The first run creates and seeds `database/quotes.db` (109 quotes, three categories, the AriyaSavaka collection with 16 named groups and 471 suttas), the seed is never reapplied, edits persist. The workspace is at http://127.0.0.1:8080/ and the canon pages sit beside it. Canon pages answer `503 not ready` until a pipeline run publishes a graph database (next section).
 
 3. Exercise the CLI:
 
@@ -205,7 +215,7 @@ make diagrams
 
 ## Production environment setup
 
-1. Config file. `qm` layers built-in defaults, then an optional JSON file (`--config file`, unknown fields rejected), then environment variables. The sections: `quotes` (db_path, dumps_dir, seed_file, export_file, pictures_dir), `server` (addr, default_limit, max_limit, graph_max_nodes, graph_max_edges, job_log_lines, sql_console, analytics_threads, analytics_memory_gb, read, write, idle, and shutdown timeouts), `canon.repos.bilara` and `canon.repos.editions` (url, branch, dir each), `canon.bilara` (root_lang, root_edition, trans_lang, authors, sparse_dirs, keep_regexes, max_range_expansion), `canon.editions` (authors, sparse_dirs, keep_regexes), `canon.dpd` (url, sha256, max_tarball_bytes, max_db_bytes, timeout_seconds, min_token_length, unknown_warn_per_muid), `canon.paths` (data_dir, e2e_dir, dist_dir, db_dir, manifests_dir, reports_dir), `canon.load` (batch_size), `canon.triangulate` (severity map over the triangulation check ids, empty_warn_per_muid, similarity_min, detail_sample_max), `canon.e2e` (muids), `canon.export` (parquet).
+1. Config file. `qm` layers built-in defaults, then an optional JSON file (`--config file`, unknown fields rejected), then environment variables. The sections: `quotes` (db_path, dumps_dir, seed_file, export_file, pictures_dir, tables_collection), `server` (addr, default_limit, max_limit, graph_max_nodes, graph_max_edges, job_log_lines, sql_console, analytics_threads, analytics_memory_gb, read, write, idle, and shutdown timeouts), `canon.repos.bilara` and `canon.repos.editions` (url, branch, dir each), `canon.bilara` (root_lang, root_edition, trans_lang, authors, sparse_dirs, keep_regexes, max_range_expansion), `canon.editions` (authors, sparse_dirs, keep_regexes), `canon.dpd` (url, sha256, max_tarball_bytes, max_db_bytes, timeout_seconds, min_token_length, unknown_warn_per_muid), `canon.paths` (data_dir, e2e_dir, dist_dir, db_dir, manifests_dir, reports_dir), `canon.load` (batch_size), `canon.triangulate` (severity map over the triangulation check ids, empty_warn_per_muid, similarity_min, detail_sample_max), `canon.e2e` (muids), `canon.export` (parquet).
 
 2. Environment overrides, the complete set the loader honors:
 
@@ -216,6 +226,7 @@ make diagrams
 | QM_QUOTES_SEED_FILE | path | quotes.seed_file |
 | QM_QUOTES_EXPORT_FILE | path | quotes.export_file |
 | QM_QUOTES_PICTURES_DIR | path | quotes.pictures_dir |
+| QM_QUOTES_TABLES_COLLECTION | name | quotes.tables_collection |
 | QM_SERVER_ADDR | host:port | server.addr |
 | QM_SERVER_READ_TIMEOUT_SECONDS | int | server.read_timeout_seconds |
 | QM_SERVER_WRITE_TIMEOUT_SECONDS | int | server.write_timeout_seconds |
@@ -265,14 +276,15 @@ Root flags: `--config file` and `-v` (verbose). `qm` with no command prints the 
 | qm report | --out dir | render the triangulation report under a dated dir |
 | qm discrepancies | --severity --check --run | list discrepancies, run 0 means latest |
 | qm query | see below | query the current database |
+| qm suttas | --lengths --db | fill suttas.length from the published canon db |
 | qm serve | --addr --db | serve the api and frontend |
-| qm extract | none | dumps to seed sql plus the shortest-first export |
+| qm extract | none | dumps to seed sql including the sutta tables, plus the shortest-first export |
 | qm fixture | --db --out | regenerate the clone-of-main test fixture |
 | qm screenshot | --out dir | capture the UI journey pictures |
 | qm coverage | --profile --readme | refresh the readme coverage badge |
 | qm version | none | print version and schema version |
 
-`qm query` takes a subcommand: segments, search, quotes, tree, stats, or word. Shared flags: `--muid`, `--with-en`, `--text`, `--lang` (pali or en), `--limit`, `--offset`, `--division`, `--types`, `--form`, `--headword`, `--segments`, `--format json or qm`. `query quotes` adds `--db` for a database path override and defaults to the qm format, the graph subcommands default to json.
+`qm query` takes a subcommand: segments, search, quotes, suttas, tree, stats, or word. Shared flags: `--muid`, `--with-en`, `--text`, `--lang` (pali or en), `--limit`, `--offset`, `--division`, `--types`, `--form`, `--headword`, `--segments`, `--format json or qm`. `query quotes` adds `--db` for a database path override and defaults to the qm format, the graph subcommands default to json. `query suttas` adds `--db` and `--collection id`, lists the registry by muid or one collection group by group, and the muids feed `query segments --muid` for the text itself.
 
 ### http routes
 
@@ -299,16 +311,24 @@ Workspace routes:
 | GET | /export.txt | whole corpus as the canonical export |
 | GET | /backup.json | versioned whole-database JSON snapshot |
 | POST | /restore | restore a backup, replacing every table |
-| GET | /collections/{cid} | collection pane |
+| GET | /collections/{cid} | collection pane, named groups in position order with an ungrouped section last |
 | POST | /collections | create a collection from the selection |
 | POST | /collections/{cid}/items | prepend selected quotes to a collection |
 | POST | /collections/{cid}/insert | insert the selection at a 1-based position |
 | POST | /collections/{cid}/rename | rename a collection |
 | DELETE | /collections/{cid} | delete a collection |
 | POST | /collections/{cid}/reorder | save a drag reorder |
+| POST | /collections/{cid}/groups | create a named group |
+| POST | /collections/{cid}/groups/{gid}/rename | rename a group |
+| DELETE | /collections/{cid}/groups/{gid} | delete a group |
+| POST | /collections/{cid}/groups/{gid}/move | move a group up or down |
+| POST | /collections/{cid}/items/{id}/group | assign a quote to a group |
+| POST | /collections/{cid}/suttas | add a sutta by muid or display id |
+| DELETE | /collections/{cid}/suttas/{muid} | remove a sutta from the collection |
+| POST | /collections/{cid}/suttas/{muid}/group | assign a sutta to a group |
 | GET | /collections/{cid}/export.txt | collection canonical export |
 | GET | /ids.txt | corpus text ids, sorted, one per line |
-| GET | /collections/{cid}/ids.txt | collection text ids |
+| GET | /collections/{cid}/ids.txt | collection quote ids then sutta muids |
 | GET | /pane/root | root pane fragment |
 | GET | /pane/collection | collection pane fragment |
 | GET | /pane/check | check-ids workspace pane |
