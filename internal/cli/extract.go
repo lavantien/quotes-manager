@@ -44,6 +44,10 @@ func extractGenerate(dumpsDir, seedPath, exportPath, collection string) (int, er
 	if err != nil {
 		return 0, err
 	}
+	groups := 0
+	for _, tab := range tables {
+		groups += len(tab.Groups)
+	}
 
 	for _, dir := range []string{filepath.Dir(seedPath), filepath.Dir(exportPath)} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -52,7 +56,7 @@ func extractGenerate(dumpsDir, seedPath, exportPath, collection string) (int, er
 	}
 	var seed strings.Builder
 	seed.WriteString(quote.RenderSeedSQL(quotes))
-	if len(tables) > 0 {
+	if groups > 0 {
 		seed.WriteString("\n")
 		seed.WriteString(sutta.RenderSeedSQL(tables, collection))
 	}

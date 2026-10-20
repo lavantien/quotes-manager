@@ -66,6 +66,27 @@ func writeTableDumps(t *testing.T, quoteBody, tableBody string) string {
 	return dumps
 }
 
+func TestExtractGenerateSkipsZeroGroupTables(t *testing.T) {
+	root := t.TempDir()
+	dumps := writeTableDumps(t, "\"Quote A.\" - MN 1\n", "# stray notes\nno sutta tables here\n")
+	seed := filepath.Join(root, "database", "seed.sql")
+	export := filepath.Join(root, "exports", "shortest-first.md")
+
+	if _, err := extractGenerate(dumps, seed, export, "TestCollection"); err != nil {
+		t.Fatalf("extractGenerate: %v", err)
+	}
+	seedBytes, err := os.ReadFile(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(seedBytes, []byte("TestCollection")) {
+		t.Error("a zero-group markdown must not seed a collection shell")
+	}
+	if bytes.Contains(seedBytes, []byte("suttas")) {
+		t.Error("a zero-group markdown must not emit the sutta table deletes")
+	}
+}
+
 func TestExtractGenerateAppendsSuttaSection(t *testing.T) {
 	root := t.TempDir()
 	dumps := writeTableDumps(t, "\"Quote A.\" - MN 1\n", tableFixture)
