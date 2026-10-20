@@ -86,6 +86,13 @@ type Store interface {
 	RenameCollectionGroup(id, groupID int64, name string) error
 	DeleteCollectionGroup(id, groupID int64) error
 	ReorderCollectionGroups(id int64, orderedGroupIDs []int64) error
+	CollectionQuoteItems(id int64) ([]QuoteItem, error)
+	CollectionSuttaItems(id int64) ([]SuttaItem, error)
+	SetQuoteGroup(id, quoteID, groupID int64) error
+	SetSuttaGroup(id int64, muid string, groupID int64) error
+	AddSuttaToCollection(id int64, muid, display, link string) error
+	RemoveSuttaFromCollection(id int64, muid string) error
+	ReorderCollectionSuttas(id int64, orderedMuids []string) error
 	ListCategories() ([]Category, error)
 	CreateCategory(name string) (int64, error)
 	GetCategory(id int64) (Category, error)

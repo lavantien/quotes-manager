@@ -136,3 +136,180 @@ func (s *SQLiteStore) ReorderCollectionGroups(id int64, orderedGroupIDs []int64)
 	}
 	return tx.Commit()
 }
+
+func (s *SQLiteStore) CollectionQuoteItems(id int64) ([]QuoteItem, error) {
+	rows, err := s.db.Query(
+		"SELECT q."+strings.Join(quoteColumns, ", q.")+", ci.group_id"+
+			" FROM quotes q JOIN collection_items ci ON ci.quote_id = q.id"+
+			" WHERE ci.collection_id = ? ORDER BY ci.position ASC", id)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []QuoteItem
+	for rows.Next() {
+		var it QuoteItem
+		var sources string
+		var groupID sql.NullInt64
+		if err := rows.Scan(&it.ID, &it.SuttaID, &it.Citation, &it.BodyMD, &it.BodyText, &it.LineCount, &it.CharCount, &sources, &groupID); err != nil {
+			return nil, err
+		}
+		it.Sources = splitSources(sources)
+		it.GroupID = groupID.Int64
+		out = append(out, it)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) CollectionSuttaItems(id int64) ([]SuttaItem, error) {
+	rows, err := s.db.Query(
+		`SELECT si.muid, su.display, su.link, si.position, si.group_id
+		 FROM collection_sutta_items si JOIN suttas su ON su.muid = si.muid
+		 WHERE si.collection_id = ? ORDER BY si.position ASC`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []SuttaItem
+	for rows.Next() {
+		var it SuttaItem
+		var groupID sql.NullInt64
+		if err := rows.Scan(&it.Muid, &it.Display, &it.Link, &it.Position, &groupID); err != nil {
+			return nil, err
+		}
+		it.GroupID = groupID.Int64
+		out = append(out, it)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) SetQuoteGroup(id, quoteID, groupID int64) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	if err := ensureGroup(tx, id, groupID); err != nil {
+		return rollback(tx, err)
+	}
+	res, err := tx.Exec(
+		"UPDATE collection_items SET group_id = ? WHERE collection_id = ? AND quote_id = ?",
+		nullableGroupID(groupID), id, quoteID)
+	if err != nil {
+		return rollback(tx, err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return rollback(tx, fmt.Errorf("%w: quote %d not in collection %d", ErrNotFound, quoteID, id))
+	}
+	return tx.Commit()
+}
+
+func (s *SQLiteStore) SetSuttaGroup(id int64, muid string, groupID int64) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	if err := ensureGroup(tx, id, groupID); err != nil {
+		return rollback(tx, err)
+	}
+	res, err := tx.Exec(
+		"UPDATE collection_sutta_items SET group_id = ? WHERE collection_id = ? AND muid = ?",
+		nullableGroupID(groupID), id, muid)
+	if err != nil {
+		return rollback(tx, err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return rollback(tx, fmt.Errorf("%w: sutta %q not in collection %d", ErrNotFound, muid, id))
+	}
+	return tx.Commit()
+}
+
+func ensureGroup(tx *sql.Tx, collectionID, groupID int64) error {
+	if groupID == 0 {
+		return nil
+	}
+	var one int64
+	if err := tx.QueryRow(
+		"SELECT 1 FROM collection_groups WHERE id = ? AND collection_id = ?", groupID, collectionID).Scan(&one); err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("%w: group %d not in collection %d", ErrNotFound, groupID, collectionID)
+		}
+		return err
+	}
+	return nil
+}
+
+func nullableGroupID(groupID int64) any {
+	if groupID == 0 {
+		return nil
+	}
+	return groupID
+}
+
+func (s *SQLiteStore) AddSuttaToCollection(id int64, muid, display, link string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	var one int64
+	if err := tx.QueryRow("SELECT 1 FROM collections WHERE id = ?", id).Scan(&one); err != nil {
+		if err == sql.ErrNoRows {
+			return rollback(tx, fmt.Errorf("%w: collection %d", ErrNotFound, id))
+		}
+		return rollback(tx, err)
+	}
+	if _, err := tx.Exec(
+		"INSERT OR IGNORE INTO suttas (muid, display, link) VALUES (?, ?, ?)", muid, display, link); err != nil {
+		return rollback(tx, err)
+	}
+	var exists int64
+	if err := tx.QueryRow(
+		"SELECT 1 FROM collection_sutta_items WHERE collection_id = ? AND muid = ?", id, muid).Scan(&exists); err == nil {
+		return tx.Commit()
+	} else if err != sql.ErrNoRows {
+		return rollback(tx, err)
+	}
+	if _, err := tx.Exec(
+		"INSERT INTO collection_sutta_items (collection_id, muid, position) VALUES (?, ?, (SELECT COALESCE(MAX(position), 0) + 1 FROM collection_sutta_items WHERE collection_id = ?))",
+		id, muid, id); err != nil {
+		return rollback(tx, err)
+	}
+	return tx.Commit()
+}
+
+func (s *SQLiteStore) RemoveSuttaFromCollection(id int64, muid string) error {
+	res, err := s.db.Exec(
+		"DELETE FROM collection_sutta_items WHERE collection_id = ? AND muid = ?", id, muid)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("%w: sutta %q not in collection %d", ErrNotFound, muid, id)
+	}
+	return nil
+}
+
+func (s *SQLiteStore) ReorderCollectionSuttas(id int64, orderedMuids []string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	var one int64
+	if err := tx.QueryRow("SELECT 1 FROM collections WHERE id = ?", id).Scan(&one); err != nil {
+		if err == sql.ErrNoRows {
+			return rollback(tx, fmt.Errorf("%w: collection %d", ErrNotFound, id))
+		}
+		return rollback(tx, err)
+	}
+	for i, muid := range orderedMuids {
+		res, err := tx.Exec(
+			"UPDATE collection_sutta_items SET position = ? WHERE collection_id = ? AND muid = ?",
+			i+1, id, muid)
+		if err != nil {
+			return rollback(tx, err)
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return rollback(tx, fmt.Errorf("%w: sutta %q not in collection %d", ErrNotFound, muid, id))
+		}
+	}
+	return tx.Commit()
+}
