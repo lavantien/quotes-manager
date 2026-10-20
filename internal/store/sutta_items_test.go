@@ -63,9 +63,9 @@ func TestListSuttasOrderedByMuid(t *testing.T) {
 	s := newTestStore(t)
 	cid := mustCollection(t, s)
 	for _, su := range []Sutta{
-		{"mn2", "MN 2", "https://suttacentral.net/mn2"},
-		{"mn10", "MN 10", "https://suttacentral.net/mn10"},
-		{"mn1", "MN 1", "https://suttacentral.net/mn1"},
+		{Muid: "mn2", Display: "MN 2", Link: "https://suttacentral.net/mn2"},
+		{Muid: "mn10", Display: "MN 10", Link: "https://suttacentral.net/mn10"},
+		{Muid: "mn1", Display: "MN 1", Link: "https://suttacentral.net/mn1"},
 	} {
 		if err := s.AddSuttaToCollection(cid, su.Muid, su.Display, su.Link); err != nil {
 			t.Fatal(err)
@@ -352,4 +352,68 @@ func TestDeleteCollectionRemovesGroupsAndSuttaItems(t *testing.T) {
 	if len(suttas) != 1 || suttas[0].Muid != "mn1" {
 		t.Errorf("registry after collection delete = %+v, want mn1 kept", suttas)
 	}
+}
+
+func TestSuttaLengthsDefaultUnknownAndSet(t *testing.T) {
+	s := newTestStore(t)
+	cid := mustCollection(t, s)
+	_ = s.AddSuttaToCollection(cid, "mn1", "MN 1", "https://suttacentral.net/mn1")
+	_ = s.AddSuttaToCollection(cid, "mn2", "MN 2", "https://suttacentral.net/mn2")
+
+	suttas, _ := s.ListSuttas()
+	if suttas[0].Length != 0 || suttas[1].Length != 0 {
+		t.Errorf("default lengths = %+v, want unknown (0)", suttas)
+	}
+	if err := s.SetSuttaLengths(map[string]int{"mn1": 312, "mn2": 45}); err != nil {
+		t.Fatal(err)
+	}
+	suttas, _ = s.ListSuttas()
+	if suttas[0].Length != 312 || suttas[1].Length != 45 {
+		t.Errorf("lengths after set = %+v", suttas)
+	}
+	items, _ := s.CollectionSuttaItems(cid)
+	if items[0].Length != 312 || items[1].Length != 45 {
+		t.Errorf("item lengths = %+v", items)
+	}
+}
+
+func TestSetSuttaLengthsIgnoresUnknownMuids(t *testing.T) {
+	s := newTestStore(t)
+	cid := mustCollection(t, s)
+	_ = s.AddSuttaToCollection(cid, "mn1", "MN 1", "https://suttacentral.net/mn1")
+
+	if err := s.SetSuttaLengths(map[string]int{"mn404": 10, "": 3}); err != nil {
+		t.Fatalf("unknown muid: %v", err)
+	}
+	suttas, _ := s.ListSuttas()
+	if suttas[0].Length != 0 {
+		t.Errorf("length = %d, want 0", suttas[0].Length)
+	}
+}
+
+func TestSortShortestFirst(t *testing.T) {
+	items := []SuttaItem{
+		{Muid: "unknown-early", Position: 2, Length: 0},
+		{Muid: "long", Position: 3, Length: 900},
+		{Muid: "short", Position: 4, Length: 10},
+		{Muid: "mid", Position: 1, Length: 100},
+		{Muid: "tie-a", Position: 6, Length: 100},
+		{Muid: "tie-b", Position: 5, Length: 100},
+		{Muid: "unknown-late", Position: 7, Length: 0},
+	}
+	SortShortestFirst(items)
+	want := []string{"short", "mid", "tie-b", "tie-a", "long", "unknown-early", "unknown-late"}
+	if len(items) != len(want) {
+		t.Fatalf("sorted = %v, want %v", items, want)
+	}
+	for i, it := range items {
+		if it.Muid != want[i] {
+			t.Errorf("pos %d = %s, want %s", i, it.Muid, want[i])
+		}
+	}
+}
+
+func TestSortShortestFirstEmptyAndNil(t *testing.T) {
+	SortShortestFirst(nil)
+	SortShortestFirst([]SuttaItem{})
 }

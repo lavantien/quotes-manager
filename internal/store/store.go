@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"sort"
 
 	"github.com/lavantien/quotes-manager/internal/quote"
 )
@@ -27,6 +28,7 @@ type Sutta struct {
 	Muid    string
 	Display string
 	Link    string
+	Length  int
 }
 
 type Group struct {
@@ -39,6 +41,7 @@ type SuttaItem struct {
 	Muid     string
 	Display  string
 	Link     string
+	Length   int
 	Position int
 	GroupID  int64
 }
@@ -55,6 +58,19 @@ type Category struct {
 }
 
 var ErrNotFound = errors.New("quote not found")
+
+func SortShortestFirst(items []SuttaItem) {
+	sort.SliceStable(items, func(i, j int) bool {
+		a, b := items[i], items[j]
+		if (a.Length > 0) != (b.Length > 0) {
+			return a.Length > 0
+		}
+		if a.Length != b.Length {
+			return a.Length < b.Length
+		}
+		return a.Position < b.Position
+	})
+}
 
 var ErrDuplicate = errors.New("duplicate")
 
@@ -93,6 +109,7 @@ type Store interface {
 	AddSuttaToCollection(id int64, muid, display, link string) error
 	RemoveSuttaFromCollection(id int64, muid string) error
 	ReorderCollectionSuttas(id int64, orderedMuids []string) error
+	SetSuttaLengths(lengths map[string]int) error
 	ListCategories() ([]Category, error)
 	CreateCategory(name string) (int64, error)
 	GetCategory(id int64) (Category, error)

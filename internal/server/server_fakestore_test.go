@@ -517,6 +517,10 @@ func (f *fakeStore) ReorderCollectionSuttas(int64, []string) error {
 	panic("not implemented")
 }
 
+func (f *fakeStore) SetSuttaLengths(map[string]int) error {
+	panic("not implemented")
+}
+
 type failingStore struct{}
 
 var errStoreFails = errors.New("store unavailable")
@@ -579,6 +583,7 @@ func (failingStore) AddSuttaToCollection(int64, string, string, string) error {
 }
 func (failingStore) RemoveSuttaFromCollection(int64, string) error { return errStoreFails }
 func (failingStore) ReorderCollectionSuttas(int64, []string) error { return errStoreFails }
+func (failingStore) SetSuttaLengths(map[string]int) error          { return errStoreFails }
 
 type failList struct{ *fakeStore }
 

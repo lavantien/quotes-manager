@@ -7,7 +7,7 @@ import (
 )
 
 func (s *SQLiteStore) ListSuttas() ([]Sutta, error) {
-	rows, err := s.db.Query("SELECT muid, display, link FROM suttas ORDER BY muid ASC")
+	rows, err := s.db.Query("SELECT muid, display, link, length FROM suttas ORDER BY muid ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -15,12 +15,27 @@ func (s *SQLiteStore) ListSuttas() ([]Sutta, error) {
 	var out []Sutta
 	for rows.Next() {
 		var su Sutta
-		if err := rows.Scan(&su.Muid, &su.Display, &su.Link); err != nil {
+		var length sql.NullInt64
+		if err := rows.Scan(&su.Muid, &su.Display, &su.Link, &length); err != nil {
 			return nil, err
 		}
+		su.Length = int(length.Int64)
 		out = append(out, su)
 	}
 	return out, rows.Err()
+}
+
+func (s *SQLiteStore) SetSuttaLengths(lengths map[string]int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	for muid, length := range lengths {
+		if _, err := tx.Exec("UPDATE suttas SET length = ? WHERE muid = ?", length, muid); err != nil {
+			return rollback(tx, err)
+		}
+	}
+	return tx.Commit()
 }
 
 func (s *SQLiteStore) ListCollectionGroups(id int64) ([]Group, error) {
@@ -163,7 +178,7 @@ func (s *SQLiteStore) CollectionQuoteItems(id int64) ([]QuoteItem, error) {
 
 func (s *SQLiteStore) CollectionSuttaItems(id int64) ([]SuttaItem, error) {
 	rows, err := s.db.Query(
-		`SELECT si.muid, su.display, su.link, si.position, si.group_id
+		`SELECT si.muid, su.display, su.link, su.length, si.position, si.group_id
 		 FROM collection_sutta_items si JOIN suttas su ON su.muid = si.muid
 		 WHERE si.collection_id = ? ORDER BY si.position ASC`, id)
 	if err != nil {
@@ -173,10 +188,11 @@ func (s *SQLiteStore) CollectionSuttaItems(id int64) ([]SuttaItem, error) {
 	var out []SuttaItem
 	for rows.Next() {
 		var it SuttaItem
-		var groupID sql.NullInt64
-		if err := rows.Scan(&it.Muid, &it.Display, &it.Link, &it.Position, &groupID); err != nil {
+		var length, groupID sql.NullInt64
+		if err := rows.Scan(&it.Muid, &it.Display, &it.Link, &length, &it.Position, &groupID); err != nil {
 			return nil, err
 		}
+		it.Length = int(length.Int64)
 		it.GroupID = groupID.Int64
 		out = append(out, it)
 	}

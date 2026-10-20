@@ -37,7 +37,8 @@ CREATE INDEX IF NOT EXISTS idx_collection_items_quote ON collection_items(quote_
 CREATE TABLE IF NOT EXISTS suttas (
     muid    TEXT PRIMARY KEY,
     display TEXT NOT NULL,
-    link    TEXT NOT NULL
+    link    TEXT NOT NULL,
+    length  INTEGER
 );
 CREATE TABLE IF NOT EXISTS collection_groups (
     id            INTEGER PRIMARY KEY,
