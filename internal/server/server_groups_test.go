@@ -372,6 +372,92 @@ func TestMoveGroupUpAtTopIsNoOp(t *testing.T) {
 	}
 }
 
+func TestMoveGroupDown(t *testing.T) {
+	fs, cid, g1, g2 := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/%d/move?dir=down", cid, g1), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	if len(groups) != 2 || groups[0].ID != g2 || groups[1].ID != g1 {
+		t.Errorf("groups after move down = %+v, want g2 then g1", groups)
+	}
+}
+
+func TestMoveGroupDownAtBottomIsNoOp(t *testing.T) {
+	fs, cid, g1, g2 := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/%d/move?dir=down", cid, g2), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	if groups[0].ID != g1 || groups[1].ID != g2 {
+		t.Errorf("bottom move changed order: %+v", groups)
+	}
+}
+
+func TestMoveGroupDirViaFormField(t *testing.T) {
+	fs, cid, g1, g2 := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/%d/move", cid, g1), "dir=down", formCT, formEnc)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	if len(groups) != 2 || groups[0].ID != g2 {
+		t.Errorf("groups after form-field move = %+v, want g2 first", groups)
+	}
+}
+
+func TestMoveGroupMissingDir(t *testing.T) {
+	fs, cid, _, g2 := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/%d/move", cid, g2), "")
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestGroupedViewCountsSumQuotesAndSuttas(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	body := do(t, srv, "GET", fmt.Sprintf("/collections/%d", cid), "").Body.String()
+	if !strings.Contains(body, "6 items") {
+		t.Error("collection count must sum the 2 quotes and 4 suttas")
+	}
+}
+
+func TestUngroupedCountPillSumsQuotesAndSuttas(t *testing.T) {
+	fs, cid := fakeWithCollection(t)
+	g1, err := fs.CreateCollectionGroup(cid, "only")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.SetQuoteGroup(cid, 1, g1); err != nil {
+		t.Fatal(err)
+	}
+	for _, muid := range []string{"mn10", "mn5"} {
+		if err := fs.AddSuttaToCollection(cid, muid, muid, "https://suttacentral.net/"+muid); err != nil {
+			t.Fatal(err)
+		}
+	}
+	srv := newServer(t, fs)
+	body := do(t, srv, "GET", fmt.Sprintf("/collections/%d", cid), "").Body.String()
+	s0 := sectionSlice(t, body, `id="group-0"`, "")
+	if !strings.Contains(s0, `<span class="zone__count">3</span>`) {
+		t.Errorf("ungrouped count pill must sum its quote and 2 suttas, got %s", clipSection(s0))
+	}
+}
+
+func clipSection(s string) string {
+	if len(s) > 400 {
+		return s[:400]
+	}
+	return s
+}
+
 func TestMoveGroupBadDir(t *testing.T) {
 	fs, cid, _, g2 := groupedFake(t)
 	srv := newServer(t, fs)

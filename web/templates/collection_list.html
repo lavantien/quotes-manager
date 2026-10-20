@@ -22,8 +22,8 @@
 <section class="collection-group" id="group-{{$gid}}">
   <div class="zone__toolbar">
     <span class="rail__heading">{{$g.Name}}</span>
-    {{if $gid}}<span class="zone__count">{{$g.Count}}</span>
-    <button type="button" class="btn btn--sm" hx-post="/collections/{{$cid}}/groups/{{$gid}}/move?dir=up" hx-target="#collection-zone" hx-swap="outerHTML">up</button>
+    <span class="zone__count">{{$g.Count}}</span>
+    {{if $gid}}<button type="button" class="btn btn--sm" hx-post="/collections/{{$cid}}/groups/{{$gid}}/move?dir=up" hx-target="#collection-zone" hx-swap="outerHTML">up</button>
     <button type="button" class="btn btn--sm" hx-post="/collections/{{$cid}}/groups/{{$gid}}/move?dir=down" hx-target="#collection-zone" hx-swap="outerHTML">down</button>
     <button type="button" class="btn btn--sm" hx-post="/collections/{{$cid}}/groups/{{$gid}}/rename" hx-prompt="Rename group to:" hx-target="#collection-zone" hx-swap="outerHTML">rename</button>
     <button type="button" class="btn btn--sm btn--danger" hx-delete="/collections/{{$cid}}/groups/{{$gid}}" hx-confirm="Delete this group? Its items stay, ungrouped." hx-target="#collection-zone" hx-swap="outerHTML">delete</button>{{end}}
