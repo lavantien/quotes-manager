@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -157,5 +158,149 @@ func TestRunSuttasWithoutFlagsPrintsUsage(t *testing.T) {
 	}
 	if !bytes.Contains([]byte(out), []byte("--lengths")) {
 		t.Errorf("bare suttas must print usage, got %q", out)
+	}
+}
+
+func suttaFixtureDB(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "suttas.db")
+	st, err := store.Open(path)
+	if err != nil {
+		t.Fatalf("store.Open: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	cid, err := st.CreateCollection(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AddSuttaToCollection(cid, "mn1", "MN 1", "https://suttacentral.net/mn1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AddSuttaToCollection(cid, "mn2", "MN 2", "https://suttacentral.net/mn2"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AddSuttaToCollection(cid, "mn3", "MN 3", "https://suttacentral.net/mn3"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AddSuttaToCollection(cid, "mn4", "MN 4", "https://suttacentral.net/mn4"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetSuttaLengths(map[string]int{"mn1": 5, "mn3": 2, "mn4": 1}); err != nil {
+		t.Fatal(err)
+	}
+	g1, err := st.CreateCollectionGroup(cid, "First")
+	if err != nil {
+		t.Fatal(err)
+	}
+	g2, err := st.CreateCollectionGroup(cid, "Second")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for m, g := range map[string]int64{"mn1": g1, "mn3": g1, "mn2": g2, "mn4": g2} {
+		if err := st.SetSuttaGroup(cid, m, g); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return path
+}
+
+func runQuerySuttasOut(t *testing.T, form, db string, collection int64) (string, error) {
+	t.Helper()
+	oldOut := stdout
+	stdout = new(bytes.Buffer)
+	err := runQuerySuttas(config.Defaults(), form, db, collection)
+	out := stdout.(*bytes.Buffer).String()
+	stdout = oldOut
+	return out, err
+}
+
+func TestQuerySuttasRegistryQM(t *testing.T) {
+	out, err := runQuerySuttasOut(t, "", suttaFixtureDB(t), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "MN 1 (https://suttacentral.net/mn1) 5\nMN 2 (https://suttacentral.net/mn2)\nMN 3 (https://suttacentral.net/mn3) 2\nMN 4 (https://suttacentral.net/mn4) 1\n"
+	if out != want {
+		t.Errorf("qm registry output = %q, want %q", out, want)
+	}
+}
+
+func TestQuerySuttasRegistryJSON(t *testing.T) {
+	out, err := runQuerySuttasOut(t, "json", suttaFixtureDB(t), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []struct {
+		Muid    string `json:"muid"`
+		Display string `json:"display"`
+		Link    string `json:"link"`
+		Length  int    `json:"length"`
+	}
+	if err := json.Unmarshal([]byte(out), &rows); err != nil {
+		t.Fatalf("json: %v\n%s", err, out)
+	}
+	if len(rows) != 4 {
+		t.Fatalf("rows = %d, want 4", len(rows))
+	}
+	if rows[0].Muid != "mn1" || rows[0].Length != 5 || rows[1].Muid != "mn2" || rows[1].Length != 0 {
+		t.Errorf("registry order or lengths wrong: %+v", rows)
+	}
+}
+
+func TestQuerySuttasCollectionQM(t *testing.T) {
+	out, err := runQuerySuttasOut(t, "", suttaFixtureDB(t), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "MN 3 (https://suttacentral.net/mn3) 2\nMN 1 (https://suttacentral.net/mn1) 5\n\nMN 4 (https://suttacentral.net/mn4) 1\nMN 2 (https://suttacentral.net/mn2)\n"
+	if out != want {
+		t.Errorf("qm collection output = %q, want %q", out, want)
+	}
+}
+
+func TestQuerySuttasCollectionJSON(t *testing.T) {
+	out, err := runQuerySuttasOut(t, "json", suttaFixtureDB(t), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []struct {
+		Muid      string `json:"muid"`
+		Length    int    `json:"length"`
+		GroupID   int64  `json:"group_id"`
+		GroupName string `json:"group_name"`
+		GroupPos  int    `json:"group_position"`
+	}
+	if err := json.Unmarshal([]byte(out), &rows); err != nil {
+		t.Fatalf("json: %v\n%s", err, out)
+	}
+	wantOrder := []string{"mn3", "mn1", "mn4", "mn2"}
+	if len(rows) != len(wantOrder) {
+		t.Fatalf("rows = %d, want %d", len(rows), len(wantOrder))
+	}
+	for i, m := range wantOrder {
+		if rows[i].Muid != m {
+			t.Fatalf("row %d = %s, want %s", i, rows[i].Muid, m)
+		}
+	}
+	if rows[0].GroupName != "First" || rows[0].GroupPos != 1 || rows[2].GroupName != "Second" || rows[2].GroupPos != 2 {
+		t.Errorf("group fields wrong: %+v", rows)
+	}
+}
+
+func TestQuerySuttasUnknownCollection(t *testing.T) {
+	if _, err := runQuerySuttasOut(t, "", suttaFixtureDB(t), 99); err == nil {
+		t.Error("unknown collection must error")
+	}
+}
+
+func TestQuerySuttasMissingDB(t *testing.T) {
+	if _, err := runQuerySuttasOut(t, "", filepath.Join(t.TempDir(), "gone.db"), 0); err == nil {
+		t.Error("missing db must error")
+	}
+}
+
+func TestQuerySuttasBadFormat(t *testing.T) {
+	if _, err := runQuerySuttasOut(t, "xml", suttaFixtureDB(t), 0); err == nil {
+		t.Error("bad format must error")
 	}
 }

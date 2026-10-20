@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/lavantien/quotes-manager/internal/canon/graph"
 	"github.com/lavantien/quotes-manager/internal/config"
@@ -71,4 +73,103 @@ func runSuttas(ctx context.Context, cfg *config.Config, args []string) error {
 	}
 	printLine("suttas: %d lengths updated of %d from %s\n", len(counts), len(registry), graphPath)
 	return nil
+}
+
+type suttaRow struct {
+	Muid          string `json:"muid"`
+	Display       string `json:"display"`
+	Link          string `json:"link"`
+	Length        int    `json:"length"`
+	GroupID       int64  `json:"group_id,omitempty"`
+	GroupName     string `json:"group_name,omitempty"`
+	GroupPosition int    `json:"group_position,omitempty"`
+}
+
+func runQuerySuttas(cfg *config.Config, form, dbOverride string, collection int64) error {
+	format, err := resolveQueryFormat(form, formatQM)
+	if err != nil {
+		return err
+	}
+	dbPath := cfg.Quotes.DBPath
+	if dbOverride != "" {
+		dbPath = dbOverride
+	}
+	if _, err := os.Stat(dbPath); err != nil {
+		return fmt.Errorf("suttas: database %s does not exist: %w", dbPath, err)
+	}
+	st, err := store.Open(dbPath)
+	if err != nil {
+		return fmt.Errorf("suttas: %w", err)
+	}
+	defer func() { _ = st.Close() }()
+
+	if collection == 0 {
+		suttas, err := st.ListSuttas()
+		if err != nil {
+			return err
+		}
+		rows := make([]suttaRow, 0, len(suttas))
+		for _, s := range suttas {
+			rows = append(rows, suttaRow{Muid: s.Muid, Display: s.Display, Link: s.Link, Length: s.Length})
+		}
+		return renderSuttas(format, rows)
+	}
+	if _, err := st.GetCollection(collection); err != nil {
+		return fmt.Errorf("suttas: collection %d: %w", collection, err)
+	}
+	groups, err := st.ListCollectionGroups(collection)
+	if err != nil {
+		return err
+	}
+	items, err := st.CollectionSuttaItems(collection)
+	if err != nil {
+		return err
+	}
+	byGroup := make(map[int64][]store.SuttaItem, len(groups)+1)
+	var ungrouped []store.SuttaItem
+	for _, it := range items {
+		if it.GroupID == 0 {
+			ungrouped = append(ungrouped, it)
+		} else {
+			byGroup[it.GroupID] = append(byGroup[it.GroupID], it)
+		}
+	}
+	rows := make([]suttaRow, 0, len(items))
+	appendBlock := func(block []store.SuttaItem, gid int64, gname string, gpos int) {
+		store.SortShortestFirst(block)
+		for _, it := range block {
+			rows = append(rows, suttaRow{
+				Muid: it.Muid, Display: it.Display, Link: it.Link, Length: it.Length,
+				GroupID: gid, GroupName: gname, GroupPosition: gpos,
+			})
+		}
+	}
+	appendBlock(ungrouped, 0, "", 0)
+	for gi, g := range groups {
+		appendBlock(byGroup[g.ID], g.ID, g.Name, gi+1)
+	}
+	return renderSuttas(format, rows)
+}
+
+func renderSuttas(format string, rows []suttaRow) error {
+	if format == formatJSON {
+		return printJSON(rows)
+	}
+	var b strings.Builder
+	for i, r := range rows {
+		if i > 0 && rows[i-1].GroupID != r.GroupID {
+			b.WriteString("\n")
+		}
+		b.WriteString(r.Display)
+		b.WriteString(" (")
+		b.WriteString(r.Link)
+		b.WriteString(")")
+		if r.Length > 0 {
+			b.WriteString(" ")
+			b.WriteString(strconv.Itoa(r.Length))
+		}
+		b.WriteString("\n")
+	}
+	_, err := fmt.Fprint(stdout, b.String())
+	return err
 }

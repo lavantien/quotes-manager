@@ -12,12 +12,12 @@ import (
 )
 
 func init() {
-	Register(Command{Name: "query", Usage: "query the current database: segments|search|quotes|tree|stats|word", Run: runQuery})
+	Register(Command{Name: "query", Usage: "query the current database: segments|search|quotes|suttas|tree|stats|word", Run: runQuery})
 }
 
 func runQuery(ctx context.Context, cfg *config.Config, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("query needs a subcommand: segments, search, quotes, tree, stats, or word")
+		return fmt.Errorf("query needs a subcommand: segments, search, quotes, suttas, tree, stats, or word")
 	}
 	fs := flag.NewFlagSet("query "+args[0], flag.ContinueOnError)
 	muid := fs.String("muid", "", "text muid")
@@ -33,6 +33,7 @@ func runQuery(ctx context.Context, cfg *config.Config, args []string) error {
 	withSegments := fs.Bool("segments", false, "with --headword: list the segment refs")
 	format := fs.String("format", "", "output format: json or qm")
 	quotesDB := fs.String("db", "", "quotes subcommand: SQLite database path override")
+	collection := fs.Int64("collection", 0, "suttas subcommand: collection id")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -45,6 +46,9 @@ func runQuery(ctx context.Context, cfg *config.Config, args []string) error {
 
 	if args[0] == "quotes" {
 		return runQueryQuotes(cfg, *text, *format, *limit, *quotesDB)
+	}
+	if args[0] == "suttas" {
+		return runQuerySuttas(cfg, *format, *quotesDB, *collection)
 	}
 
 	_, dbPath, err := graph.CurrentDB(cfg)
@@ -142,7 +146,7 @@ func runQuery(ctx context.Context, cfg *config.Config, args []string) error {
 			return fmt.Errorf("word needs --form <token> or --headword <lemma>")
 		}
 	default:
-		return fmt.Errorf("unknown query subcommand %q: want segments, search, quotes, tree, stats, or word", args[0])
+		return fmt.Errorf("unknown query subcommand %q: want segments, search, quotes, suttas, tree, stats, or word", args[0])
 	}
 }
 
