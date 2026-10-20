@@ -4,7 +4,9 @@ Wave goal: ingest the AriyaSavaka curated sutta table from the crawled reddit da
 
 Source of truth: `dumps/ariyasavaka-curated-list.md` (verbatim post body, provenance in `dumps/ariyasavaka-curated-list.json`, commit bb83190). 16 roman-numeral sections in gradual training order, 107 numbered items, 261 sutta markdown links, 44,688 bytes.
 
-Design decisions: suttas are a global registry table; collections gain named ordered groups; quote items and sutta items both carry an optional group id; within a group the document order is the ordering (author's gradual approach encodes similarity and relationship); no length data exists offline so shortest-on-top is honored by the table's own generally-shortest-first structure; seed.sql is the only ingest surface (local db verified identical to seed: 109 quotes, 1 collection, 3 categories); sample collection seeding is removed once AriyaSavaka seeds.
+Design decisions: suttas are a global registry table; collections gain named ordered groups; quote items and sutta items both carry an optional group id; within a group the document order is the ordering (author's gradual approach encodes similarity and relationship); no length data exists offline so shortest-on-top is honored by the table's own generally-shortest-first structure; seed.sql is the only ingest surface (local db verified identical to seed: 109 quotes, 1 collection, 3 categories); sample collection seeding is removed once AriyaSavaka seeds. The muid is the operative handle for our own CLI: T4 adds `qm query suttas` (registry and per-collection listing, ids feed `qm query segments --muid`) and T5 makes `/collections/{cid}/ids.txt` carry the collection's sutta ids alongside quote ids.
+
+First launch attempt (2026-10-20 18:20) landed all three agents in a web-only toolset with no file or shell tools; one agent probed a host escape through a browser MCP before being stopped, both repos verified clean afterwards. Relaunched 18:40 on the general-purpose type with a toolset guard in every brief.
 
 | task | lane | files owned | depends | status |
 |---|---|---|---|---|
