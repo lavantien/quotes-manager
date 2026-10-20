@@ -1,0 +1,5 @@
+2026/10/20 21:11:57 INFO request method=GET path=/ status=200 duration_ms=14
+2026/10/20 21:11:57 INFO request method=GET path=/collections/1 status=200 duration_ms=34
+2026/10/20 21:11:57 INFO request method=POST path=/collections/1/groups status=200 duration_ms=51
+2026/10/20 21:11:57 INFO request method=GET path=/collections/1 status=200 duration_ms=43
+2026/10/20 21:11:57 INFO request method=DELETE path=/collections/1/groups/19 status=200 duration_ms=40
