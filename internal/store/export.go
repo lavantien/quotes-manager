@@ -4,13 +4,8 @@ import (
 	"strings"
 )
 
-// DumpVersion is the current backup format version.
 const DumpVersion = 2
 
-// Dump is a portable, whole-database snapshot: every quote plus the named
-// collections and categories with their ordered memberships, the suttas
-// registry, and the collection groups with their memberships. It is the
-// serialization format for backup/restore.
 type Dump struct {
 	Version     int              `json:"version"`
 	Quotes      []Quote          `json:"quotes"`
@@ -19,9 +14,6 @@ type Dump struct {
 	Suttas      []Sutta          `json:"suttas"`
 }
 
-// CollectionDump is a collection with its ordered quote ids, the parallel
-// group ids of those items (0 = ungrouped), its groups with their member
-// quote ids, and its ordered sutta items with their group ids.
 type CollectionDump struct {
 	ID         int64           `json:"id"`
 	Name       string          `json:"name"`
@@ -31,29 +23,23 @@ type CollectionDump struct {
 	SuttaItems []SuttaItemDump `json:"sutta_items"`
 }
 
-// GroupDump is a collection group with its member quote ids in order.
 type GroupDump struct {
 	ID    int64   `json:"id"`
 	Name  string  `json:"name"`
 	Items []int64 `json:"items"`
 }
 
-// SuttaItemDump is one sutta membership with its group id (0 = ungrouped).
 type SuttaItemDump struct {
 	Muid    string `json:"muid"`
 	GroupID int64  `json:"group_id"`
 }
 
-// CategoryDump is a category with its member quote ids.
 type CategoryDump struct {
 	ID    int64   `json:"id"`
 	Name  string  `json:"name"`
 	Items []int64 `json:"items"`
 }
 
-// Export snapshots the whole database: every quote (in home order), each
-// collection with its ordered members, groups, and sutta items, the suttas
-// registry, and each category with its members.
 func (s *SQLiteStore) Export() (*Dump, error) {
 	qs, err := s.List()
 	if err != nil {
@@ -124,12 +110,6 @@ func (s *SQLiteStore) exportCollection(id int64) (CollectionDump, error) {
 	return cd, nil
 }
 
-// Import replaces every data table with the dump's contents in a single
-// transaction. Explicit ids are preserved so the canonical shortest-first
-// ranking, collection positions, group memberships, and category memberships
-// survive the round-trip. Version 1 dumps import without groups or suttas.
-// ErrUnsupportedDump is returned (and the transaction rolled back) for a nil
-// dump or an unknown version.
 func (s *SQLiteStore) Import(d *Dump) error {
 	if d == nil || (d.Version != 1 && d.Version != DumpVersion) {
 		return ErrUnsupportedDump
