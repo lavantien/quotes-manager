@@ -29,7 +29,15 @@ func EnsureSeeded(db *sql.DB) error {
 			empty = n == 0
 		}
 		if empty {
-			if _, err := db.Exec(database.SeedSQL); err != nil {
+			tx, err := db.Begin()
+			if err != nil {
+				return err
+			}
+			if _, err := tx.Exec(database.SeedSQL); err != nil {
+				_ = tx.Rollback()
+				return err
+			}
+			if err := tx.Commit(); err != nil {
 				return err
 			}
 		}
