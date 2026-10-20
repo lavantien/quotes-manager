@@ -180,15 +180,15 @@ Prerequisites: Go (the toolchain pin lives in `go.mod`), a C toolchain for CGO (
 ```sh
 git clone https://github.com/lavantien/quotes-manager
 cd quotes-manager
-make build
+go run ./tools/dev build
 ```
 
-`make build` emits `dist/qm.exe` with `CGO_ENABLED=1` and the `sqlite_fts5` tag. Any manual `go` command needs the same treatment: `CGO_ENABLED=1 go build -tags sqlite_fts5 ./cmd/qm`.
+`go run ./tools/dev build` emits `dist/qm.exe` with `CGO_ENABLED=1` and the `sqlite_fts5` tag. Any manual `go` command needs the same treatment: `CGO_ENABLED=1 go build -tags sqlite_fts5 ./cmd/qm`.
 
 2. Run the merged server:
 
 ```sh
-make run
+go run ./tools/dev run
 ```
 
 That is `qm serve --addr 127.0.0.1:8080 --db database/quotes.db`. The first run creates and seeds `database/quotes.db` (109 quotes, three categories, the AriyaSavaka collection with 16 named groups and 471 suttas), the seed is never reapplied, edits persist. The workspace is at http://127.0.0.1:8080/ and the canon pages sit beside it. Canon pages answer `503 not ready` until a pipeline run publishes a graph database (next section).
@@ -206,12 +206,12 @@ dist/qm.exe serve --addr 127.0.0.1:9000
 4. Regenerate artifacts:
 
 ```sh
-make extract
-make screenshots
-make diagrams
+go run ./tools/dev extract
+go run ./tools/dev screenshots
+go run ./tools/dev diagrams
 ```
 
-`make extract` rebuilds `database/seed.sql` and `exports/shortest-first.md` from `dumps/`.
+`go run ./tools/dev extract` rebuilds `database/seed.sql` and `exports/shortest-first.md` from `dumps/`.
 
 ## Production environment setup
 
@@ -254,9 +254,9 @@ make diagrams
 | QM_CANON_EMPTY_WARN_PER_MUID | int | canon.triangulate.empty_warn_per_muid |
 | QM_CANON_E2E_MUIDS | csv | canon.e2e.muids |
 
-3. Loopback default. `server.addr` defaults to `127.0.0.1:8080`, the loopback only. Override with `--addr`, `QM_SERVER_ADDR`, or the `ADDR` make variable.
+3. Loopback default. `server.addr` defaults to `127.0.0.1:8080`, the loopback only. Override with `--addr`, `QM_SERVER_ADDR`, or the `ADDR` environment variable.
 
-4. Pipeline and publish. `qm all` (or `make stage STAGE=all`) runs sync, parse, load, triangulate, export, report in order, and `make stage STAGE=parse` runs any single stage through the built binary. `load` writes `database/canon/canon-<runid>.db` then publishes it: `pointer.json` is written to a temp file, fsynced, and renamed over the old pointer, so `serve` follows the new run on the next request without a restart. Superseded `canon-*.db` files and their wal, shm, and journal sidecars are retired, with a retry window when a Windows reader still holds the old file: the pointer already references the new run and a lagging retirement is reported, never silently dropped.
+4. Pipeline and publish. `qm all` (or `go run ./tools/dev stage -stage all`) runs sync, parse, load, triangulate, export, report in order, and `go run ./tools/dev stage -stage parse` runs any single stage through the built binary. `load` writes `database/canon/canon-<runid>.db` then publishes it: `pointer.json` is written to a temp file, fsynced, and renamed over the old pointer, so `serve` follows the new run on the next request without a restart. Superseded `canon-*.db` files and their wal, shm, and journal sidecars are retired, with a retry window when a Windows reader still holds the old file: the pointer already references the new run and a lagging retirement is reported, never silently dropped.
 
 ## Surfaces
 
@@ -396,45 +396,47 @@ The `/api/v1` JSON surface:
 | GET | /api/v1/report/{date}/{file} | report file |
 | GET POST | /api/ | JSON 404 catch-all for unknown api paths |
 
-### make targets
+### the dev runner
 
-`make help` prints this table from the Makefile comments:
+`go run ./tools/dev` with no subcommand prints this table from the runner's own registry:
 
 ```text
-help          show this help
-all           run the full test suite (default)
 build         build the qm binary into dist/
 test          run the full test suite
-test-pkg      run one package's tests: make test-pkg PKG=./internal/config
-test-one      run one named test: make test-one PKG=./internal/cli TEST=TestLiveEnabled
-race          go test -race over the merged-app core (RACE_PKGS)
+test-pkg      run one package's tests: -pkg ./internal/config
+test-one      run one named test: -pkg ./internal/cli -test TestLiveEnabled
+race          go test -race over the merged-app core
 vet           go vet
 fmt           gofumpt all Go files
 lint          golangci-lint run
-lint-pkg      lint one package: make lint-pkg PKG=./internal/config
+lint-pkg      lint one package: -pkg ./internal/config
 typecheck     compile every package, then go vet
 sloc          enforce the 1000-line ceiling on every Go file
-fuzz          fuzz every target in the repo for FUZZ_TIME each
-fuzz-one      fuzz one target: make fuzz-one PKG=./internal/quote FUZZ_TARGET=FuzzParseCanonical
-mutate        mutation-test MUTATE_PKGS, every surviving mutant fails the build
-memtest       hermetic pipeline + merged e2e under a hard GOMEMLIMIT
-e2e-hermetic  merged-app hermetic e2e (internal/e2e + the cli hermetic pass)
+fuzz          fuzz every target in the repo for -fuzztime each
+fuzz-one      fuzz one target: -pkg ./internal/quote -target FuzzParseCanonical
+mutate        mutation-test -pkgs, every surviving mutant fails the build
+memtest       hermetic pipeline plus merged e2e under a hard GOMEMLIMIT
+e2e-hermetic  merged-app hermetic e2e (internal/e2e plus the cli hermetic pass)
 e2e           live end-to-end pipeline (network, QM_E2E_LIVE gate)
 verify        run the full quality chain, fail-fast
-vendor-assets verify or refresh the vendored htmx/cytoscape pins in web/static
+vendor-assets verify the vendored htmx and cytoscape pins in web/static, -refresh moves them
 diagrams      render every docs/diagrams/*.puml to a committed PNG beside it
-stage         run one pipeline stage via the built binary: make stage STAGE=parse
-run server    run the web server (http://127.0.0.1:8080)
-extract       regenerate database/seed.sql + exports/shortest-first.md from dumps/
-seed          delete the database so the next 'make run' re-seeds it
+stage         run one pipeline stage via the built binary: -stage parse
+run           run the web server: -addr 127.0.0.1:8080 -db database/quotes.db
+server        run the web server: -addr 127.0.0.1:8080 -db database/quotes.db
+extract       regenerate database/seed.sql plus exports/shortest-first.md from dumps/
+seed          delete the database so the next run re-seeds it from seed.sql
 tidy          go mod tidy
 clean         remove generated artifacts (database, binaries)
-coverage      recompute Go test coverage and refresh the README coverage badge
+coverage      recompute Go test coverage and refresh the readme coverage badge
 screenshots   capture the UI journey into project-pictures/ (needs git, Chrome or Edge)
-fixture       regenerate the clone-of-main test fixture (internal/store/storetest)
-monitor       memory guard over project processes (make monitor MONITOR_FOR=5s)
+fixture       regenerate the clone-of-main test fixture (internal/store/storetest/testdata)
+monitor       memory guard over project processes: -for 5s
+all           run the full test suite
 ```
+
+Flags whose defaults seed from environment variables: `ADDR`, `DB`, `PKG`, `TEST`, `STAGE`, `FUZZ_TARGET`, `FUZZ_TIME`, `MUTATE_PKGS`, `MUTATE_PARALLEL`, `E2E_TIMEOUT`, `MEMSOFT`, `GOMEMLIMIT`, `RACE_PKGS`, `MEMCAP`, and `MONITOR_FOR` seed the flag defaults, an explicit flag wins.
 
 ## QA harness
 
-Every change runs the verification chain through make, committing at each green step. The gates in order: `make test` (full suite), `make race`, `make fmt`, `make lint`, `make typecheck`, `make sloc`, `make fuzz`, `make mutate`, `make e2e-hermetic`, then `make e2e` for the live network pass gated by `QM_E2E_LIVE`. `make verify` chains the whole sequence, and `make memtest` re-runs the hermetic passes under a hard memory limit. Stage baselines and per-run logs are recorded under [docs/qa](docs/qa/baselines.md).
+Every change runs the verification chain through the dev runner, committing at each green step. The gates in order: `go run ./tools/dev test` (full suite), `go run ./tools/dev race`, `go run ./tools/dev fmt`, `go run ./tools/dev lint`, `go run ./tools/dev typecheck`, `go run ./tools/dev sloc`, `go run ./tools/dev fuzz`, `go run ./tools/dev mutate`, `go run ./tools/dev e2e-hermetic`, then `go run ./tools/dev e2e` for the live network pass gated by `QM_E2E_LIVE`. `go run ./tools/dev verify` chains the whole sequence, and `go run ./tools/dev memtest` re-runs the hermetic passes under a hard memory limit. Stage baselines and per-run logs are recorded under [docs/qa](docs/qa/baselines.md).
