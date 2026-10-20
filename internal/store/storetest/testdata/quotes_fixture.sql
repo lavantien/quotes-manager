@@ -660,8 +660,8 @@ Furthermore, for the sake of sensual pleasures, they conduct themselves badly by
 And what is the escape from sensual pleasures? Removing and giving up desire and greed for sensual pleasures: this is the escape from sensual pleasures.
 There are ascetics and brahmins who don’t truly understand sensual pleasures’ gratification, drawback, and escape in this way for what they are. It’s impossible for them to completely understand sensual pleasures themselves, or to instruct another so that, practicing accordingly, they will completely understand sensual pleasures.”', 15, 5032, 'stream-entry-for-lay-buddhists.txt');
 INSERT INTO collections (id, name) VALUES (1, '');
-INSERT INTO collection_items (collection_id, quote_id, position) VALUES (1, 1, 1);
-INSERT INTO collection_items (collection_id, quote_id, position) VALUES (1, 2, 2);
+INSERT INTO collection_items (collection_id, quote_id, position, group_id) VALUES (1, 1, 1, NULL);
+INSERT INTO collection_items (collection_id, quote_id, position, group_id) VALUES (1, 2, 2, NULL);
 INSERT INTO categories (id, name) VALUES (1, 'suffering');
 INSERT INTO categories (id, name) VALUES (2, 'renunciation');
 INSERT INTO categories (id, name) VALUES (3, 'right view');

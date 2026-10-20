@@ -63,7 +63,10 @@ func fixtureRun(dbPath, outPath string) error {
 var fixtureTables = []fixtureTable{
 	{"quotes", []string{"id", "sutta_id", "citation", "body_md", "body_text", "line_count", "char_count", "sources"}, "id"},
 	{"collections", []string{"id", "name"}, "id"},
-	{"collection_items", []string{"collection_id", "quote_id", "position"}, "collection_id, position"},
+	{"collection_items", []string{"collection_id", "quote_id", "position", "group_id"}, "collection_id, position"},
+	{"collection_groups", []string{"id", "collection_id", "name", "position"}, "collection_id, position"},
+	{"collection_sutta_items", []string{"collection_id", "muid", "position", "group_id"}, "collection_id, position"},
+	{"suttas", []string{"muid", "display", "link", "length"}, "muid"},
 	{"categories", []string{"id", "name"}, "id"},
 	{"category_items", []string{"category_id", "quote_id"}, "category_id, quote_id"},
 }
