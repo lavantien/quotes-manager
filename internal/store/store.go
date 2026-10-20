@@ -76,6 +76,10 @@ var ErrDuplicate = errors.New("duplicate")
 
 var ErrEmptyName = errors.New("empty name")
 
+const MaxGroupNameChars = 100
+
+var ErrNameTooLong = errors.New("name too long")
+
 var ErrUnsupportedDump = errors.New("unsupported dump version")
 
 type Store interface {

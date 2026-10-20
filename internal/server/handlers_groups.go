@@ -7,8 +7,10 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/lavantien/quotes-manager/internal/quote"
+	"github.com/lavantien/quotes-manager/internal/store"
 )
 
 func (s *Server) createGroup(w http.ResponseWriter, r *http.Request) {
@@ -272,6 +274,9 @@ func suttaLink(muid string) string {
 
 func validGroupName(name string) bool {
 	if name == "" {
+		return false
+	}
+	if utf8.RuneCountInString(name) > store.MaxGroupNameChars {
 		return false
 	}
 	for _, r := range name {

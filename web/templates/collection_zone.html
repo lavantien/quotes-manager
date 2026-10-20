@@ -23,7 +23,7 @@
 </div>
 <div class="zone__toolbar">
   <form hx-post="/collections/{{.Collection.ID}}/groups" hx-target="#collection-zone" hx-swap="outerHTML">
-    <input class="rail__input" type="text" name="name" placeholder="New group" maxlength="100" required>
+    <input class="rail__input" type="text" name="name" placeholder="New group" maxlength="{{.Collection.NameMax}}" required>
     <button class="btn btn--sm" type="submit">+ group</button>
   </form>
   <form hx-post="/collections/{{.Collection.ID}}/suttas" hx-target="#collection-zone" hx-swap="outerHTML">

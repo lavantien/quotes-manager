@@ -53,6 +53,7 @@ type collectionPane struct {
 	Quotes      []store.Quote
 	Groups      []store.Group
 	HasSections bool
+	NameMax     int
 	Sections    []groupSection
 	ExportURL   string
 	Query       string
@@ -173,6 +174,7 @@ func (s *Server) buildPageData(catID, colID int64, rq, cq string) (pageData, err
 				Name:       collectionLabel(c),
 				Count:      len(qItems) + len(sItems),
 				QuoteCount: len(qItems),
+				NameMax:    store.MaxGroupNameChars,
 				ExportURL:  fmt.Sprintf("/collections/%d/export.txt", colID),
 				Query:      cq,
 				Terms:      search.HighlightTerms(cQuery),

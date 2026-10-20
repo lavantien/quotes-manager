@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -168,6 +169,31 @@ func TestCreateCollectionGroupEmptyName(t *testing.T) {
 	}
 	if _, err := s.CreateCollectionGroup(cid, "   "); !errors.Is(err, ErrEmptyName) {
 		t.Errorf("err = %v, want ErrEmptyName", err)
+	}
+}
+
+func TestCreateCollectionGroupNameTooLong(t *testing.T) {
+	s := newTestStore(t)
+	cid := mustCollection(t, s)
+	long := strings.Repeat("x", MaxGroupNameChars+1)
+	if _, err := s.CreateCollectionGroup(cid, long); !errors.Is(err, ErrNameTooLong) {
+		t.Errorf("err = %v, want ErrNameTooLong", err)
+	}
+	if _, err := s.CreateCollectionGroup(cid, strings.Repeat("y", MaxGroupNameChars)); err != nil {
+		t.Fatalf("name at the cap must pass: %v", err)
+	}
+}
+
+func TestRenameCollectionGroupNameTooLong(t *testing.T) {
+	s := newTestStore(t)
+	cid := mustCollection(t, s)
+	g, _ := s.CreateCollectionGroup(cid, "old")
+	if err := s.RenameCollectionGroup(cid, g, strings.Repeat("x", MaxGroupNameChars+1)); !errors.Is(err, ErrNameTooLong) {
+		t.Errorf("err = %v, want ErrNameTooLong", err)
+	}
+	groups, _ := s.ListCollectionGroups(cid)
+	if groups[0].Name != "old" {
+		t.Errorf("rejected rename must not change the name, got %q", groups[0].Name)
 	}
 }
 

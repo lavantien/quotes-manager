@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 )
 
 func (s *SQLiteStore) ListSuttas() ([]Sutta, error) {
@@ -66,6 +67,9 @@ func (s *SQLiteStore) CreateCollectionGroup(id int64, name string) (int64, error
 	if trimmed == "" {
 		return 0, fmt.Errorf("%w: collection group", ErrEmptyName)
 	}
+	if utf8.RuneCountInString(trimmed) > MaxGroupNameChars {
+		return 0, fmt.Errorf("%w: collection group over %d chars", ErrNameTooLong, MaxGroupNameChars)
+	}
 	tx, err := s.db.Begin()
 	if err != nil {
 		return 0, err
@@ -94,6 +98,9 @@ func (s *SQLiteStore) RenameCollectionGroup(id, groupID int64, name string) erro
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
 		return fmt.Errorf("%w: collection group", ErrEmptyName)
+	}
+	if utf8.RuneCountInString(trimmed) > MaxGroupNameChars {
+		return fmt.Errorf("%w: collection group over %d chars", ErrNameTooLong, MaxGroupNameChars)
 	}
 	res, err := s.db.Exec(
 		"UPDATE collection_groups SET name = ? WHERE id = ? AND collection_id = ?", trimmed, groupID, id)

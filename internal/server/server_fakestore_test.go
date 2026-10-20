@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/lavantien/quotes-manager/internal/quote"
 	"github.com/lavantien/quotes-manager/internal/store"
@@ -552,6 +553,9 @@ func (f *fakeStore) CreateCollectionGroup(cid int64, name string) (int64, error)
 	if trimmed == "" {
 		return 0, store.ErrEmptyName
 	}
+	if utf8.RuneCountInString(trimmed) > store.MaxGroupNameChars {
+		return 0, store.ErrNameTooLong
+	}
 	if !f.collectionExists(cid) {
 		return 0, store.ErrNotFound
 	}
@@ -564,6 +568,9 @@ func (f *fakeStore) RenameCollectionGroup(cid, gid int64, name string) error {
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
 		return store.ErrEmptyName
+	}
+	if utf8.RuneCountInString(trimmed) > store.MaxGroupNameChars {
+		return store.ErrNameTooLong
 	}
 	for i, g := range f.groups[cid] {
 		if g.ID == gid {

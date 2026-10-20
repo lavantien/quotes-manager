@@ -276,6 +276,37 @@ func TestCreateGroupRejectsControlCharacters(t *testing.T) {
 	}
 }
 
+func TestCreateGroupRejectsTooLongName(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	tooLong := strings.Repeat("x", 101)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups", cid), "name="+tooLong, formCT, formEnc)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400 for a 101 character name", rec.Code)
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	if len(groups) != 2 {
+		t.Errorf("groups = %+v, want only the 2 seeded ones", groups)
+	}
+}
+
+func TestRenameGroupRejectsTooLongPrompt(t *testing.T) {
+	fs, cid, g1, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	prompt := ""
+	for i := 0; i < 101; i++ {
+		prompt += "x"
+	}
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/%d/rename", cid, g1), "", "HX-Prompt", prompt)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400 for a 101 character prompt", rec.Code)
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	if groups[0].Name != "senses restraint" {
+		t.Errorf("name = %q, want unchanged senses restraint", groups[0].Name)
+	}
+}
+
 func TestCreateGroupUnknownCollection(t *testing.T) {
 	srv := newServer(t, newFake(sampleQuote(1)))
 	rec := do(t, srv, "POST", "/collections/999/groups", "name=x", formCT, formEnc)
