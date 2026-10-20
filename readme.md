@@ -1,7 +1,7 @@
 # quotes-manager
 
 <!-- coverage:START -->
-![coverage](https://img.shields.io/badge/coverage-90.3%25-brightgreen)
+![coverage](https://img.shields.io/badge/coverage-77.6%25-yellow)
 <!-- coverage:END -->
 
 ## Table of contents
