@@ -465,6 +465,58 @@ func removeID(xs []int64, x int64) []int64 {
 
 func (f *fakeStore) Close() error { return nil }
 
+func (f *fakeStore) ListSuttas() ([]store.Sutta, error) {
+	panic("not implemented")
+}
+
+func (f *fakeStore) ListCollectionGroups(int64) ([]store.Group, error) {
+	panic("not implemented")
+}
+
+func (f *fakeStore) CreateCollectionGroup(int64, string) (int64, error) {
+	panic("not implemented")
+}
+
+func (f *fakeStore) RenameCollectionGroup(int64, int64, string) error {
+	panic("not implemented")
+}
+
+func (f *fakeStore) DeleteCollectionGroup(int64, int64) error {
+	panic("not implemented")
+}
+
+func (f *fakeStore) ReorderCollectionGroups(int64, []int64) error {
+	panic("not implemented")
+}
+
+func (f *fakeStore) CollectionQuoteItems(int64) ([]store.QuoteItem, error) {
+	panic("not implemented")
+}
+
+func (f *fakeStore) CollectionSuttaItems(int64) ([]store.SuttaItem, error) {
+	panic("not implemented")
+}
+
+func (f *fakeStore) SetQuoteGroup(int64, int64, int64) error {
+	panic("not implemented")
+}
+
+func (f *fakeStore) SetSuttaGroup(int64, string, int64) error {
+	panic("not implemented")
+}
+
+func (f *fakeStore) AddSuttaToCollection(int64, string, string, string) error {
+	panic("not implemented")
+}
+
+func (f *fakeStore) RemoveSuttaFromCollection(int64, string) error {
+	panic("not implemented")
+}
+
+func (f *fakeStore) ReorderCollectionSuttas(int64, []string) error {
+	panic("not implemented")
+}
+
 type failingStore struct{}
 
 var errStoreFails = errors.New("store unavailable")
@@ -503,6 +555,30 @@ func (failingStore) CategoryQuotes(int64) ([]store.Quote, error)           { ret
 func (failingStore) SetQuoteCategories(int64, []int64) error               { return errStoreFails }
 func (failingStore) QuoteCategoryMap() (map[int64][]store.Category, error) { return nil, errStoreFails }
 func (failingStore) Close() error                                          { return nil }
+func (failingStore) ListSuttas() ([]store.Sutta, error)                    { return nil, errStoreFails }
+
+func (failingStore) ListCollectionGroups(int64) ([]store.Group, error) { return nil, errStoreFails }
+
+func (failingStore) CreateCollectionGroup(int64, string) (int64, error) {
+	return 0, errStoreFails
+}
+func (failingStore) RenameCollectionGroup(int64, int64, string) error { return errStoreFails }
+func (failingStore) DeleteCollectionGroup(int64, int64) error         { return errStoreFails }
+func (failingStore) ReorderCollectionGroups(int64, []int64) error     { return errStoreFails }
+func (failingStore) CollectionQuoteItems(int64) ([]store.QuoteItem, error) {
+	return nil, errStoreFails
+}
+
+func (failingStore) CollectionSuttaItems(int64) ([]store.SuttaItem, error) {
+	return nil, errStoreFails
+}
+func (failingStore) SetQuoteGroup(int64, int64, int64) error  { return errStoreFails }
+func (failingStore) SetSuttaGroup(int64, string, int64) error { return errStoreFails }
+func (failingStore) AddSuttaToCollection(int64, string, string, string) error {
+	return errStoreFails
+}
+func (failingStore) RemoveSuttaFromCollection(int64, string) error { return errStoreFails }
+func (failingStore) ReorderCollectionSuttas(int64, []string) error { return errStoreFails }
 
 type failList struct{ *fakeStore }
 

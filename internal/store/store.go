@@ -23,6 +23,31 @@ type Collection struct {
 	Count int
 }
 
+type Sutta struct {
+	Muid    string
+	Display string
+	Link    string
+}
+
+type Group struct {
+	ID    int64
+	Name  string
+	Count int
+}
+
+type SuttaItem struct {
+	Muid     string
+	Display  string
+	Link     string
+	Position int
+	GroupID  int64
+}
+
+type QuoteItem struct {
+	Quote
+	GroupID int64
+}
+
 type Category struct {
 	ID    int64
 	Name  string
@@ -32,6 +57,8 @@ type Category struct {
 var ErrNotFound = errors.New("quote not found")
 
 var ErrDuplicate = errors.New("duplicate")
+
+var ErrEmptyName = errors.New("empty name")
 
 var ErrUnsupportedDump = errors.New("unsupported dump version")
 
@@ -53,6 +80,12 @@ type Store interface {
 	QuoteCollectionMap() (map[int64][]Collection, error)
 	ReorderCollection(id int64, orderedQuoteIDs []int64) error
 	DeleteCollection(id int64) error
+	ListSuttas() ([]Sutta, error)
+	ListCollectionGroups(id int64) ([]Group, error)
+	CreateCollectionGroup(id int64, name string) (int64, error)
+	RenameCollectionGroup(id, groupID int64, name string) error
+	DeleteCollectionGroup(id, groupID int64) error
+	ReorderCollectionGroups(id int64, orderedGroupIDs []int64) error
 	ListCategories() ([]Category, error)
 	CreateCategory(name string) (int64, error)
 	GetCategory(id int64) (Category, error)

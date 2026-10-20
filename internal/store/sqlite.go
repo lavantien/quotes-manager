@@ -34,6 +34,26 @@ CREATE TABLE IF NOT EXISTS collection_items (
 );
 CREATE INDEX IF NOT EXISTS idx_collection_items_collection ON collection_items(collection_id, position);
 CREATE INDEX IF NOT EXISTS idx_collection_items_quote ON collection_items(quote_id);
+CREATE TABLE IF NOT EXISTS suttas (
+    muid    TEXT PRIMARY KEY,
+    display TEXT NOT NULL,
+    link    TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS collection_groups (
+    id            INTEGER PRIMARY KEY,
+    collection_id INTEGER NOT NULL,
+    name          TEXT NOT NULL,
+    position      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_collection_groups_collection ON collection_groups(collection_id, position);
+CREATE TABLE IF NOT EXISTS collection_sutta_items (
+    collection_id INTEGER NOT NULL,
+    muid          TEXT NOT NULL,
+    position      INTEGER NOT NULL,
+    group_id      INTEGER,
+    PRIMARY KEY (collection_id, muid)
+);
+CREATE INDEX IF NOT EXISTS idx_collection_sutta_items_collection ON collection_sutta_items(collection_id, position);
 CREATE TABLE IF NOT EXISTS categories (
     id   INTEGER PRIMARY KEY,
     name TEXT NOT NULL UNIQUE COLLATE NOCASE
@@ -68,7 +88,41 @@ func Open(path string) (*SQLiteStore, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	if err := migrateCollectionItemsGroupID(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	return &SQLiteStore{db: db}, nil
+}
+
+func migrateCollectionItemsGroupID(db *sql.DB) error {
+	rows, err := db.Query("PRAGMA table_info(collection_items)")
+	if err != nil {
+		return err
+	}
+	hasGroupID := false
+	for rows.Next() {
+		var cid, notnull, pk int
+		var name, typ string
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
+			_ = rows.Close()
+			return err
+		}
+		if name == "group_id" {
+			hasGroupID = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return err
+	}
+	_ = rows.Close()
+	if hasGroupID {
+		return nil
+	}
+	_, err = db.Exec("ALTER TABLE collection_items ADD COLUMN group_id INTEGER")
+	return err
 }
 
 func migrateCollectionsName(db *sql.DB) error {
@@ -205,7 +259,9 @@ func (s *SQLiteStore) DeleteMany(ids []int64) error {
 
 func (s *SQLiteStore) ListCollections() ([]Collection, error) {
 	rows, err := s.db.Query(
-		`SELECT c.id, c.name, (SELECT COUNT(*) FROM collection_items ci WHERE ci.collection_id = c.id)
+		`SELECT c.id, c.name,
+		        (SELECT COUNT(*) FROM collection_items ci WHERE ci.collection_id = c.id)
+		        + (SELECT COUNT(*) FROM collection_sutta_items si WHERE si.collection_id = c.id)
 		 FROM collections c ORDER BY c.id ASC`)
 	if err != nil {
 		return nil, err
@@ -357,7 +413,9 @@ func collectionMembers(tx *sql.Tx, cid int64) (map[int64]bool, error) {
 func (s *SQLiteStore) GetCollection(id int64) (Collection, error) {
 	var c Collection
 	err := s.db.QueryRow(
-		`SELECT id, name, (SELECT COUNT(*) FROM collection_items ci WHERE ci.collection_id = id)
+		`SELECT id, name,
+		        (SELECT COUNT(*) FROM collection_items ci WHERE ci.collection_id = id)
+		        + (SELECT COUNT(*) FROM collection_sutta_items si WHERE si.collection_id = id)
 		 FROM collections WHERE id = ?`, id).Scan(&c.ID, &c.Name, &c.Count)
 	if err == sql.ErrNoRows {
 		return Collection{}, ErrNotFound
@@ -425,6 +483,12 @@ func (s *SQLiteStore) DeleteCollection(id int64) error {
 		return err
 	}
 	if _, err := tx.Exec("DELETE FROM collection_items WHERE collection_id = ?", id); err != nil {
+		return rollback(tx, err)
+	}
+	if _, err := tx.Exec("DELETE FROM collection_sutta_items WHERE collection_id = ?", id); err != nil {
+		return rollback(tx, err)
+	}
+	if _, err := tx.Exec("DELETE FROM collection_groups WHERE collection_id = ?", id); err != nil {
 		return rollback(tx, err)
 	}
 	res, err := tx.Exec("DELETE FROM collections WHERE id = ?", id)
