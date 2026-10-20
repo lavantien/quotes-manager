@@ -7,12 +7,12 @@ import (
 	"testing"
 )
 
-func TestCollectionViewShowsBlockCount(t *testing.T) {
+func TestCollectionViewShowsItemCount(t *testing.T) {
 	fs, cid := fakeWithCollection(t)
 	srv := newServer(t, fs)
 	rec := do(t, srv, "GET", fmt.Sprintf("/collections/%d", cid), "")
-	if !strings.Contains(rec.Body.String(), "2 blocks") {
-		t.Error("collection view missing block count badge")
+	if !strings.Contains(rec.Body.String(), "2 items") {
+		t.Error("collection view missing item count badge")
 	}
 }
 

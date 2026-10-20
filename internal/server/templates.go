@@ -24,7 +24,13 @@ func mustTemplates() *template.Template {
 			return colChipsData{ID: id, Collections: cols}
 		},
 		"colLabel": func(c store.Collection) string { return collectionLabel(c) },
-		"add":      func(a, b int) int { return a + b },
+		"sel": func(cur, opt int64) template.HTMLAttr {
+			if cur == opt {
+				return template.HTMLAttr(" selected")
+			}
+			return ""
+		},
+		"add": func(a, b int) int { return a + b },
 	})
 	return template.Must(tmpl.ParseFS(web.Templates,
 		"templates/layout.html",

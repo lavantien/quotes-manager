@@ -5,14 +5,14 @@
 {{end}}
 
 {{define "collection_count"}}
-<span id="collection-count" class="zone__count" hx-swap-oob="outerHTML">{{.Collection.Count}} blocks</span>
+<span id="collection-count" class="zone__count" hx-swap-oob="outerHTML">{{.Collection.Count}} items</span>
 {{end}}
 
 {{define "collection_zone_body"}}
 {{if .Collection.Active}}
 <header class="zone__head">
   <span class="zone__title">{{.Collection.Name}}</span>
-  <span class="zone__count" id="collection-count">{{.Collection.Count}} blocks</span>
+  <span class="zone__count" id="collection-count">{{.Collection.Count}} items</span>
 </header>
 <div class="zone__toolbar">
   <button type="button" class="btn btn--sm" data-action="copy-all" data-export="{{.Collection.ExportURL}}">Copy all</button>
@@ -20,6 +20,16 @@
   <input type="search" class="zone__search rail__input" name="cq" placeholder="Search" value="{{.Collection.Query}}" autocomplete="off"
          hx-get="/search/collection" hx-trigger="input changed delay:200ms, search" hx-target="#collection-list" hx-swap="innerHTML" hx-include="this"
          hx-vals='{"col": "{{.Collection.ID}}"}'>
+</div>
+<div class="zone__toolbar">
+  <form hx-post="/collections/{{.Collection.ID}}/groups" hx-target="#collection-zone" hx-swap="outerHTML">
+    <input class="rail__input" type="text" name="name" placeholder="New group" maxlength="100" required>
+    <button class="btn btn--sm" type="submit">+ group</button>
+  </form>
+  <form hx-post="/collections/{{.Collection.ID}}/suttas" hx-target="#collection-zone" hx-swap="outerHTML">
+    <input class="rail__input" type="text" name="muid" placeholder="muid, e.g. mn26" required>
+    <button class="btn btn--sm" type="submit">+ sutta</button>
+  </form>
 </div>
 {{template "collection_list" .}}
 {{else}}

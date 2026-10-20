@@ -1,7 +1,53 @@
 {{define "collection_list"}}
 <div id="collection-list" class="quote-list collection-list"{{if not .Collection.Searching}} data-reorder="/collections/{{.Collection.ID}}/reorder"{{end}}>
+  {{if .Collection.HasGroups}}{{template "collection_grouped" .}}{{else}}{{template "collection_flat" .}}{{end}}
+</div>
+{{end}}
+
+{{define "collection_flat"}}
   {{range $i, $q := .Collection.Quotes}}{{if not $.Collection.Searching}}<button type="button" class="insert-gap" data-action="insert-collection" data-pos="{{add $i 1}}" title="Insert selected root quotes here" aria-label="Insert selected root quotes here"></button>{{end}}{{template "quote_block_ro" (withView $q $.CatMap $.ColMap $.Collection.Terms (not $.Collection.Searching))}}{{end}}
   {{if not .Collection.Searching}}<button type="button" class="insert-gap" data-action="insert-collection" data-pos="{{add (len .Collection.Quotes) 1}}" title="Insert selected root quotes here" aria-label="Insert selected root quotes here"></button>{{end}}
   {{if not .Collection.Quotes}}{{if .Collection.Searching}}<p class="empty">No matches.</p>{{else}}<p class="empty">No quotes here.</p>{{end}}{{end}}
-</div>
+{{end}}
+
+{{define "collection_grouped"}}
+{{$cid := .Collection.ID}}
+{{$groups := .Collection.Groups}}
+{{$searching := .Collection.Searching}}
+{{$terms := .Collection.Terms}}
+{{$draggable := not $searching}}
+{{range .Collection.Sections}}
+{{$g := .Group}}
+{{$gid := $g.ID}}
+<section class="collection-group" id="group-{{$gid}}">
+  <div class="zone__toolbar">
+    <span class="rail__heading">{{$g.Name}}</span>
+    {{if $gid}}<span class="zone__count">{{$g.Count}}</span>
+    <button type="button" class="btn btn--sm" hx-post="/collections/{{$cid}}/groups/{{$gid}}/move?dir=up" hx-target="#collection-zone" hx-swap="outerHTML">up</button>
+    <button type="button" class="btn btn--sm" hx-post="/collections/{{$cid}}/groups/{{$gid}}/move?dir=down" hx-target="#collection-zone" hx-swap="outerHTML">down</button>
+    <button type="button" class="btn btn--sm" hx-post="/collections/{{$cid}}/groups/{{$gid}}/rename" hx-prompt="Rename group to:" hx-target="#collection-zone" hx-swap="outerHTML">rename</button>
+    <button type="button" class="btn btn--sm btn--danger" hx-delete="/collections/{{$cid}}/groups/{{$gid}}" hx-confirm="Delete this group? Its items stay, ungrouped." hx-target="#collection-zone" hx-swap="outerHTML">delete</button>{{end}}
+  </div>
+  {{range $row := .Quotes}}
+  {{if and (not $searching) (not $gid)}}<button type="button" class="insert-gap" data-action="insert-collection" data-pos="{{$row.Pos}}" title="Insert selected root quotes here" aria-label="Insert selected root quotes here"></button>{{end}}
+  {{template "quote_block_ro" (withView $row.Item.Quote $.CatMap $.ColMap $terms $draggable)}}
+  <select class="rail__input" name="group" hx-post="/collections/{{$cid}}/items/{{$row.Item.ID}}/group" hx-trigger="change" hx-target="#collection-zone" hx-swap="outerHTML">
+    {{range $groups}}<option value="{{.ID}}"{{sel $row.Item.GroupID .ID}}>{{.Name}}</option>{{end}}
+    <option value="0"{{sel $row.Item.GroupID 0}}>Ungrouped</option>
+  </select>
+  {{end}}
+  {{if and (not $searching) (not $gid)}}<button type="button" class="insert-gap" data-action="insert-collection" data-pos="{{add $.Collection.QuoteCount 1}}" title="Insert selected root quotes here" aria-label="Insert selected root quotes here"></button>{{end}}
+  {{range .Suttas}}{{$s := .}}
+  <div class="zone__toolbar">
+    <a class="zone__title" href="{{.Link}}" rel="noopener">{{.Display}}</a>
+    {{if gt .Length 0}}<span class="zone__count">{{.Length}} seg</span>{{end}}
+    <select class="rail__input" name="group" hx-post="/collections/{{$cid}}/suttas/{{.Muid}}/group" hx-trigger="change" hx-target="#collection-zone" hx-swap="outerHTML">
+      {{range $groups}}<option value="{{.ID}}"{{sel $s.GroupID .ID}}>{{.Name}}</option>{{end}}
+      <option value="0"{{sel $s.GroupID 0}}>Ungrouped</option>
+    </select>
+    <button type="button" class="btn btn--sm btn--danger" hx-delete="/collections/{{$cid}}/suttas/{{.Muid}}" hx-confirm="Remove this sutta from the collection?" hx-target="#collection-zone" hx-swap="outerHTML">remove</button>
+  </div>
+  {{end}}
+</section>
+{{end}}
 {{end}}

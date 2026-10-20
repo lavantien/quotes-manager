@@ -17,6 +17,22 @@ type fakeStore struct {
 	items       map[int64][]int64
 	categories  []store.Category
 	tags        map[int64][]int64
+	groups      map[int64][]fakeGroup
+	qgroups     map[int64]map[int64]int64
+	suttas      []store.Sutta
+	sitems      map[int64][]fakeSuttaItem
+	nextGroupID int64
+}
+
+type fakeGroup struct {
+	ID   int64
+	Name string
+}
+
+type fakeSuttaItem struct {
+	Muid     string
+	GroupID  int64
+	Position int
 }
 
 func newFake(quotes ...store.Quote) *fakeStore {
@@ -27,10 +43,13 @@ func newFake(quotes ...store.Quote) *fakeStore {
 		}
 	}
 	return &fakeStore{
-		quotes: append([]store.Quote{}, quotes...),
-		nextID: maxID,
-		items:  map[int64][]int64{},
-		tags:   map[int64][]int64{},
+		quotes:  append([]store.Quote{}, quotes...),
+		nextID:  maxID,
+		items:   map[int64][]int64{},
+		tags:    map[int64][]int64{},
+		groups:  map[int64][]fakeGroup{},
+		qgroups: map[int64]map[int64]int64{},
+		sitems:  map[int64][]fakeSuttaItem{},
 	}
 }
 
@@ -154,7 +173,11 @@ func (f *fakeStore) Import(d *store.Dump) error {
 }
 
 func (f *fakeStore) ListCollections() ([]store.Collection, error) {
-	return append([]store.Collection{}, f.collections...), nil
+	out := make([]store.Collection, 0, len(f.collections))
+	for _, c := range f.collections {
+		out = append(out, store.Collection{ID: c.ID, Name: c.Name, Count: f.itemCount(c.ID)})
+	}
+	return out, nil
 }
 
 func (f *fakeStore) CreateCollection(quoteIDs []int64) (int64, error) {
@@ -170,7 +193,7 @@ func (f *fakeStore) CreateCollection(quoteIDs []int64) (int64, error) {
 func (f *fakeStore) GetCollection(id int64) (store.Collection, error) {
 	for _, c := range f.collections {
 		if c.ID == id {
-			return c, nil
+			return store.Collection{ID: c.ID, Name: c.Name, Count: f.itemCount(c.ID)}, nil
 		}
 	}
 	return store.Collection{}, store.ErrNotFound
@@ -193,6 +216,9 @@ func (f *fakeStore) DeleteCollection(id int64) error {
 		if c.ID == id {
 			f.collections = append(f.collections[:i], f.collections[i+1:]...)
 			delete(f.items, id)
+			delete(f.groups, id)
+			delete(f.qgroups, id)
+			delete(f.sitems, id)
 			return nil
 		}
 	}
@@ -465,60 +491,259 @@ func removeID(xs []int64, x int64) []int64 {
 
 func (f *fakeStore) Close() error { return nil }
 
+func (f *fakeStore) itemCount(cid int64) int {
+	return len(f.items[cid]) + len(f.sitems[cid])
+}
+
+func (f *fakeStore) collectionExists(id int64) bool {
+	for _, c := range f.collections {
+		if c.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *fakeStore) groupIn(cid, gid int64) bool {
+	for _, g := range f.groups[cid] {
+		if g.ID == gid {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *fakeStore) suttaRow(muid string) (store.Sutta, bool) {
+	for _, su := range f.suttas {
+		if su.Muid == muid {
+			return su, true
+		}
+	}
+	return store.Sutta{}, false
+}
+
 func (f *fakeStore) ListSuttas() ([]store.Sutta, error) {
-	panic("not implemented")
+	out := append([]store.Sutta{}, f.suttas...)
+	sort.Slice(out, func(i, j int) bool { return out[i].Muid < out[j].Muid })
+	return out, nil
 }
 
-func (f *fakeStore) ListCollectionGroups(int64) ([]store.Group, error) {
-	panic("not implemented")
+func (f *fakeStore) ListCollectionGroups(cid int64) ([]store.Group, error) {
+	out := make([]store.Group, 0, len(f.groups[cid]))
+	for _, g := range f.groups[cid] {
+		n := 0
+		for _, gid := range f.qgroups[cid] {
+			if gid == g.ID {
+				n++
+			}
+		}
+		for _, it := range f.sitems[cid] {
+			if it.GroupID == g.ID {
+				n++
+			}
+		}
+		out = append(out, store.Group{ID: g.ID, Name: g.Name, Count: n})
+	}
+	return out, nil
 }
 
-func (f *fakeStore) CreateCollectionGroup(int64, string) (int64, error) {
-	panic("not implemented")
+func (f *fakeStore) CreateCollectionGroup(cid int64, name string) (int64, error) {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return 0, store.ErrEmptyName
+	}
+	if !f.collectionExists(cid) {
+		return 0, store.ErrNotFound
+	}
+	f.nextGroupID++
+	f.groups[cid] = append(f.groups[cid], fakeGroup{ID: f.nextGroupID, Name: trimmed})
+	return f.nextGroupID, nil
 }
 
-func (f *fakeStore) RenameCollectionGroup(int64, int64, string) error {
-	panic("not implemented")
+func (f *fakeStore) RenameCollectionGroup(cid, gid int64, name string) error {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return store.ErrEmptyName
+	}
+	for i, g := range f.groups[cid] {
+		if g.ID == gid {
+			f.groups[cid][i].Name = trimmed
+			return nil
+		}
+	}
+	return store.ErrNotFound
 }
 
-func (f *fakeStore) DeleteCollectionGroup(int64, int64) error {
-	panic("not implemented")
+func (f *fakeStore) DeleteCollectionGroup(cid, gid int64) error {
+	for i, g := range f.groups[cid] {
+		if g.ID == gid {
+			f.groups[cid] = append(f.groups[cid][:i], f.groups[cid][i+1:]...)
+			for qid, qg := range f.qgroups[cid] {
+				if qg == gid {
+					f.qgroups[cid][qid] = 0
+				}
+			}
+			for j := range f.sitems[cid] {
+				if f.sitems[cid][j].GroupID == gid {
+					f.sitems[cid][j].GroupID = 0
+				}
+			}
+			return nil
+		}
+	}
+	return store.ErrNotFound
 }
 
-func (f *fakeStore) ReorderCollectionGroups(int64, []int64) error {
-	panic("not implemented")
+func (f *fakeStore) ReorderCollectionGroups(cid int64, ordered []int64) error {
+	if !f.collectionExists(cid) {
+		return store.ErrNotFound
+	}
+	if len(ordered) != len(f.groups[cid]) {
+		return store.ErrNotFound
+	}
+	reordered := make([]fakeGroup, 0, len(ordered))
+	for _, gid := range ordered {
+		var found fakeGroup
+		ok := false
+		for _, g := range f.groups[cid] {
+			if g.ID == gid {
+				found = g
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			return store.ErrNotFound
+		}
+		reordered = append(reordered, found)
+	}
+	f.groups[cid] = reordered
+	return nil
 }
 
-func (f *fakeStore) CollectionQuoteItems(int64) ([]store.QuoteItem, error) {
-	panic("not implemented")
+func (f *fakeStore) CollectionQuoteItems(cid int64) ([]store.QuoteItem, error) {
+	ids := f.qgroups[cid]
+	out := make([]store.QuoteItem, 0, len(f.items[cid]))
+	for _, qid := range f.items[cid] {
+		for _, q := range f.quotes {
+			if q.ID == qid {
+				out = append(out, store.QuoteItem{Quote: q, GroupID: ids[qid]})
+				break
+			}
+		}
+	}
+	return out, nil
 }
 
-func (f *fakeStore) CollectionSuttaItems(int64) ([]store.SuttaItem, error) {
-	panic("not implemented")
+func (f *fakeStore) CollectionSuttaItems(cid int64) ([]store.SuttaItem, error) {
+	out := make([]store.SuttaItem, 0, len(f.sitems[cid]))
+	for _, it := range f.sitems[cid] {
+		su, ok := f.suttaRow(it.Muid)
+		if !ok {
+			continue
+		}
+		out = append(out, store.SuttaItem{
+			Muid: it.Muid, Display: su.Display, Link: su.Link, Length: su.Length,
+			Position: it.Position, GroupID: it.GroupID,
+		})
+	}
+	return out, nil
 }
 
-func (f *fakeStore) SetQuoteGroup(int64, int64, int64) error {
-	panic("not implemented")
+func (f *fakeStore) SetQuoteGroup(cid, qid, gid int64) error {
+	if gid != 0 && !f.groupIn(cid, gid) {
+		return store.ErrNotFound
+	}
+	if !containsID(f.items[cid], qid) {
+		return store.ErrNotFound
+	}
+	if f.qgroups[cid] == nil {
+		f.qgroups[cid] = map[int64]int64{}
+	}
+	f.qgroups[cid][qid] = gid
+	return nil
 }
 
-func (f *fakeStore) SetSuttaGroup(int64, string, int64) error {
-	panic("not implemented")
+func (f *fakeStore) SetSuttaGroup(cid int64, muid string, gid int64) error {
+	if gid != 0 && !f.groupIn(cid, gid) {
+		return store.ErrNotFound
+	}
+	for i, it := range f.sitems[cid] {
+		if it.Muid == muid {
+			f.sitems[cid][i].GroupID = gid
+			return nil
+		}
+	}
+	return store.ErrNotFound
 }
 
-func (f *fakeStore) AddSuttaToCollection(int64, string, string, string) error {
-	panic("not implemented")
+func (f *fakeStore) AddSuttaToCollection(cid int64, muid, display, link string) error {
+	if !f.collectionExists(cid) {
+		return store.ErrNotFound
+	}
+	if _, ok := f.suttaRow(muid); !ok {
+		f.suttas = append(f.suttas, store.Sutta{Muid: muid, Display: display, Link: link})
+	}
+	for _, it := range f.sitems[cid] {
+		if it.Muid == muid {
+			return nil
+		}
+	}
+	next := 1
+	if n := len(f.sitems[cid]); n > 0 {
+		next = f.sitems[cid][n-1].Position + 1
+	}
+	f.sitems[cid] = append(f.sitems[cid], fakeSuttaItem{Muid: muid, Position: next})
+	return nil
 }
 
-func (f *fakeStore) RemoveSuttaFromCollection(int64, string) error {
-	panic("not implemented")
+func (f *fakeStore) RemoveSuttaFromCollection(cid int64, muid string) error {
+	for i, it := range f.sitems[cid] {
+		if it.Muid == muid {
+			f.sitems[cid] = append(f.sitems[cid][:i], f.sitems[cid][i+1:]...)
+			return nil
+		}
+	}
+	return store.ErrNotFound
 }
 
-func (f *fakeStore) ReorderCollectionSuttas(int64, []string) error {
-	panic("not implemented")
+func (f *fakeStore) ReorderCollectionSuttas(cid int64, ordered []string) error {
+	if !f.collectionExists(cid) {
+		return store.ErrNotFound
+	}
+	reordered := make([]fakeSuttaItem, 0, len(ordered))
+	for _, muid := range ordered {
+		found := false
+		for _, it := range f.sitems[cid] {
+			if it.Muid == muid {
+				reordered = append(reordered, it)
+				found = true
+				break
+			}
+		}
+		if !found {
+			return store.ErrNotFound
+		}
+	}
+	if len(reordered) != len(f.sitems[cid]) {
+		return store.ErrNotFound
+	}
+	for i := range reordered {
+		reordered[i].Position = i + 1
+	}
+	f.sitems[cid] = reordered
+	return nil
 }
 
-func (f *fakeStore) SetSuttaLengths(map[string]int) error {
-	panic("not implemented")
+func (f *fakeStore) SetSuttaLengths(lengths map[string]int) error {
+	for muid, length := range lengths {
+		for i := range f.suttas {
+			if f.suttas[i].Muid == muid {
+				f.suttas[i].Length = length
+			}
+		}
+	}
+	return nil
 }
 
 type failingStore struct{}
