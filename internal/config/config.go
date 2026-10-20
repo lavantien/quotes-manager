@@ -28,11 +28,12 @@ type Repo struct {
 }
 
 type Quotes struct {
-	DBPath      string `json:"db_path"`
-	DumpsDir    string `json:"dumps_dir"`
-	SeedFile    string `json:"seed_file"`
-	ExportFile  string `json:"export_file"`
-	PicturesDir string `json:"pictures_dir"`
+	DBPath           string `json:"db_path"`
+	DumpsDir         string `json:"dumps_dir"`
+	SeedFile         string `json:"seed_file"`
+	ExportFile       string `json:"export_file"`
+	PicturesDir      string `json:"pictures_dir"`
+	TablesCollection string `json:"tables_collection"`
 }
 
 type Server struct {
@@ -129,11 +130,12 @@ var severities = map[string]bool{"info": true, "warn": true, "error": true}
 func Defaults() *Config {
 	c := &Config{}
 	c.Quotes = Quotes{
-		DBPath:      "database/quotes.db",
-		DumpsDir:    "dumps",
-		SeedFile:    "database/seed.sql",
-		ExportFile:  "exports/shortest-first.md",
-		PicturesDir: "project-pictures",
+		DBPath:           "database/quotes.db",
+		DumpsDir:         "dumps",
+		SeedFile:         "database/seed.sql",
+		ExportFile:       "exports/shortest-first.md",
+		PicturesDir:      "project-pictures",
+		TablesCollection: "AriyaSavaka",
 	}
 
 	c.Server.Addr = "127.0.0.1:8080"
@@ -271,6 +273,7 @@ func (c *Config) applyEnv() error {
 	set("QUOTES_SEED_FILE", &c.Quotes.SeedFile)
 	set("QUOTES_EXPORT_FILE", &c.Quotes.ExportFile)
 	set("QUOTES_PICTURES_DIR", &c.Quotes.PicturesDir)
+	set("QUOTES_TABLES_COLLECTION", &c.Quotes.TablesCollection)
 
 	set("SERVER_ADDR", &c.Server.Addr)
 
@@ -354,8 +357,9 @@ func (c *Config) applyEnv() error {
 func (c *Config) Validate() error {
 	if slices.Contains([]string{
 		c.Quotes.DBPath, c.Quotes.DumpsDir, c.Quotes.SeedFile, c.Quotes.ExportFile, c.Quotes.PicturesDir,
+		c.Quotes.TablesCollection,
 	}, "") {
-		return fmt.Errorf("quotes: all paths required")
+		return fmt.Errorf("quotes: all paths and tables_collection required")
 	}
 	for name, r := range map[string]Repo{"bilara": c.Canon.Repos.Bilara, "editions": c.Canon.Repos.Editions} {
 		if r.URL == "" || r.Branch == "" || r.Dir == "" {

@@ -28,18 +28,20 @@ func TestDefaultsValidate(t *testing.T) {
 func TestQuotesDefaults(t *testing.T) {
 	c := Defaults()
 	want := map[string]string{
-		"db_path":      "database/quotes.db",
-		"dumps_dir":    "dumps",
-		"seed_file":    "database/seed.sql",
-		"export_file":  "exports/shortest-first.md",
-		"pictures_dir": "project-pictures",
+		"db_path":           "database/quotes.db",
+		"dumps_dir":         "dumps",
+		"seed_file":         "database/seed.sql",
+		"export_file":       "exports/shortest-first.md",
+		"pictures_dir":      "project-pictures",
+		"tables_collection": "AriyaSavaka",
 	}
 	got := map[string]string{
-		"db_path":      c.Quotes.DBPath,
-		"dumps_dir":    c.Quotes.DumpsDir,
-		"seed_file":    c.Quotes.SeedFile,
-		"export_file":  c.Quotes.ExportFile,
-		"pictures_dir": c.Quotes.PicturesDir,
+		"db_path":           c.Quotes.DBPath,
+		"dumps_dir":         c.Quotes.DumpsDir,
+		"seed_file":         c.Quotes.SeedFile,
+		"export_file":       c.Quotes.ExportFile,
+		"pictures_dir":      c.Quotes.PicturesDir,
+		"tables_collection": c.Quotes.TablesCollection,
 	}
 	for k, w := range want {
 		if got[k] != w {
@@ -205,7 +207,7 @@ func TestCanonDerivedPaths(t *testing.T) {
 func TestLoadFileOverlay(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "c.json")
 	body := `{
-		"quotes": {"db_path": "file.db", "dumps_dir": "filedumps"},
+		"quotes": {"db_path": "file.db", "dumps_dir": "filedumps", "tables_collection": "FromFile"},
 		"server": {"addr": "127.0.0.1:9999", "sql_console": true},
 		"canon": {"dpd": {"min_token_length": 3}, "triangulate": {"similarity_min": 0.5}, "e2e": {"muids": ["mn3"]}}
 	}`
@@ -218,6 +220,9 @@ func TestLoadFileOverlay(t *testing.T) {
 	}
 	if c.Quotes.DBPath != "file.db" || c.Quotes.DumpsDir != "filedumps" {
 		t.Fatalf("quotes overlay not applied: %+v", c.Quotes)
+	}
+	if c.Quotes.TablesCollection != "FromFile" {
+		t.Fatalf("quotes tables collection overlay not applied: %q", c.Quotes.TablesCollection)
 	}
 	if c.Quotes.SeedFile != "database/seed.sql" {
 		t.Fatalf("untouched quotes defaults must survive: %+v", c.Quotes)
@@ -279,6 +284,7 @@ func TestEnvOverridesFile(t *testing.T) {
 	}`)
 	t.Setenv("QM_QUOTES_DB_PATH", "from-env.db")
 	t.Setenv("QM_QUOTES_PICTURES_DIR", "from-env-pictures")
+	t.Setenv("QM_QUOTES_TABLES_COLLECTION", "FromEnv")
 	t.Setenv("QM_SERVER_ADDR", "127.0.0.1:9222")
 	t.Setenv("QM_SERVER_READ_TIMEOUT_SECONDS", "45")
 	t.Setenv("QM_CANON_SERVER_MAX_LIMIT", "250")
@@ -300,6 +306,9 @@ func TestEnvOverridesFile(t *testing.T) {
 	}
 	if c.Quotes.PicturesDir != "from-env-pictures" {
 		t.Fatalf("env quotes pictures dir not applied: %q", c.Quotes.PicturesDir)
+	}
+	if c.Quotes.TablesCollection != "FromEnv" {
+		t.Fatalf("env quotes tables collection not applied: %q", c.Quotes.TablesCollection)
 	}
 	if c.Quotes.SeedFile != "database/seed.sql" {
 		t.Fatalf("untouched quotes defaults must survive: %q", c.Quotes.SeedFile)
@@ -366,11 +375,12 @@ func TestEnvBadValuesRejected(t *testing.T) {
 
 func TestValidateQuotesFailures(t *testing.T) {
 	for name, mut := range map[string]func(*Config){
-		"empty db path":      func(c *Config) { c.Quotes.DBPath = "" },
-		"empty dumps dir":    func(c *Config) { c.Quotes.DumpsDir = "" },
-		"empty seed file":    func(c *Config) { c.Quotes.SeedFile = "" },
-		"empty export file":  func(c *Config) { c.Quotes.ExportFile = "" },
-		"empty pictures dir": func(c *Config) { c.Quotes.PicturesDir = "" },
+		"empty db path":           func(c *Config) { c.Quotes.DBPath = "" },
+		"empty dumps dir":         func(c *Config) { c.Quotes.DumpsDir = "" },
+		"empty seed file":         func(c *Config) { c.Quotes.SeedFile = "" },
+		"empty export file":       func(c *Config) { c.Quotes.ExportFile = "" },
+		"empty pictures dir":      func(c *Config) { c.Quotes.PicturesDir = "" },
+		"empty tables collection": func(c *Config) { c.Quotes.TablesCollection = "" },
 	} {
 		t.Run(name, func(t *testing.T) {
 			c := Defaults()
