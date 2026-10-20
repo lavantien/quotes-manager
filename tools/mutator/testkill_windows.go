@@ -29,22 +29,31 @@ func killProcessTree(root int) error {
 	for pid, ppid := range procs {
 		children[ppid] = append(children[ppid], pid)
 	}
-	var order []uint32
-	var walk func(pid uint32)
-	walk = func(pid uint32) {
-		order = append(order, pid)
-		for _, c := range children[pid] {
-			walk(c)
-		}
-	}
-	walk(uint32(root))
 	var firstErr error
-	for _, pid := range slices.Backward(order) {
+	for _, pid := range slices.Backward(treeOrder(children, uint32(root))) {
 		if err := terminateProcess(pid); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
 	return firstErr
+}
+
+func treeOrder(children map[uint32][]uint32, root uint32) []uint32 {
+	var order []uint32
+	seen := map[uint32]bool{}
+	var walk func(pid uint32)
+	walk = func(pid uint32) {
+		if seen[pid] {
+			return
+		}
+		seen[pid] = true
+		order = append(order, pid)
+		for _, c := range children[pid] {
+			walk(c)
+		}
+	}
+	walk(root)
+	return order
 }
 
 func snapshotParentage() (map[uint32]uint32, error) {
