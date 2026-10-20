@@ -8,9 +8,9 @@ Design decisions: suttas are a global registry table; collections gain named ord
 
 | task | lane | files owned | depends | status |
 |---|---|---|---|---|
-| T1 dataset grab | reddit-dataset repo | scripts/export_tables.py, tests/, playground/mutate_export.py, artifacts/tables/ | none | queued |
-| T2 sutta package | quotes-manager | internal/sutta/** | dump committed | queued |
-| T3 store groups+suttas | quotes-manager | internal/store/**, internal/server/server_fakestore_test.go stubs only | none | queued |
+| T1 dataset grab | reddit-dataset repo | scripts/export_tables.py, tests/, playground/mutate_export.py, artifacts/tables/ | none | running since 2026-10-20 18:20 local |
+| T2 sutta package | quotes-manager | internal/sutta/** | dump committed | running since 2026-10-20 18:20 local |
+| T3 store groups+suttas | quotes-manager | internal/store/**, internal/server/server_fakestore_test.go stubs only | none | running since 2026-10-20 18:20 local |
 | T4 extract+seed wiring | quotes-manager | internal/cli/extract*.go, internal/seed/**, database/seed.sql | T2 | queued |
 | T5 server groups UI | quotes-manager | internal/server/** except fakestore stubs, web/templates/** | T3, T4 seed names | queued |
 | T6 docs and artifacts | quotes-manager | README.md, docs/**, project-pictures/** | T4, T5 | queued |
