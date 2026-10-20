@@ -21,3 +21,5 @@ data/
 # ...and the committed canon and QA trees stay fully tracked.
 !docs/canon/**
 !docs/qa/**
+
+playground/t7b/*.db
