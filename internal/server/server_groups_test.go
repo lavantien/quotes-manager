@@ -200,3 +200,361 @@ func TestFlatViewWithoutGroupsUnchanged(t *testing.T) {
 		t.Error("flat view must keep draggable blocks")
 	}
 }
+
+const (
+	formCT  = "Content-Type"
+	formEnc = "application/x-www-form-urlencoded"
+)
+
+func TestCreateGroupHandler(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups", cid), "name=clear comprehension", formCT, formEnc)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), `id="collection-zone"`) {
+		t.Error("create group must swap the collection zone")
+	}
+	if !strings.Contains(rec.Body.String(), "clear comprehension") {
+		t.Error("zone must render the new group")
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	found := false
+	for _, g := range groups {
+		if g.Name == "clear comprehension" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("groups = %+v, want clear comprehension stored", groups)
+	}
+}
+
+func TestCreateGroupEmptyName(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups", cid), "name=%20%20", formCT, formEnc)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestCreateGroupUnknownCollection(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "POST", "/collections/999/groups", "name=x", formCT, formEnc)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestRenameGroupViaPromptHeader(t *testing.T) {
+	fs, cid, g1, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/%d/rename", cid, g1), "", "HX-Prompt", "wise%20attention")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	if groups[0].Name != "wise attention" {
+		t.Errorf("name = %q, want wise attention", groups[0].Name)
+	}
+}
+
+func TestRenameGroupViaFormField(t *testing.T) {
+	fs, cid, g1, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/%d/rename", cid, g1), "name=renamed", formCT, formEnc)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	if groups[0].Name != "renamed" {
+		t.Errorf("name = %q, want renamed", groups[0].Name)
+	}
+}
+
+func TestRenameGroupEmptyPrompt(t *testing.T) {
+	fs, cid, g1, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/%d/rename", cid, g1), "", "HX-Prompt", "%20%20")
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestRenameGroupUnknownGroup(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/999/rename", cid), "name=x", formCT, formEnc)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestDeleteGroupHandler(t *testing.T) {
+	fs, cid, g1, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "DELETE", fmt.Sprintf("/collections/%d/groups/%d", cid, g1), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	if len(groups) != 1 {
+		t.Fatalf("groups after delete = %+v, want 1", groups)
+	}
+	qi, _ := fs.CollectionQuoteItems(cid)
+	for _, it := range qi {
+		if it.GroupID == g1 {
+			t.Errorf("quote %d still references the deleted group", it.ID)
+		}
+	}
+	si, _ := fs.CollectionSuttaItems(cid)
+	for _, it := range si {
+		if it.GroupID == g1 {
+			t.Errorf("sutta %s still references the deleted group", it.Muid)
+		}
+	}
+}
+
+func TestDeleteGroupUnknown(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "DELETE", fmt.Sprintf("/collections/%d/groups/999", cid), "")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestMoveGroupUp(t *testing.T) {
+	fs, cid, _, g2 := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/%d/move?dir=up", cid, g2), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	if len(groups) != 2 || groups[0].ID != g2 {
+		t.Errorf("groups after move = %+v, want g2 first", groups)
+	}
+	if !strings.Contains(rec.Body.String(), "wakefulness") {
+		t.Error("move must return the refreshed zone")
+	}
+}
+
+func TestMoveGroupUpAtTopIsNoOp(t *testing.T) {
+	fs, cid, g1, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/%d/move?dir=up", cid, g1), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	if groups[0].ID != g1 || len(groups) != 2 {
+		t.Errorf("top move changed order: %+v", groups)
+	}
+}
+
+func TestMoveGroupBadDir(t *testing.T) {
+	fs, cid, _, g2 := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/%d/move?dir=sideways", cid, g2), "")
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestMoveGroupUnknownGroup(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups/999/move?dir=up", cid), "")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestSetQuoteGroupHandler(t *testing.T) {
+	fs, cid, g1, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/items/2/group", cid), fmt.Sprintf("group=%d", g1), formCT, formEnc)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	qi, _ := fs.CollectionQuoteItems(cid)
+	for _, it := range qi {
+		if it.ID == 2 && it.GroupID != g1 {
+			t.Errorf("quote 2 group = %d, want %d", it.GroupID, g1)
+		}
+	}
+	rec = do(t, srv, "POST", fmt.Sprintf("/collections/%d/items/2/group", cid), "group=0", formCT, formEnc)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("clear status = %d", rec.Code)
+	}
+	qi, _ = fs.CollectionQuoteItems(cid)
+	for _, it := range qi {
+		if it.ID == 2 && it.GroupID != 0 {
+			t.Errorf("quote 2 group after clear = %d, want 0", it.GroupID)
+		}
+	}
+}
+
+func TestSetQuoteGroupUnknownGroup(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/items/2/group", cid), "group=999", formCT, formEnc)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestSetQuoteGroupNonMember(t *testing.T) {
+	fs, cid, g1, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/items/3/group", cid), fmt.Sprintf("group=%d", g1), formCT, formEnc)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestSetQuoteGroupBadPayload(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/items/2/group", cid), "group=abc", formCT, formEnc)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestAddSuttaHandler(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/suttas", cid), "muid=MN 7", formCT, formEnc)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, ">MN 7<") {
+		t.Error("zone must render the added sutta with its display id")
+	}
+	if !strings.Contains(body, "https://suttacentral.net/mn7/") {
+		t.Error("added sutta must link its canonical page")
+	}
+	if !strings.Contains(body, `id="right-rail"`) {
+		t.Error("add sutta must refresh the rail counts out of band")
+	}
+	items, _ := fs.CollectionSuttaItems(cid)
+	found := false
+	for _, it := range items {
+		if it.Muid == "mn7" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("items = %+v, want mn7 membership", items)
+	}
+	suttas, _ := fs.ListSuttas()
+	for _, su := range suttas {
+		if su.Muid == "mn7" && su.Display != "MN 7" {
+			t.Errorf("registry display = %q, want MN 7", su.Display)
+		}
+	}
+}
+
+func TestAddSuttaInvalidMuid(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/suttas", cid), "muid=%21%21%21", formCT, formEnc)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestAddSuttaEmptyMuid(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/suttas", cid), "muid=%20", formCT, formEnc)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestAddSuttaUnknownCollection(t *testing.T) {
+	srv := newServer(t, newFake(sampleQuote(1)))
+	rec := do(t, srv, "POST", "/collections/999/suttas", "muid=mn7", formCT, formEnc)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestRemoveSuttaHandler(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "DELETE", fmt.Sprintf("/collections/%d/suttas/mn5", cid), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	items, _ := fs.CollectionSuttaItems(cid)
+	for _, it := range items {
+		if it.Muid == "mn5" {
+			t.Error("mn5 membership must be gone")
+		}
+	}
+	suttas, _ := fs.ListSuttas()
+	found := false
+	for _, su := range suttas {
+		if su.Muid == "mn5" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("registry must keep mn5 after removal")
+	}
+}
+
+func TestRemoveSuttaUnknown(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "DELETE", fmt.Sprintf("/collections/%d/suttas/mn404", cid), "")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestSetSuttaGroupHandler(t *testing.T) {
+	fs, cid, g2, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/suttas/mn5/group", cid), fmt.Sprintf("group=%d", g2), formCT, formEnc)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	items, _ := fs.CollectionSuttaItems(cid)
+	for _, it := range items {
+		if it.Muid == "mn5" && it.GroupID != g2 {
+			t.Errorf("mn5 group = %d, want %d", it.GroupID, g2)
+		}
+	}
+}
+
+func TestSetSuttaGroupUnknownGroup(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/suttas/mn5/group", cid), "group=999", formCT, formEnc)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestSetSuttaGroupNonMember(t *testing.T) {
+	fs, cid, g1, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/suttas/mn404/group", cid), fmt.Sprintf("group=%d", g1), formCT, formEnc)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+}
+
+func TestGroupMutationsStoreError(t *testing.T) {
+	assert500(t, newServer(t, failingStore{}), "POST", "/collections/1/groups", "name=x", formCT, formEnc)
+	assert500(t, newServer(t, failingStore{}), "DELETE", "/collections/1/groups/1", "")
+	assert500(t, newServer(t, failingStore{}), "POST", "/collections/1/suttas", "muid=mn7", formCT, formEnc)
+}
