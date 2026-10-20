@@ -27,20 +27,20 @@ func run(argv []string, out, errW io.Writer) int {
 			if errors.Is(err, errUsage) {
 				return 2
 			}
-			fmt.Fprintf(errW, "dev: %s: %v\n", name, err)
+			_, _ = fmt.Fprintf(errW, "dev: %s: %v\n", name, err)
 			return 1
 		}
 		return 0
 	}
-	fmt.Fprintf(errW, "dev: unknown subcommand %q, run without args for the list\n", name)
+	_, _ = fmt.Fprintf(errW, "dev: unknown subcommand %q, run without args for the list\n", name)
 	return 2
 }
 
 func printUsage(out io.Writer, cmds []command) {
-	fmt.Fprintln(out, "Usage: go run ./tools/dev <subcommand> [flags]")
-	fmt.Fprintln(out, "")
-	fmt.Fprintln(out, "Subcommands:")
+	_, _ = fmt.Fprintln(out, "Usage: go run ./tools/dev <subcommand> [flags]")
+	_, _ = fmt.Fprintln(out, "")
+	_, _ = fmt.Fprintln(out, "Subcommands:")
 	for _, c := range cmds {
-		fmt.Fprintf(out, "  %-14s %s\n", c.Name, c.Desc)
+		_, _ = fmt.Fprintf(out, "  %-14s %s\n", c.Name, c.Desc)
 	}
 }

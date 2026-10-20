@@ -123,9 +123,9 @@ func (r *devRunner) execLook(name string) (string, error) {
 
 func (r *devRunner) execAbs(desc string, extra map[string]string, bin string, args ...string) error {
 	if len(extra) == 0 {
-		fmt.Fprintf(r.Stderr, "dev: run cmd=%s bin=%s args=%s\n", desc, bin, strings.Join(args, " "))
+		_, _ = fmt.Fprintf(r.Stderr, "dev: run cmd=%s bin=%s args=%s\n", desc, bin, strings.Join(args, " "))
 	} else {
-		fmt.Fprintf(r.Stderr, "dev: run cmd=%s bin=%s args=%s env=%s\n", desc, bin, strings.Join(args, " "), envSummary(extra))
+		_, _ = fmt.Fprintf(r.Stderr, "dev: run cmd=%s bin=%s args=%s env=%s\n", desc, bin, strings.Join(args, " "), envSummary(extra))
 	}
 	start := time.Now()
 	cmd := exec.Command(bin, args...)
@@ -139,13 +139,13 @@ func (r *devRunner) execAbs(desc string, extra map[string]string, bin string, ar
 	if err != nil {
 		var exitErr *exec.ExitError
 		if ok := asExitError(err, &exitErr); ok {
-			fmt.Fprintf(r.Stderr, "dev: fail cmd=%s code=%d dur=%s\n", desc, exitErr.ExitCode(), dur)
+			_, _ = fmt.Fprintf(r.Stderr, "dev: fail cmd=%s code=%d dur=%s\n", desc, exitErr.ExitCode(), dur)
 		} else {
-			fmt.Fprintf(r.Stderr, "dev: fail cmd=%s dur=%s err=%v\n", desc, dur, err)
+			_, _ = fmt.Fprintf(r.Stderr, "dev: fail cmd=%s dur=%s err=%v\n", desc, dur, err)
 		}
 		return err
 	}
-	fmt.Fprintf(r.Stderr, "dev: exit cmd=%s code=0 dur=%s\n", desc, dur)
+	_, _ = fmt.Fprintf(r.Stderr, "dev: exit cmd=%s code=0 dur=%s\n", desc, dur)
 	return nil
 }
 
