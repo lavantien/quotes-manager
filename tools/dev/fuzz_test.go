@@ -11,17 +11,28 @@ func FuzzGuardPkg(f *testing.F) {
 	f.Add("..\\..\\windows")
 	f.Add("C:\\abs")
 	f.Add("a/../b")
+	f.Add("0..")
 	f.Fuzz(func(t *testing.T, s string) {
 		if len(s) > 200 {
 			return
 		}
 		err := guardPkg(s)
-		if err == nil {
-			if s == "" || strings.Contains(s, "..") || strings.HasPrefix(s, "/") || strings.HasPrefix(s, `\`) || filepathIsAbsPortable(s) {
-				t.Fatalf("guardPkg(%q) accepted an unsafe package path", s)
-			}
+		if err == nil && pkgIsUnsafe(s) {
+			t.Fatalf("guardPkg(%q) accepted an unsafe package path", s)
 		}
 	})
+}
+
+func pkgIsUnsafe(s string) bool {
+	if s == "" || strings.HasPrefix(s, "/") || strings.HasPrefix(s, `\`) || filepathIsAbsPortable(s) {
+		return true
+	}
+	for _, part := range strings.FieldsFunc(s, func(r rune) bool { return r == '/' || r == '\\' }) {
+		if part == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 func filepathIsAbsPortable(s string) bool {
