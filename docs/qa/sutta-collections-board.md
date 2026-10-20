@@ -10,9 +10,9 @@ First launch attempt (2026-10-20 18:20) landed all three agents in a web-only to
 
 | task | lane | files owned | depends | status |
 |---|---|---|---|---|
-| T1 dataset grab | reddit-dataset repo | scripts/export_tables.py, tests/, playground/mutate_export.py, artifacts/tables/ | none | running since 2026-10-20 18:20 local |
-| T2 sutta package | quotes-manager | internal/sutta/** | dump committed | running since 2026-10-20 18:20 local |
-| T3 store groups+suttas | quotes-manager | internal/store/**, internal/server/server_fakestore_test.go stubs only | none | running since 2026-10-20 18:20 local |
+| T1 dataset grab | descoped 2026-10-20 19:35: the dataset repo only ever needed to yield the id plus link table, which is already committed as dumps/ariyasavaka-curated-list.md; the repo was reset to 2b57cfe clean and needs nothing further | none | done |
+| T2 sutta package | quotes-manager | internal/sutta/** | dump committed | running |
+| T3 store groups+suttas | quotes-manager | internal/store/**, internal/server/server_fakestore_test.go stubs only | none | running, length column delta delivered |
 | T4 extract+seed wiring | quotes-manager | internal/cli/extract*.go, internal/seed/**, database/seed.sql | T2 | queued |
 | T5 server groups UI | quotes-manager | internal/server/** except fakestore stubs, web/templates/** | T3, T4 seed names | queued |
 | T6 docs and artifacts | quotes-manager | README.md, docs/**, project-pictures/** | T4, T5 | queued |
