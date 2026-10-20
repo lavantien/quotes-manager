@@ -258,6 +258,26 @@ func TestQuerySuttasCollectionQM(t *testing.T) {
 	}
 }
 
+func TestQuerySuttasCollectionUngroupedLast(t *testing.T) {
+	path := suttaFixtureDB(t)
+	st, err := store.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = st.Close() }()
+	if err := st.AddSuttaToCollection(1, "mn5", "MN 5", "https://suttacentral.net/mn5"); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runQuerySuttasOut(t, "", path, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "MN 3 (https://suttacentral.net/mn3) 2\nMN 1 (https://suttacentral.net/mn1) 5\n\nMN 4 (https://suttacentral.net/mn4) 1\nMN 2 (https://suttacentral.net/mn2)\n\nMN 5 (https://suttacentral.net/mn5)\n"
+	if out != want {
+		t.Errorf("qm collection output = %q, want %q", out, want)
+	}
+}
+
 func TestQuerySuttasCollectionJSON(t *testing.T) {
 	out, err := runQuerySuttasOut(t, "json", suttaFixtureDB(t), 1)
 	if err != nil {

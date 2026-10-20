@@ -144,10 +144,10 @@ func runQuerySuttas(cfg *config.Config, form, dbOverride string, collection int6
 			})
 		}
 	}
-	appendBlock(ungrouped, 0, "", 0)
 	for gi, g := range groups {
 		appendBlock(byGroup[g.ID], g.ID, g.Name, gi+1)
 	}
+	appendBlock(ungrouped, 0, "", 0)
 	return renderSuttas(format, rows)
 }
 
