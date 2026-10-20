@@ -240,6 +240,23 @@ func TestCreateGroupEmptyName(t *testing.T) {
 	}
 }
 
+func TestCreateGroupRejectsControlCharacters(t *testing.T) {
+	fs, cid, _, _ := groupedFake(t)
+	srv := newServer(t, fs)
+	rec := do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups", cid), "name=ab%00c", formCT, formEnc)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", rec.Code)
+	}
+	rec = do(t, srv, "POST", fmt.Sprintf("/collections/%d/groups", cid), "name=ab%0Ac", formCT, formEnc)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("newline name status = %d, want 400", rec.Code)
+	}
+	groups, _ := fs.ListCollectionGroups(cid)
+	if len(groups) != 2 {
+		t.Errorf("groups = %+v, want only the 2 seeded ones", groups)
+	}
+}
+
 func TestCreateGroupUnknownCollection(t *testing.T) {
 	srv := newServer(t, newFake(sampleQuote(1)))
 	rec := do(t, srv, "POST", "/collections/999/groups", "name=x", formCT, formEnc)

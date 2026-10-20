@@ -1,10 +1,12 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/lavantien/quotes-manager/internal/quote"
 )
@@ -19,7 +21,7 @@ func (s *Server) createGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := strings.TrimSpace(r.PostForm.Get("name"))
-	if name == "" {
+	if !validGroupName(name) {
 		badRequest(w)
 		return
 	}
@@ -46,7 +48,7 @@ func (s *Server) renameGroup(w http.ResponseWriter, r *http.Request) {
 	if name == "" {
 		name = promptValue(r)
 	}
-	if name == "" {
+	if !validGroupName(name) {
 		badRequest(w)
 		return
 	}
@@ -58,7 +60,10 @@ func (s *Server) renameGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 func promptValue(r *http.Request) string {
-	raw := r.Header.Get("HX-Prompt")
+	return promptValueOf(r.Header.Get("HX-Prompt"))
+}
+
+func promptValueOf(raw string) string {
 	if raw == "" {
 		return ""
 	}
@@ -168,15 +173,12 @@ func (s *Server) addSutta(w http.ResponseWriter, r *http.Request) {
 		badRequest(w)
 		return
 	}
-	if normalized, err := quote.MuidFromSuttaID(muid); err == nil {
-		muid = normalized
-	}
-	display, err := quote.DisplaySuttaID(muid)
+	refMuid, display, link, err := suttaRef(muid)
 	if err != nil {
 		badRequest(w)
 		return
 	}
-	if err := s.store.AddSuttaToCollection(cid, muid, display, suttaLink(muid)); err != nil {
+	if err := s.store.AddSuttaToCollection(cid, refMuid, display, link); err != nil {
 		handleStoreErr(w, err)
 		return
 	}
@@ -226,19 +228,56 @@ func groupIDFromForm(w http.ResponseWriter, r *http.Request) (int64, bool) {
 		badRequest(w)
 		return 0, false
 	}
-	raw := strings.TrimSpace(r.PostForm.Get("group"))
-	if raw == "" {
-		badRequest(w)
-		return 0, false
-	}
-	gid, err := strconv.ParseInt(raw, 10, 64)
-	if err != nil || gid < 0 {
+	gid, ok := parseGroupID(r.PostForm)
+	if !ok {
 		badRequest(w)
 		return 0, false
 	}
 	return gid, true
 }
 
+func parseGroupID(f url.Values) (int64, bool) {
+	raw := strings.TrimSpace(f.Get("group"))
+	if raw == "" {
+		return 0, false
+	}
+	gid, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || gid < 0 {
+		return 0, false
+	}
+	return gid, true
+}
+
+func suttaRef(muid string) (string, string, string, error) {
+	muid = strings.TrimSpace(muid)
+	if muid == "" {
+		return "", "", "", fmt.Errorf("empty sutta reference")
+	}
+	if normalized, err := quote.MuidFromSuttaID(muid); err == nil {
+		muid = normalized
+	}
+	if strings.ContainsAny(muid, " \t\r\n") {
+		return "", "", "", fmt.Errorf("sutta reference %q is not a muid", muid)
+	}
+	display, err := quote.DisplaySuttaID(muid)
+	if err != nil {
+		return "", "", "", err
+	}
+	return muid, display, suttaLink(muid), nil
+}
+
 func suttaLink(muid string) string {
 	return "https://suttacentral.net/" + muid + "/en/sujato?lang=en&layout=plain&reference=none&notes=none&highlight=true&script=latin"
+}
+
+func validGroupName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for _, r := range name {
+		if unicode.IsControl(r) {
+			return false
+		}
+	}
+	return true
 }
