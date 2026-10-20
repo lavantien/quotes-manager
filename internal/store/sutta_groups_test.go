@@ -258,6 +258,31 @@ func TestReorderCollectionGroups(t *testing.T) {
 			t.Errorf("pos %d = %d, want %d", i, g.ID, want[i])
 		}
 	}
+	rows, err := s.db.Query("SELECT id FROM collection_groups WHERE collection_id = ? ORDER BY position ASC", cid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = rows.Close() }()
+	var got []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, id)
+	}
+	if !equalInts(got, want) {
+		t.Errorf("stored order = %v, want %v", got, want)
+	}
+	for i, id := range got {
+		var pos int
+		if err := s.db.QueryRow("SELECT position FROM collection_groups WHERE id = ?", id).Scan(&pos); err != nil {
+			t.Fatal(err)
+		}
+		if pos != i+1 {
+			t.Errorf("group %d stored position = %d, want %d", id, pos, i+1)
+		}
+	}
 }
 
 func TestReorderCollectionGroupsNotFound(t *testing.T) {

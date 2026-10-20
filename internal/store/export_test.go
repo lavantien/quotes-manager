@@ -242,6 +242,13 @@ func TestImportRoundTripsGroupsAndSuttas(t *testing.T) {
 	if dg[0].ID != sg[0].ID || dg[0].Name != sg[0].Name || dg[0].Count != sg[0].Count {
 		t.Errorf("group = %+v, want %+v", dg[0], sg[0])
 	}
+	var dstPos int
+	if err := dst.db.QueryRow("SELECT position FROM collection_groups WHERE id = ?", dg[0].ID).Scan(&dstPos); err != nil {
+		t.Fatal(err)
+	}
+	if dstPos != 1 {
+		t.Errorf("imported group position = %d, want 1", dstPos)
+	}
 	sq, _ := src.CollectionQuoteItems(1)
 	dq, _ := dst.CollectionQuoteItems(1)
 	if len(sq) != len(dq) || len(dq) != 2 {
