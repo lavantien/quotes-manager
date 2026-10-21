@@ -278,6 +278,36 @@ func TestQuerySuttasCollectionUngroupedLast(t *testing.T) {
 	}
 }
 
+func TestQuerySuttasCollectionWithoutGroups(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "suttas.db")
+	st, err := store.Open(path)
+	if err != nil {
+		t.Fatalf("store.Open: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	cid, err := st.CreateCollection(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AddSuttaToCollection(cid, "sn1", "SN 1", "https://suttacentral.net/sn1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AddSuttaToCollection(cid, "sn2", "SN 2", "https://suttacentral.net/sn2"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetSuttaLengths(map[string]int{"sn1": 4, "sn2": 1}); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runQuerySuttasOut(t, "", path, cid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "SN 2 (https://suttacentral.net/sn2) 1\nSN 1 (https://suttacentral.net/sn1) 4\n"
+	if out != want {
+		t.Errorf("qm collection output = %q, want %q", out, want)
+	}
+}
+
 func TestQuerySuttasCollectionJSON(t *testing.T) {
 	out, err := runQuerySuttasOut(t, "json", suttaFixtureDB(t), 1)
 	if err != nil {

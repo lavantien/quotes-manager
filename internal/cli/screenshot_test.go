@@ -415,6 +415,16 @@ func TestStepActionsRejectsUnknownAction(t *testing.T) {
 	}
 }
 
+func TestCaptureScreenshotRejectsUnsupportedStep(t *testing.T) {
+	buf, err := captureScreenshot("http://127.0.0.1:1", "#a", []ShotStep{{Action: "explode", Sel: "#x"}})
+	if err == nil || !strings.Contains(err.Error(), "unsupported action") || !strings.Contains(err.Error(), "explode") {
+		t.Fatalf("captureScreenshot unsupported step = (%d bytes, %v), want an unsupported-action error naming explode", len(buf), err)
+	}
+	if buf != nil {
+		t.Errorf("captureScreenshot must return no bytes on a rejected step, got %d", len(buf))
+	}
+}
+
 func TestCapturePageRunsNavigateThenShot(t *testing.T) {
 	var order []string
 	got, err := capturePage(context.Background(),
