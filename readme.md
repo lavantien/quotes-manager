@@ -1,7 +1,7 @@
 # quotes-manager
 
 <!-- coverage:START -->
-![coverage](https://img.shields.io/badge/coverage-77.6%25-yellow)
+![coverage](https://img.shields.io/badge/coverage-77.7%25-yellow)
 <!-- coverage:END -->
 
 ## Table of contents
@@ -173,7 +173,7 @@ cross-link navigation, quote citations and pali words into canon pages
 
 ## Local development
 
-Prerequisites: Go (the toolchain pin lives in `go.mod`), a C toolchain for CGO (on Windows the Makefile pins the scoop mingw-winlibs UCRT gcc and exports `CC`/`CXX`), git, Chrome or Edge for screenshots, and Java or Docker for the plantuml diagrams.
+Prerequisites: Go (the toolchain pin lives in `go.mod`), a C toolchain for CGO (on Windows the dev runner pins the scoop mingw-winlibs UCRT gcc and exports `CC`/`CXX` when they are unset), git, Chrome or Edge for screenshots, and Java or Docker for the plantuml diagrams.
 
 1. Clone and build:
 
