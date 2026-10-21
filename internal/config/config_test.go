@@ -8,8 +8,8 @@ import (
 )
 
 func TestVersionConstants(t *testing.T) {
-	if Version != "2.0.0" {
-		t.Fatalf("Version = %q, want 2.0.0", Version)
+	if Version != "2.1.0" {
+		t.Fatalf("Version = %q, want 2.1.0", Version)
 	}
 	if SchemaVersion != 2 {
 		t.Fatalf("SchemaVersion = %d, want 2", SchemaVersion)
