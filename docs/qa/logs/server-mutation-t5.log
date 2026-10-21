@@ -1,0 +1,23 @@
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/mutator -packages internal/server -tags sqlite_fts5 -parallel 4
+progress 10/216
+progress 20/216
+progress 30/216
+progress 40/216
+progress 50/216
+progress 60/216
+progress 70/216
+progress 80/216
+progress 90/216
+progress 100/216
+progress 110/216
+progress 120/216
+progress 130/216
+progress 140/216
+progress 150/216
+progress 160/216
+progress 170/216
+progress 180/216
+progress 190/216
+progress 200/216
+progress 210/216
+slots=4 mutants=216 killed=208 invalid=8 survived=0

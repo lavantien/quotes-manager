@@ -1,0 +1,30 @@
+=== store mutation gate start 2026-10-20T19:26:02.9231047+07:00 ===
+CGO_ENABLED=1 GOMEMLIMIT=4GiB C:/Users/lavantien/dev/github/quotes-manager/dist/tools/jobwrap.exe go test -tags sqlite_fts5 ./internal/store
+ok  	github.com/lavantien/quotes-manager/internal/store	(cached)
+=== test-pkg green, starting mutate 2026-10-20T19:26:04.8279097+07:00 ===
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/mutator -packages internal/store -tags sqlite_fts5 -parallel 8
+progress 10/235
+progress 20/235
+progress 30/235
+progress 40/235
+progress 50/235
+progress 60/235
+progress 70/235
+progress 80/235
+progress 90/235
+progress 100/235
+progress 110/235
+progress 120/235
+progress 130/235
+progress 140/235
+progress 150/235
+progress 160/235
+progress 170/235
+progress 180/235
+progress 190/235
+progress 200/235
+progress 210/235
+progress 220/235
+progress 230/235
+slots=8 mutants=235 killed=219 invalid=16 survived=0
+=== mutate exit 0 2026-10-20T19:53:46.3108917+07:00 ===

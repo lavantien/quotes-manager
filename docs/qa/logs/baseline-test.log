@@ -1,0 +1,37 @@
+CGO_ENABLED=1 GOMEMLIMIT=4GiB C:/Users/lavantien/dev/github/quotes-manager/dist/tools/jobwrap.exe go test -tags sqlite_fts5 ./...
+ok  	github.com/lavantien/quotes-manager/cmd/qm	25.134s
+?   	github.com/lavantien/quotes-manager/database	[no test files]
+ok  	github.com/lavantien/quotes-manager/internal/canon/analytics	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/export	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/graph	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/jobs	1.679s
+ok  	github.com/lavantien/quotes-manager/internal/canon/model	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/norm	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/pipeline	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/report	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/server	38.805s
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/bilara	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/dpd	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/source/editions	1.547s
+ok  	github.com/lavantien/quotes-manager/internal/canon/sync	17.614s
+ok  	github.com/lavantien/quotes-manager/internal/canon/triangulate	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/web	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/canon/winjob	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/cli	57.951s
+ok  	github.com/lavantien/quotes-manager/internal/config	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/coverbadge	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/e2e	43.308s
+ok  	github.com/lavantien/quotes-manager/internal/quote	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/search	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/seed	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/server	24.681s
+ok  	github.com/lavantien/quotes-manager/internal/store	(cached)
+ok  	github.com/lavantien/quotes-manager/internal/store/storetest	(cached)
+?   	github.com/lavantien/quotes-manager/playground/serve-smoke	[no test files]
+?   	github.com/lavantien/quotes-manager/playground/stripcomments	[no test files]
+?   	github.com/lavantien/quotes-manager/tools/dpdfixture	[no test files]
+ok  	github.com/lavantien/quotes-manager/tools/jobwrap	5.635s
+ok  	github.com/lavantien/quotes-manager/tools/memcapmon	1.780s
+ok  	github.com/lavantien/quotes-manager/tools/mutator	2.594s
+?   	github.com/lavantien/quotes-manager/tools/sloc	[no test files]
+?   	github.com/lavantien/quotes-manager/web	[no test files]

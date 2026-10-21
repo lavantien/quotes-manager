@@ -1,0 +1,50 @@
+=== t7 fix mutation start 2026-10-20T21:45:30.3066243+07:00 ===
+CGO_ENABLED=1 GOMEMLIMIT=4GiB go run ./tools/mutator -packages internal/store,internal/server -tags sqlite_fts5 -parallel 8
+progress 10/462
+progress 20/462
+progress 30/462
+progress 40/462
+progress 50/462
+progress 60/462
+progress 70/462
+progress 80/462
+progress 90/462
+progress 100/462
+progress 110/462
+progress 120/462
+progress 130/462
+progress 140/462
+progress 150/462
+progress 160/462
+progress 170/462
+progress 180/462
+progress 190/462
+progress 200/462
+progress 210/462
+progress 220/462
+progress 230/462
+progress 240/462
+progress 250/462
+progress 260/462
+progress 270/462
+progress 280/462
+progress 290/462
+progress 300/462
+progress 310/462
+progress 320/462
+progress 330/462
+progress 340/462
+progress 350/462
+progress 360/462
+progress 370/462
+progress 380/462
+progress 390/462
+progress 400/462
+progress 410/462
+progress 420/462
+progress 430/462
+progress 440/462
+progress 450/462
+progress 460/462
+slots=8 mutants=462 killed=438 invalid=24 survived=0
+=== mutate exit 0 2026-10-20T22:27:29.1778028+07:00 ===

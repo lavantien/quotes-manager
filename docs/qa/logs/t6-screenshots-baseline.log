@@ -1,0 +1,187 @@
+=== t6 screenshots baseline start 2026-10-20T21:02:02.7966083+07:00 ===
+CGO_ENABLED=1 go build -tags sqlite_fts5 -o dist/qm.exe ./cmd/qm
+./dist/qm.exe screenshot
+2026/10/20 21:02:25 INFO request method=GET path=/ status=200 duration_ms=16
+2026/10/20 21:02:25 INFO request method=GET path=/static/nav.css status=200 duration_ms=70
+2026/10/20 21:02:25 INFO request method=GET path=/static/app.css status=200 duration_ms=72
+2026/10/20 21:02:25 INFO request method=GET path=/static/layout.css status=200 duration_ms=71
+2026/10/20 21:02:25 INFO request method=GET path=/static/app.js status=200 duration_ms=69
+2026/10/20 21:02:25 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=71
+2026/10/20 21:02:26 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/01-workspace-home.png (119510 bytes)
+2026/10/20 21:02:26 INFO request method=GET path=/ status=200 duration_ms=14
+2026/10/20 21:02:26 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:26 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/20 21:02:26 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:26 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:26 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/20 21:02:27 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/02-workspace-category.png (92138 bytes)
+2026/10/20 21:02:28 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:28 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/20 21:02:28 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:28 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:28 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/20 21:02:28 INFO request method=GET path=/ status=200 duration_ms=75
+2026/10/20 21:02:28 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/03-workspace-collection.png (154469 bytes)
+2026/10/20 21:02:29 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:29 INFO request method=GET path=/ status=200 duration_ms=27
+2026/10/20 21:02:29 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/20 21:02:29 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:29 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:29 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/20 21:02:29 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/04-workspace-search.png (121295 bytes)
+2026/10/20 21:02:30 INFO request method=GET path=/ status=200 duration_ms=20
+2026/10/20 21:02:30 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:30 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/20 21:02:30 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/20 21:02:30 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:30 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:30 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+2026/10/20 21:02:30 INFO request method=GET path=/quotes/new status=200 duration_ms=0
+wrote project-pictures/05-workspace-new-form.png (95566 bytes)
+2026/10/20 21:02:31 INFO request method=GET path=/ status=200 duration_ms=20
+2026/10/20 21:02:31 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:31 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/20 21:02:31 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:31 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:31 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/20 21:02:32 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+2026/10/20 21:02:32 INFO request method=GET path=/quotes/import/form status=200 duration_ms=0
+wrote project-pictures/06-workspace-import-form.png (92689 bytes)
+2026/10/20 21:02:32 INFO request method=GET path=/ status=200 duration_ms=18
+2026/10/20 21:02:32 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:32 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/20 21:02:32 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:32 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:32 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/20 21:02:33 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+2026/10/20 21:02:33 INFO request method=GET path=/pane/check status=200 duration_ms=12
+2026/10/20 21:02:33 INFO request method=POST path=/check status=200 duration_ms=1
+wrote project-pictures/07-workspace-check-ids.png (126318 bytes)
+2026/10/20 21:02:34 INFO request method=GET path=/ status=200 duration_ms=19
+2026/10/20 21:02:34 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:34 INFO request method=GET path=/static/layout.css status=200 duration_ms=0
+2026/10/20 21:02:34 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:34 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:34 INFO request method=GET path=/static/app.js status=200 duration_ms=0
+2026/10/20 21:02:34 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+2026/10/20 21:02:34 INFO request method=GET path=/quotes/1/edit status=200 duration_ms=0
+wrote project-pictures/08-workspace-edit-form.png (104876 bytes)
+2026/10/20 21:02:35 INFO request method=GET path=/dashboard status=200 duration_ms=5
+2026/10/20 21:02:35 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:35 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:02:35 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:35 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:35 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:02:35 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=4
+2026/10/20 21:02:35 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/09-canon-dashboard.png (36618 bytes)
+2026/10/20 21:02:36 INFO request method=GET path=/texts status=200 duration_ms=1
+2026/10/20 21:02:36 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:36 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:02:36 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:36 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:36 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:02:36 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=2
+2026/10/20 21:02:36 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/10-canon-texts.png (16627 bytes)
+2026/10/20 21:02:37 INFO request method=GET path=/texts/mn1 status=200 duration_ms=2
+2026/10/20 21:02:37 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:37 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:02:37 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:37 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:37 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:02:37 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=2
+2026/10/20 21:02:37 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/11-canon-text.png (23669 bytes)
+2026/10/20 21:02:38 INFO request method=GET path=/search status=200 duration_ms=1
+2026/10/20 21:02:38 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:38 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:02:38 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:38 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:38 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:02:38 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=2
+2026/10/20 21:02:38 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/12-canon-search.png (16256 bytes)
+2026/10/20 21:02:39 INFO request method=GET path=/words status=200 duration_ms=0
+2026/10/20 21:02:39 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:39 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:02:39 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:39 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:39 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:02:39 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=2
+2026/10/20 21:02:39 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/13-canon-words.png (20302 bytes)
+2026/10/20 21:02:40 INFO request method=GET path=/words/eva status=200 duration_ms=1
+2026/10/20 21:02:40 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:40 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:02:40 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:40 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:40 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:02:40 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=4
+2026/10/20 21:02:40 INFO request method=GET path=/api/v1/graph/word status=200 duration_ms=0
+2026/10/20 21:02:40 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/14-canon-word.png (29448 bytes)
+2026/10/20 21:02:41 INFO request method=GET path=/graph status=200 duration_ms=0
+2026/10/20 21:02:41 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:41 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:02:41 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:41 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:41 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:02:41 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=1
+2026/10/20 21:02:41 INFO request method=GET path=/api/v1/graph/word status=200 duration_ms=1
+2026/10/20 21:02:41 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/15-canon-graph-word.png (46341 bytes)
+2026/10/20 21:02:42 INFO request method=GET path=/graph status=200 duration_ms=0
+2026/10/20 21:02:42 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:42 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:02:42 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:42 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:42 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:02:42 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=2
+2026/10/20 21:02:42 INFO request method=GET path=/api/v1/graph/coverage status=200 duration_ms=0
+2026/10/20 21:02:42 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/16-canon-graph-coverage.png (49637 bytes)
+2026/10/20 21:02:43 INFO request method=GET path=/analytics status=200 duration_ms=25
+2026/10/20 21:02:43 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:43 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:02:43 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:43 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:43 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:02:43 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=4
+2026/10/20 21:02:43 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/17-canon-analytics.png (29927 bytes)
+2026/10/20 21:02:44 INFO request method=GET path=/pipeline status=200 duration_ms=0
+2026/10/20 21:02:44 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:02:44 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:02:44 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:02:44 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:02:44 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:02:44 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=2
+2026/10/20 21:02:44 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+2026/10/20 21:02:44 INFO request method=POST path=/pipeline status=200 duration_ms=0
+2026/10/20 21:02:46 INFO request method=GET path=/partials/job/1 status=200 duration_ms=0
+capture 18-canon-pipeline.png (http://127.0.0.1:52010/pipeline) attempt 1 failed: context deadline exceeded; retrying once
+2026/10/20 21:04:44 INFO request method=GET path=/pipeline status=200 duration_ms=0
+2026/10/20 21:04:44 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:04:44 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:04:44 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:04:44 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:04:44 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:04:44 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=4
+2026/10/20 21:04:44 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+2026/10/20 21:04:44 INFO request method=POST path=/pipeline status=200 duration_ms=0
+wrote project-pictures/18-canon-pipeline.png (30128 bytes)
+2026/10/20 21:04:45 INFO request method=GET path=/discrepancies status=200 duration_ms=1
+2026/10/20 21:04:45 INFO request method=GET path=/static/app.css status=200 duration_ms=0
+2026/10/20 21:04:45 INFO request method=GET path=/static/canon.css status=200 duration_ms=0
+2026/10/20 21:04:45 INFO request method=GET path=/static/nav.css status=200 duration_ms=0
+2026/10/20 21:04:45 INFO request method=GET path=/static/htmx.min.js status=200 duration_ms=0
+2026/10/20 21:04:45 INFO request method=GET path=/static/canon.js status=200 duration_ms=0
+2026/10/20 21:04:45 INFO request method=GET path=/static/cytoscape.min.js status=200 duration_ms=3
+2026/10/20 21:04:45 INFO request method=GET path=/favicon.ico status=204 duration_ms=0
+wrote project-pictures/19-canon-discrepancies.png (68513 bytes)
+=== exit 0 2026-10-20T21:04:46.4156332+07:00 ===
