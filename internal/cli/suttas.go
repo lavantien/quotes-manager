@@ -125,7 +125,7 @@ func runQuerySuttas(cfg *config.Config, form, dbOverride string, collection int6
 	if err != nil {
 		return err
 	}
-	byGroup := make(map[int64][]store.SuttaItem, len(groups)+1)
+	byGroup := make(map[int64][]store.SuttaItem, len(groups))
 	var ungrouped []store.SuttaItem
 	for _, it := range items {
 		if it.GroupID == 0 {
